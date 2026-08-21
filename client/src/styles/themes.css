@@ -1,0 +1,215 @@
+/* =========================
+   DEFAULT / LÀNG TRE
+========================= */
+
+:root,
+[data-theme="lang-tre"] {
+    --color-primary: #315C45;
+    --color-primary-hover: #244735;
+
+    --color-secondary: #E8F0E8;
+    --color-secondary-hover: #DCE9DE;
+
+    --color-accent: #D6A84F;
+
+    --color-background: #F5F1E6;
+    --color-surface: #FFFFFF;
+
+    --color-text: #26352C;
+    --color-text-muted: #6B756E;
+
+    --color-border: #D6E0D5;
+
+    --color-success: #2E7D32;
+    --color-warning: #C58A24;
+    --color-danger: #C62828;
+}
+
+
+/* =========================
+   1. BẾP GỖ
+========================= */
+
+[data-theme="bep-go"] {
+    --color-primary: #795548;
+    --color-primary-hover: #5D4037;
+
+    --color-secondary: #F0E7DD;
+    --color-secondary-hover: #E7DACE;
+
+    --color-accent: #D6A84F;
+
+    --color-background: #F5EBDD;
+    --color-surface: #FFFFFF;
+
+    --color-text: #342820;
+    --color-text-muted: #76665B;
+
+    --color-border: #E3D3C1;
+
+    --color-success: #2E7D32;
+    --color-warning: #C58A24;
+    --color-danger: #C62828;
+}
+
+
+/* =========================
+   2. TÍM HUẾ
+========================= */
+
+[data-theme="tim-hue"] {
+    --color-primary: #6B4C6D;
+    --color-primary-hover: #513951;
+
+    --color-secondary: #F0E8F1;
+    --color-secondary-hover: #E7DCE9;
+
+    --color-accent: #D6A84F;
+
+    --color-background: #F7F1F5;
+    --color-surface: #FFFFFF;
+
+    --color-text: #352A35;
+    --color-text-muted: #766976;
+
+    --color-border: #E4D7E3;
+
+    --color-success: #2E7D32;
+    --color-warning: #C58A24;
+    --color-danger: #C62828;
+}
+
+
+/* =========================
+   3. BIỂN VIỆT
+========================= */
+
+[data-theme="bien-viet"] {
+    --color-primary: #287C8E;
+    --color-primary-hover: #1E6271;
+
+    --color-secondary: #E4F2F4;
+    --color-secondary-hover: #D8EBEE;
+
+    --color-accent: #E0A83E;
+
+    --color-background: #F1F8F8;
+    --color-surface: #FFFFFF;
+
+    --color-text: #24383D;
+    --color-text-muted: #687B80;
+
+    --color-border: #D5E7E9;
+
+    --color-success: #2E7D32;
+    --color-warning: #C58A24;
+    --color-danger: #C62828;
+}
+
+
+/* =========================
+   4. NẮNG VIỆT
+========================= */
+
+[data-theme="nang-viet"] {
+    --color-primary: #C58A24;
+    --color-primary-hover: #A97019;
+
+    --color-secondary: #FFF2D2;
+    --color-secondary-hover: #FBE8BA;
+
+    --color-accent: #B84A32;
+
+    --color-background: #FFF8E8;
+    --color-surface: #FFFFFF;
+
+    --color-text: #3D3425;
+    --color-text-muted: #796F5F;
+
+    --color-border: #EADCBF;
+
+    --color-success: #2E7D32;
+    --color-warning: #A97019;
+    --color-danger: #C62828;
+}
+
+
+/* =========================
+   5. ĐẤT VIỆT
+========================= */
+
+[data-theme="dat-viet"] {
+    --color-primary: #A64032;
+    --color-primary-hover: #863329;
+
+    --color-secondary: #F6E5E1;
+    --color-secondary-hover: #EED7D2;
+
+    --color-accent: #D9A441;
+
+    --color-background: #FAF2E4;
+    --color-surface: #FFFFFF;
+
+    --color-text: #3B2924;
+    --color-text-muted: #76635B;
+
+    --color-border: #E4D3C2;
+
+    --color-success: #2E7D32;
+    --color-warning: #C58A24;
+    --color-danger: #C62828;
+}
+
+
+/* =========================
+   6. LÀNG TRE
+========================= */
+
+[data-theme="lang-tre"] {
+    --color-primary: #315C45;
+    --color-primary-hover: #244735;
+
+    --color-secondary: #E8F0E8;
+    --color-secondary-hover: #DCE9DE;
+
+    --color-accent: #D6A84F;
+
+    --color-background: #F5F1E6;
+    --color-surface: #FFFFFF;
+
+    --color-text: #26352C;
+    --color-text-muted: #6B756E;
+
+    --color-border: #D6E0D5;
+
+    --color-success: #2E7D32;
+    --color-warning: #C58A24;
+    --color-danger: #C62828;
+}
+
+
+/* =========================
+   7. HOA SEN
+========================= */
+
+[data-theme="hoa-sen"] {
+    --color-primary: #B85C70;
+    --color-primary-hover: #98475A;
+
+    --color-secondary: #F8E8EB;
+    --color-secondary-hover: #F1DADF;
+
+    --color-accent: #C99A3D;
+
+    --color-background: #FFF4F3;
+    --color-surface: #FFFFFF;
+
+    --color-text: #3D292E;
+    --color-text-muted: #79666B;
+
+    --color-border: #EBD7DA;
+
+    --color-success: #2E7D32;
+    --color-warning: #C58A24;
+    --color-danger: #C62828;
+}

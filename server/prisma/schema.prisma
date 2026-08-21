@@ -1,0 +1,390 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ENUMS
+enum TableStatus {
+  AVAILABLE
+  OCCUPIED
+  RESERVED
+  DISABLED
+}
+
+enum DiningSessionStatus {
+  ACTIVE
+  CLOSED
+}
+
+enum FoodStatus {
+  AVAILABLE
+  OUT_OF_STOCK
+  INACTIVE
+}
+
+enum OrderStatus {
+  PENDING
+  CONFIRMED
+  PREPARING
+  SERVED
+  COMPLETED
+  CANCELLED
+}
+
+enum OrderItemStatus {
+  PENDING
+  CONFIRMED
+  PREPARING
+  SERVED
+  CANCELLED
+}
+
+enum OrderType {
+  DINE_IN
+  TAKE_AWAY
+}
+
+enum PaymentMethod {
+  CASH
+  BANKING
+  MIXED
+}
+
+enum PaymentStatus {
+  UNPAID
+  PAID
+}
+
+// ROLE
+
+model Role {
+  id   Int    @id @default(autoincrement())
+  name String @unique
+  users User[]
+
+  @@map("roles")
+}
+
+// BRANCH
+
+model Branch {
+  id        Int      @id @default(autoincrement())
+  name      String
+  address   String?
+  phone     String?
+  email     String @unique
+  isActive  Boolean  @default(true)
+
+  restaurantId Int? @map("restaurant_id")
+
+  createdAt DateTime @default(now()) @map("created_at")
+
+  restaurant Restaurant? @relation(fields: [restaurantId], references: [id], onDelete: SetNull)
+
+  users       User[]
+  floors      Floor[]
+  branchFoods BranchFood[]
+  orders      Order[]
+
+  @@map("branches")
+}
+
+model Restaurant {
+  id        Int      @id @default(autoincrement())
+  name      String
+  logo      String?
+  adminId   Int      @unique @map("admin_id")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  admin    User     @relation("RestaurantAdmin", fields: [adminId], references: [id], onDelete: Restrict)
+  branches Branch[]
+
+  @@map("restaurants")
+}
+
+// USER
+
+model User {
+  id       Int     @id @default(autoincrement())
+  username String  @unique
+  password String
+  email    String  @unique
+
+  isActive Boolean @default(true)
+
+  mustChangePassword Boolean @default(true)
+  emailChangeOtps EmailChangeOtp[]
+  
+  roleId   Int  @map("role_id")
+  branchId Int? @map("branch_id")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  role   Role    @relation(fields: [roleId], references: [id], onDelete: Restrict)
+  branch Branch? @relation(fields: [branchId], references: [id], onDelete: SetNull)
+
+  restaurant Restaurant? @relation("RestaurantAdmin")
+
+  endedSessions DiningSession[]
+
+  @@map("users")
+}
+
+// FLOOR
+
+model Floor {
+  id       Int @id @default(autoincrement())
+  branchId Int @map("branch_id")
+  floorNumber Int     @map("floor_number")
+  name        String?
+  createdAt DateTime @default(now()) @map("created_at")
+  branch Branch @relation(fields: [branchId], references: [id], onDelete: Cascade)
+  tables Table[]
+
+  @@unique([branchId, floorNumber])
+  @@map("floors")
+}
+
+// TABLE
+
+model Table {
+  id Int @id @default(autoincrement())
+  floorId Int @map("floor_id")
+  tableNumber Int @map("table_number")
+  qrCode String @unique @map("qr_code")
+  status TableStatus @default(AVAILABLE)
+  createdAt DateTime @default(now()) @map("created_at")
+  floor Floor @relation(fields: [floorId], references: [id], onDelete: Cascade)
+  sessions DiningSession[]
+  customers Customer[]
+  
+  @@unique([floorId, tableNumber])
+  @@map("tables")
+}
+
+model DiningSession {
+  id Int @id @default(autoincrement())
+  tableId Int @map("table_id")
+  table Table @relation(fields: [tableId], references: [id], onDelete: Cascade)
+  status DiningSessionStatus @default(ACTIVE)
+  startedAt DateTime @default(now())
+  closedAt DateTime?
+  endedById Int? @map("ended_by")
+  endedBy User? @relation(fields: [endedById], references: [id], onDelete: SetNull)
+  note String?
+  customers Customer[]
+  orders Order[]
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("dining_sessions")
+}
+
+//Cart
+
+model Cart {
+  id Int @id @default(autoincrement())
+  customerId Int      @unique
+  customer   Customer @relation(fields: [customerId], references: [id])
+  items CartItem[]
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("carts")
+}
+
+model CartItem {
+  id Int @id @default(autoincrement())
+  cartId Int
+  cart   Cart @relation(fields: [cartId], references: [id])
+  foodId Int
+  food   Food @relation(fields: [foodId], references: [id])
+  quantity Int @default(1)
+  note String?
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@unique([cartId, foodId])
+  @@map("cart_items")
+}
+
+// CATEGORY
+
+model Category {
+  id          Int     @id @default(autoincrement())
+  name        String  @unique
+  description String?
+  createdAt DateTime @default(now()) @map("created_at")
+  foods Food[]
+
+  @@map("categories")
+}
+
+// FOOD
+
+model Food {
+  id Int @id @default(autoincrement())
+  categoryId Int @map("category_id")
+  name String
+  price Decimal @db.Decimal(12, 2)
+  description String?
+  image String?
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+  category Category @relation(fields: [categoryId], references: [id], onDelete: Restrict)
+  branchFoods BranchFood[]
+  orderItems OrderItem[]
+  cartItems CartItem[]
+
+  @@unique([categoryId, name])
+  @@map("foods")
+}
+
+// BRANCH FOOD
+
+model BranchFood {
+  id Int @id @default(autoincrement())
+  branchId Int @map("branch_id")
+  foodId   Int @map("food_id")
+  status FoodStatus @default(AVAILABLE)
+  updatedAt DateTime @updatedAt @map("updated_at")
+  branch Branch @relation(fields: [branchId], references: [id], onDelete: Cascade)
+  food Food @relation(fields: [foodId], references: [id], onDelete: Cascade)
+
+  @@unique([branchId, foodId])
+  @@map("branch_foods")
+}
+
+model PasswordResetOtp {
+  id         Int      @id @default(autoincrement())
+  email      String
+  otp        String
+  expiresAt  DateTime @map("expires_at")
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  @@map("password_reset_otps")
+}
+
+model EmailChangeOtp {
+  id         Int      @id @default(autoincrement())
+  userId     Int      @map("user_id")
+  newEmail   String   @map("new_email")
+  otp        String
+  expiresAt  DateTime @map("expires_at")
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("email_change_otps")
+}
+
+// CUSTOMER
+
+model Customer {
+  id           Int       @id @default(autoincrement())
+  sessionId    Int?      @map("session_id")
+
+  name         String?
+  phone        String?   @unique
+  email        String?   @unique
+  password     String?
+  deviceId     String?   @unique @map("device_id")
+  guestToken   String?   @unique @map("guest_token")
+  tableId Int? @map("table_id")
+  table Table? @relation(fields: [tableId], references: [id])
+  createdAt    DateTime  @default(now()) @map("created_at")
+  expiredAt    DateTime? @map("expired_at")
+  emailOtp          String?
+  emailOtpExpiresAt DateTime?
+  isGuest      Boolean   @default(true)
+  isActive     Boolean   @default(true)
+
+  session       DiningSession? @relation(fields: [sessionId], references: [id])
+  cart          Cart?
+  orderMembers  OrderMember[]
+  createdOrders Order[] @relation("CreatedOrders")
+
+  @@map("customers")
+}
+
+// ORDER
+
+model Order {
+  id Int @id @default(autoincrement())
+  orderCode String @unique @map("order_code")
+  branchId Int @map("branch_id")
+  sessionId Int? @map("session_id")
+  session DiningSession? @relation(fields: [sessionId], references: [id])
+  branch Branch @relation(fields: [branchId], references: [id], onDelete: Restrict)
+  payment Payment?
+  orderType OrderType @default(DINE_IN)
+  status OrderStatus @default(PENDING)
+  totalAmount Decimal @default(0) @map("total_amount") @db.Decimal(12, 2)
+  note String?
+  createdById Int? @map("created_by")
+  createdBy Customer? @relation("CreatedOrders", fields: [createdById], references: [id])
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+  orderMembers OrderMember[]
+  orderItems OrderItem[]
+
+  @@index([branchId])
+  @@index([sessionId])
+  @@index([status])
+  @@map("orders")
+}
+
+model OrderMember {
+  id Int @id @default(autoincrement())
+  customerId Int @map("customer_id")
+  orderId    Int @map("order_id")
+  joinedAt DateTime @default(now()) @map("joined_at")
+  customer Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  order Order @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  @@unique([customerId, orderId])
+  @@index([orderId])
+  @@index([customerId])
+  @@map("order_members")
+}
+
+// ORDER ITEM
+
+model OrderItem {
+  id Int @id @default(autoincrement())
+  orderId Int @map("order_id")
+  foodId Int @map("food_id")
+  quantity Int
+  status OrderItemStatus @default(PENDING)
+  price Decimal @db.Decimal(12, 2)
+  note String?
+  order Order @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  food Food @relation(fields: [foodId], references: [id], onDelete: Restrict)
+
+  @@index([orderId])
+  @@index([status])
+  @@map("order_items")
+}
+
+// PAYMENT
+ 
+model Payment {
+  id Int @id @default(autoincrement())
+  orderId Int @unique @map("order_id")
+  paymentMethod PaymentMethod @map("payment_method")
+  cashAmount Decimal?
+  bankAmount Decimal?
+  paymentCode String? @map("payment_code")
+  totalAmount Decimal @map("total_amount") @db.Decimal(12, 2)
+  paymentStatus PaymentStatus @default(UNPAID) @map("payment_status")
+  paidAt DateTime? @map("paid_at")
+  order Order @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  
+  @@map("payments")
+}
