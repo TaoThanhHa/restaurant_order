@@ -36,6 +36,26 @@ async function main() {
     },
   });
 
+  const orderRole = await prisma.role.upsert({
+    where: {
+        name: "ORDER",
+    },
+    update: {},
+    create: {
+        name: "ORDER",
+    },
+});
+
+const kitchenRole = await prisma.role.upsert({
+    where: {
+        name: "KITCHEN",
+    },
+    update: {},
+    create: {
+        name: "KITCHEN",
+    },
+});
+
   console.log("✅ Roles seeded");
 
     

@@ -9,17 +9,10 @@ const response =
 // ======================================================
 
 const updateProfile = async (req, res) => {
-
     try {
-
         const data = {
             name: req.body.name,
         };
-
-        if (req.file) {
-            data.avatar =
-                `/uploads/customers/${req.file.filename}`;
-        }
 
         const customer =
             await customerService.updateProfile(
@@ -29,15 +22,20 @@ const updateProfile = async (req, res) => {
 
         return response.success(
             res,
-            "Cập nhật thông tin thành công.",
+            "Cập nhật họ và tên thành công.",
             customer
         );
 
     } catch (error) {
+        console.error(
+            "UPDATE CUSTOMER PROFILE ERROR:",
+            error
+        );
 
         return response.error(
             res,
-            error.message,
+            error.message ||
+                "Không thể cập nhật họ và tên.",
             400
         );
     }
@@ -95,216 +93,6 @@ const changePassword = async (req, res) => {
         );
     }
 };
-
-/* // ======================================================
-// CREATE GUEST
-// ======================================================
-
-const createGuest = async (
-    req,
-    res
-) => {
-
-    try {
-
-        const result =
-            await customerService.createGuest(
-                req.body
-            );
-
-        return response.success(
-            res,
-            "Tạo khách thành công.",
-            result,
-            201
-        );
-
-    } catch (error) {
-
-        return response.error(
-            res,
-            error.message,
-            400
-        );
-
-    }
-
-};
-
-
-// ======================================================
-// CREATE CUSTOMER
-// ======================================================
-
-const create = async (
-    req,
-    res
-) => {
-
-    try {
-
-        const result =
-            await customerService.create(
-                req.body
-            );
-
-        return response.success(
-            res,
-            "Tạo khách hàng thành công.",
-            result,
-            201
-        );
-
-    } catch (error) {
-
-        return response.error(
-            res,
-            error.message,
-            400
-        );
-
-    }
-
-};
-
-
-// ======================================================
-// GET BY ID
-// ======================================================
-
-const getById = async (
-    req,
-    res
-) => {
-
-    try {
-
-        const customer =
-            await customerService.getById(
-                Number(req.params.id)
-            );
-
-        return response.success(
-            res,
-            "Lấy thông tin khách hàng thành công.",
-            customer
-        );
-
-    } catch (error) {
-
-        return response.error(
-            res,
-            error.message,
-            404
-        );
-
-    }
-
-};
-
-
-// ======================================================
-// GET BY GUEST TOKEN
-// ======================================================
-
-const getByGuestToken = async (
-    req,
-    res
-) => {
-
-    try {
-
-        const customer =
-            await customerService.getByGuestToken(
-                req.params.token
-            );
-
-        return response.success(
-            res,
-            "Lấy thông tin khách hàng thành công.",
-            customer
-        );
-
-    } catch (error) {
-
-        return response.error(
-            res,
-            error.message,
-            404
-        );
-
-    }
-
-};
-
-
-// ======================================================
-// UPDATE CUSTOMER - ADMIN/CASHIER
-// ======================================================
-
-const update = async (
-    req,
-    res
-) => {
-
-    try {
-
-        const customer =
-            await customerService.update(
-                Number(req.params.id),
-                req.body
-            );
-
-        return response.success(
-            res,
-            "Cập nhật khách hàng thành công.",
-            customer
-        );
-
-    } catch (error) {
-
-        return response.error(
-            res,
-            error.message,
-            400
-        );
-
-    }
-
-};
-
-
-// ======================================================
-// DELETE CUSTOMER
-// ======================================================
-
-const remove = async (
-    req,
-    res
-) => {
-
-    try {
-
-        await customerService.remove(
-            Number(req.params.id)
-        );
-
-        return response.success(
-            res,
-            "Xóa khách hàng thành công."
-        );
-
-    } catch (error) {
-
-        return response.error(
-            res,
-            error.message,
-            400
-        );
-
-    }
-
-}; */
 
 const sendChangeEmailOtp = async (
     req,
@@ -368,12 +156,6 @@ module.exports = {
     updateProfile,
     updatePhone,
     changePassword,
-    /* createGuest,
-    create,
-    getById,
-    getByGuestToken,
-    update,
-    remove, */
     sendChangeEmailOtp,
     verifyChangeEmailOtp,
 };

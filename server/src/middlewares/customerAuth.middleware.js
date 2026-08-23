@@ -3,23 +3,22 @@ const { verifyCustomerToken } = require("../utils/jwtCustomer");
 const customerAuthMiddleware = (req, res, next) => {
 
     try {
+        const authHeader =
+            req.headers.authorization;
 
-        const authHeader = req.headers.authorization;
+        let token =
+            authHeader?.startsWith("Bearer ")
+                ? authHeader.split(" ")[1]
+                : null;
 
-        if (!authHeader) {
-            return res.status(401).json({
-                success: false,
-                message: "Chưa đăng nhập."
-            });
-        }
 
-        const token = authHeader.split(" ")[1];
-
+        // SSE không gửi được Authorization header
         if (!token) {
-            return res.status(401).json({
-                success: false,
-                message: "Token không hợp lệ."
-            });
+
+            token =
+                req.query.token ||
+                null;
+
         }
 
         req.customer = verifyCustomerToken(token);
@@ -36,5 +35,7 @@ const customerAuthMiddleware = (req, res, next) => {
     }
 
 };
+
+
 
 module.exports = customerAuthMiddleware;

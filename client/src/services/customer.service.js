@@ -1,11 +1,10 @@
 import api from "../api/axiosClient";
 
 // ======================================================
-// UPDATE PROFILE
+// UPDATE NAME
 // ======================================================
 
 const updateProfile = async (data) => {
-
     const res = await api.put(
         "/customers/profile",
         data
@@ -19,7 +18,6 @@ const updateProfile = async (data) => {
 // ======================================================
 
 const updatePhone = async (data) => {
-
     const res = await api.put(
         "/customers/phone",
         data
@@ -33,7 +31,6 @@ const updatePhone = async (data) => {
 // ======================================================
 
 const changePassword = async (data) => {
-
     const res = await api.put(
         "/customers/password",
         data
@@ -43,11 +40,10 @@ const changePassword = async (data) => {
 };
 
 // ======================================================
-// CHANGE EMAIL - SEND OTP
+// CHANGE EMAIL
 // ======================================================
 
 const sendChangeEmailOtp = async (data) => {
-
     const res = await api.post(
         "/customers/email/send-otp",
         data
@@ -56,12 +52,7 @@ const sendChangeEmailOtp = async (data) => {
     return res.data;
 };
 
-// ======================================================
-// CHANGE EMAIL - VERIFY OTP
-// ======================================================
-
 const verifyChangeEmailOtp = async (data) => {
-
     const res = await api.post(
         "/customers/email/verify-otp",
         data
@@ -69,7 +60,6 @@ const verifyChangeEmailOtp = async (data) => {
 
     return res.data;
 };
-
 
 export default {
     updateProfile,

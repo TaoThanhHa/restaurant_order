@@ -1,4 +1,5 @@
-const customerOrderService = require("./customerOrder.service");
+const customerOrderService =
+    require("./customerOrder.service");
 
 const create = async (req, res) => {
 
@@ -7,29 +8,48 @@ const create = async (req, res) => {
         const {
             tableId,
             items,
+            orderId,
+            newOrder,
         } = req.body;
 
         const order =
             await customerOrderService.create(
                 req.customer.id,
                 tableId,
-                items
+                items,
+                {
+                    orderId,
+                    newOrder,
+                }
             );
 
-        return res.json({
+        return res.status(201).json({
             success: true,
             data: order,
         });
 
     } catch (err) {
 
-        return res.status(400).json({
+        console.error(
+            "CUSTOMER CREATE ORDER ERROR:",
+            err
+        );
+
+        return res.status(
+            err.statusCode || 400
+        ).json({
             success: false,
-            message: err.message,
+
+            message:
+                err.message,
+
+            code:
+                err.code || null,
+
+            data:
+                err.data || null,
         });
-
     }
-
 };
 
 module.exports = {

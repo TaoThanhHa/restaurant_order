@@ -5,14 +5,15 @@ const router = express.Router();
 const {
     foodUpload,
     restaurantUpload,
+    customerAvatarUpload,
 } = require("../../middlewares/upload.middleware");
 
 const uploadController = require("./upload.controller");
+const customerAuth = require("../../middlewares/customerAuth.middleware");
 
-
-
+// ========================================
 // UPLOAD FOOD
-
+// ========================================
 
 router.post(
     "/food",
@@ -20,10 +21,9 @@ router.post(
     uploadController.uploadFoodImage
 );
 
-
-
+// ========================================
 // UPLOAD RESTAURANT LOGO
-
+// ========================================
 
 router.post(
     "/restaurant-logo",
@@ -31,5 +31,15 @@ router.post(
     uploadController.uploadRestaurantLogo
 );
 
+// ========================================
+// UPLOAD CUSTOMER AVATAR
+// ========================================
+
+router.post(
+    "/customer-avatar",
+    customerAuth,
+    customerAvatarUpload.single("image"),
+    uploadController.uploadCustomerAvatar
+);
 
 module.exports = router;

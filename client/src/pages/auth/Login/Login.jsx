@@ -34,6 +34,11 @@ export default function Login() {
         if (user.role === "CASHIER") {
             navigate("/cashier/dashboard", { replace: true });
         }
+        if (user.role === "ORDER") {
+            navigate("/cashier/tables", {
+                replace: true,
+            });
+        }
     }, [user, navigate]);
 
     const handleChange = (e) => {
@@ -78,6 +83,12 @@ export default function Login() {
 
             case "CASHIER":
                 navigate("/cashier/dashboard", {
+                    replace: true,
+                });
+                break;
+
+            case "ORDER":
+                navigate("/cashier/tables", {
                     replace: true,
                 });
                 break;

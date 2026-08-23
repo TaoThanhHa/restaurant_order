@@ -1,5 +1,6 @@
 const prisma = require("../../config/prisma");
 const { v4: uuidv4 } = require("uuid");
+const sseService = require("../../services/sse.service");
 
 const getAll = async () => {
   return await prisma.table.findMany({
@@ -26,6 +27,47 @@ const getAll = async () => {
       },
     ],
   });
+};
+
+const notifyOrderCustomers = async (
+    orderId,
+    event = "order.updated"
+) => {
+
+    const members =
+        await prisma.orderMember.findMany({
+
+            where: {
+                orderId: Number(orderId),
+            },
+
+            select: {
+                customerId: true,
+            },
+
+        });
+
+    const customerIds =
+        [
+            ...new Set(
+                members
+                    .map(item => item.customerId)
+                    .filter(Boolean)
+            ),
+        ];
+
+    for (const customerId of customerIds) {
+
+        sseService.sendToCustomer(
+            customerId,
+            event,
+            {
+                orderId: Number(orderId),
+            }
+        );
+
+    }
+
 };
 
 // GET TABLES BY FLOOR
@@ -169,24 +211,32 @@ const getById = async (id) => {
 };
 
 const create = async (data) => {
+
   const {
-    floorId
+    floorId,
+    tableNumber,
+    capacity = 4,
   } = data;
 
-  const tableNumber =
-    Number(data.tableNumber);
+  const floorIdNumber = Number(floorId);
+  const tableNumberNumber = Number(tableNumber);
+  const capacityNumber = Number(capacity);
 
-  if (!floorId) {
+  if (!floorIdNumber) {
     throw new Error("Vui lòng chọn tầng.");
   }
 
-  if (!tableNumber) {
+  if (!tableNumberNumber) {
     throw new Error("Vui lòng nhập số bàn.");
+  }
+
+  if (!capacityNumber || capacityNumber < 1) {
+    throw new Error("Số người trong bàn không hợp lệ.");
   }
 
   const floor = await prisma.floor.findUnique({
     where: {
-      id: Number(floorId),
+      id: floorIdNumber,
     },
   });
 
@@ -197,8 +247,8 @@ const create = async (data) => {
   const existed = await prisma.table.findUnique({
     where: {
       floorId_tableNumber: {
-        floorId: Number(floorId),
-        tableNumber,
+        floorId: floorIdNumber,
+        tableNumber: tableNumberNumber,
       },
     },
   });
@@ -209,17 +259,22 @@ const create = async (data) => {
 
   return await prisma.table.create({
     data: {
-      floorId: Number(floorId),
-      tableNumber,
+      floorId: floorIdNumber,
+      tableNumber: tableNumberNumber,
+      capacity: capacityNumber,
+
+      // QR chỉ tạo một lần khi tạo bàn
       qrCode: uuidv4(),
     },
   });
+
 };
 
 const update = async (id, data) => {
+
   const table = await prisma.table.findUnique({
     where: {
-      id,
+      id: Number(id),
     },
   });
 
@@ -227,15 +282,30 @@ const update = async (id, data) => {
     throw new Error("Bàn không tồn tại.");
   }
 
-  const floorId = Number(data.floorId ?? table.floorId);
-  const tableNumber = Number(data.tableNumber);
+  const floorId = Number(
+    data.floorId ?? table.floorId
+  );
+
+  const tableNumber = Number(
+    data.tableNumber ?? table.tableNumber
+  );
+
+  const capacity = Number(
+    data.capacity ?? table.capacity
+  );
+
+  if (!capacity || capacity < 1) {
+    throw new Error(
+      "Số người trong bàn không hợp lệ."
+    );
+  }
 
   const existed = await prisma.table.findFirst({
     where: {
       floorId,
       tableNumber,
       NOT: {
-        id,
+        id: Number(id),
       },
     },
   });
@@ -246,13 +316,16 @@ const update = async (id, data) => {
 
   return await prisma.table.update({
     where: {
-      id,
+      id: Number(id),
     },
+
     data: {
       floorId,
       tableNumber,
+      capacity,
     },
   });
+
 };
 
 const remove = async (id) => {
@@ -375,8 +448,6 @@ const scanQr = async (qrCode) => {
 
   
 // OPEN TABLE
-  
-
 const open = async (tableId, data) => {
 
     const { name, phone } = data;
@@ -398,7 +469,6 @@ const open = async (tableId, data) => {
         throw new Error("Bàn không tồn tại.");
     }
 
-    // Tìm phiên phục vụ đang hoạt động
     let session = await prisma.diningSession.findFirst({
         where: {
             tableId: Number(tableId),
@@ -406,19 +476,15 @@ const open = async (tableId, data) => {
         },
     });
 
-    // Nếu chưa có thì tạo mới
     if (!session) {
-
         session = await prisma.diningSession.create({
             data: {
                 tableId: Number(tableId),
                 status: "ACTIVE",
             },
         });
-
     }
 
-    // Tạo khách
     const customer = await prisma.customer.create({
         data: {
             sessionId: session.id,
@@ -427,7 +493,6 @@ const open = async (tableId, data) => {
         },
     });
 
-    // Cập nhật trạng thái bàn
     await prisma.table.update({
         where: {
             id: Number(tableId),
@@ -437,6 +502,15 @@ const open = async (tableId, data) => {
         },
     });
 
+    // Báo Cashier bàn vừa thay đổi
+    sseService.sendToBranch(
+        table.floor.branchId,
+        "table.updated",
+        {
+            tableId: table.id,
+        }
+    );
+
     return {
         session,
         customer,
@@ -445,6 +519,7 @@ const open = async (tableId, data) => {
 
 module.exports = {
   getAll,
+  notifyOrderCustomers,
   getByFloor,
   getById,
   create,

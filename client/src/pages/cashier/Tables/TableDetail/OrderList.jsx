@@ -1,3 +1,6 @@
+import { ArrowLeft } from "lucide-react";
+import { useNavigate } from "react-router-dom";
+
 import Button from "../../../../components/Button/Button";
 
 const STATUS = {
@@ -35,7 +38,7 @@ export default function OrderList({
     onCreateOrder,
     onMergeOrders
 }) {
-
+    const navigate = useNavigate();
     const totalOrders = orders.length;
 
     const getPendingItems = (order) => {
@@ -47,10 +50,15 @@ export default function OrderList({
     return (
 
         <div className="flex h-full flex-col">
-
-            <div className="border-b p-5">
-
-                <div className="flex items-center justify-between">
+            <div className="flex items-center justify-between m-4">
+                <div className="mb-4">
+                    <button
+                        onClick={() => navigate("/cashier/tables")}
+                        className=" flex items-center gap-2 text-sm text-gray-500 transition hover:text-[var(--color-primary)]"
+                    >
+                        <ArrowLeft size={25} />
+                    </button>
+                </div>
 
                     <div>
 
@@ -76,15 +84,13 @@ export default function OrderList({
                         )}
 
                         <Button
-                            className="w-[80px]"
+                            className="w-[90px] flex justify-center items-center"
                             onClick={onCreateOrder}
                         >
                             + Order
                         </Button>
 
                     </div>
-
-                </div>
 
             </div>
 

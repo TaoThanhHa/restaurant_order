@@ -142,8 +142,63 @@ const sendChangeEmailOtp = async (
     }
 };
 
+const sendStaffAccount = async (
+    branchName,
+    username,
+    email,
+    role,
+    password
+) => {
+
+    const roleName =
+        role === "ORDER"
+            ? "Nhân viên order"
+            : "Nhân viên bếp";
+
+    await transporter.sendMail({
+
+        to: email,
+
+        subject:
+            "Thông tin tài khoản nhân viên",
+
+        html: `
+
+            <h2>Chào mừng bạn đến với ${branchName}</h2>
+
+            <p>
+                Bạn đã được tạo tài khoản
+                <strong>${roleName}</strong>.
+            </p>
+
+            <p>
+                <strong>Tên tài khoản:</strong>
+                ${username}
+            </p>
+
+            <p>
+                <strong>Email:</strong>
+                ${email}
+            </p>
+
+            <p>
+                <strong>Mật khẩu:</strong>
+                ${password}
+            </p>
+
+            <p>
+                Vui lòng đăng nhập và đổi mật khẩu.
+            </p>
+
+        `,
+
+    });
+
+};
+
 
 module.exports = {
     sendBranchAccount,
     sendChangeEmailOtp,
+    sendStaffAccount,
 };

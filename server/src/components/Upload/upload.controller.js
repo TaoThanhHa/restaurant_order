@@ -1,6 +1,5 @@
+const prisma = require("../../config/prisma");
 const response = require("../../utils/response");
-
-
 // ========================================
 // UPLOAD FOOD IMAGE
 // ========================================
@@ -78,7 +77,72 @@ const uploadRestaurantLogo = async (
     }
 };
 
+const uploadCustomerAvatar = async (req, res) => {
+    try {
+        if (!req.file) {
+            return response.error(
+                res,
+                "Vui lòng chọn ảnh.",
+                400
+            );
+        }
+
+        const customerId = req.customer?.id;
+
+        if (!customerId) {
+            return response.error(
+                res,
+                "Không xác định được khách hàng.",
+                401
+            );
+        }
+
+        const avatar =
+            `/uploads/customers/${req.file.filename}`;
+
+        const customer =
+            await prisma.customer.update({
+                where: {
+                    id: customerId,
+                },
+                data: {
+                    avatar,
+                },
+                select: {
+                    id: true,
+                    name: true,
+                    email: true,
+                    phone: true,
+                    avatar: true,
+                },
+            });
+
+        return response.success(
+            res,
+            "Cập nhật ảnh đại diện thành công.",
+            customer
+        );
+
+    } catch (error) {
+        console.error(
+            "UPLOAD CUSTOMER AVATAR ERROR:",
+            error
+        );
+
+        return response.error(
+            res,
+            error.message ||
+                "Không thể cập nhật ảnh đại diện.",
+            400
+        );
+    }
+};
+
+
 module.exports = {
+
     uploadFoodImage,
     uploadRestaurantLogo,
+    uploadCustomerAvatar,
+
 };

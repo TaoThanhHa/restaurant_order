@@ -20,13 +20,35 @@ const create = async (req, res) => {
   }
 };
 
-  
-// GET ORDER DETAIL
-  
+  // CHECK ACTIVE ORDER BY TABLE
+const getActiveOrderByTable = async (req, res) => {
+    try {
+        const { tableId } = req.params;
 
+        const data = await orderService.getActiveOrderByTable(
+            tableId
+        );
+
+        return response.success(
+            res,
+            "Kiểm tra đơn đang hoạt động thành công.",
+            data
+        );
+
+    } catch (error) {
+        console.error("GET ACTIVE ORDER ERROR:", error);
+
+        return response.error(
+            res,
+            error.message,
+            400
+        );
+    }
+};
+
+// GET ORDER DETAIL
 const getById = async (req, res) => {
     try {
-
         const orderId = Number(req.params.id);
 
         if (!Number.isInteger(orderId)) {
@@ -41,12 +63,11 @@ const getById = async (req, res) => {
 
         return response.success(
             res,
-            data,
-            "Lấy chi tiết đơn hàng thành công."
+            "Lấy chi tiết đơn hàng thành công.",
+            data
         );
 
     } catch (error) {
-
         console.error("GET ORDER ERROR:", error);
 
         return response.error(
@@ -307,9 +328,40 @@ const mergeOrders = async (req, res) => {
 
 };
 
+const getPendingOrders = async (req, res) => {
+    try {
+
+        const data =
+            await orderService.getPendingOrders(
+                req.user.branchId
+            );
+
+        return res.json({
+            success: true,
+            data
+        });
+
+    } catch (error) {
+
+        console.error(
+            "GET PENDING ORDERS ERROR:",
+            error
+        );
+
+        return res.status(500).json({
+            success: false,
+            message:
+                error.message ||
+                "Không thể lấy đơn chờ."
+        });
+
+    }
+};
+
 module.exports = {
   create,
   getById,
+  getActiveOrderByTable,
   addItem,
   confirmItems,
   updateItem,
@@ -320,4 +372,5 @@ module.exports = {
   getTakeAway,
   getHistory,
   mergeOrders,
+  getPendingOrders,
 };

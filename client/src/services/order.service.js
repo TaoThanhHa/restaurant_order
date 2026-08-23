@@ -2,7 +2,9 @@ import api from "../api/axiosClient";
 
 const orderService = {
 
+    // =====================================================
     // ORDER TẠI BÀN
+    // =====================================================
 
     create(data) {
         return api.post("/orders", data);
@@ -65,7 +67,17 @@ const orderService = {
         );
     },
 
+    // =====================================================
+    // ĐƠN CHỜ XÁC NHẬN
+    // =====================================================
+
+    getPendingOrders() {
+        return api.get("/orders/pending");
+    },
+
+    // =====================================================
     // TAKE AWAY
+    // =====================================================
 
     createTakeAway(data) {
         return api.post(
@@ -80,8 +92,14 @@ const orderService = {
         );
     },
 
+    // =====================================================
+    // LỊCH SỬ
+    // =====================================================
+
     getHistory() {
-        return api.get("/orders/history");
+        return api.get(
+            "/orders/history"
+        );
     },
 
 };

@@ -3,395 +3,15 @@ const { v4: uuidv4 } = require("uuid");
 const bcrypt = require("bcrypt");
 const crypto = require("crypto");
 const transporter = require("../../config/mail");
-/* // ======================================================
-// CREATE GUEST
-// ======================================================
 
-const createGuest = async (data) => {
-
-    const { tableId, name } = data;
-
-    if (!tableId) {
-        throw new Error("Vui lòng chọn bàn.");
-    }
-
-    if (!name) {
-        throw new Error("Vui lòng nhập tên.");
-    }
-
-    return await prisma.$transaction(async (tx) => {
-
-        const table = await tx.table.findUnique({
-            where: {
-                id: Number(tableId),
-            },
-            include: {
-                floor: true,
-            },
-        });
-
-        if (!table) {
-            throw new Error("Bàn không tồn tại.");
-        }
-
-        if (table.status === "DISABLED") {
-            throw new Error("Bàn đang ngừng sử dụng.");
-        }
-
-        let session =
-            await tx.diningSession.findFirst({
-                where: {
-                    tableId: table.id,
-                    status: "ACTIVE",
-                },
-            });
-
-        if (!session) {
-
-            session =
-                await tx.diningSession.create({
-                    data: {
-                        tableId: table.id,
-                        status: "ACTIVE",
-                    },
-                });
-
-            await tx.table.update({
-                where: {
-                    id: table.id,
-                },
-                data: {
-                    status: "OCCUPIED",
-                },
-            });
-        }
-
-        const customer =
-            await tx.customer.create({
-                data: {
-                    sessionId: session.id,
-                    name,
-                    guestToken: uuidv4(),
-                },
-            });
-
-        await tx.cart.create({
-            data: {
-                customerId: customer.id,
-            },
-        });
-
-        const order =
-            await tx.order.create({
-                data: {
-                    branchId: table.floor.branchId,
-                    sessionId: session.id,
-                    orderType: "DINE_IN",
-                    status: "PENDING",
-                    totalAmount: 0,
-                },
-            });
-
-        await tx.orderMember.create({
-            data: {
-                customerId: customer.id,
-                orderId: order.id,
-            },
-        });
-
-        return {
-            customer,
-            order,
-        };
-
-    });
-};
-
-
-// ======================================================
-// CREATE CUSTOMER
-// ======================================================
-
-const create = async (data) => {
-
-    const {
-        tableId,
-        name,
-        phone,
-    } = data;
-
-    if (!tableId) {
-        throw new Error("Vui lòng chọn bàn.");
-    }
-
-    if (!name) {
-        throw new Error(
-            "Vui lòng nhập tên khách hàng."
-        );
-    }
-
-    return await prisma.$transaction(async (tx) => {
-
-        const table =
-            await tx.table.findUnique({
-                where: {
-                    id: Number(tableId),
-                },
-                include: {
-                    floor: true,
-                },
-            });
-
-        if (!table) {
-            throw new Error(
-                "Bàn không tồn tại."
-            );
-        }
-
-        let session =
-            await tx.diningSession.findFirst({
-                where: {
-                    tableId: table.id,
-                    status: "ACTIVE",
-                },
-            });
-
-        if (!session) {
-
-            session =
-                await tx.diningSession.create({
-                    data: {
-                        tableId: table.id,
-                        status: "ACTIVE",
-                    },
-                });
-
-            await tx.table.update({
-                where: {
-                    id: table.id,
-                },
-                data: {
-                    status: "OCCUPIED",
-                },
-            });
-        }
-
-        if (phone) {
-
-            const existed =
-                await tx.customer.findUnique({
-                    where: {
-                        phone,
-                    },
-                });
-
-            if (existed) {
-                throw new Error(
-                    "Số điện thoại đã tồn tại."
-                );
-            }
-        }
-
-        const customer =
-            await tx.customer.create({
-                data: {
-                    sessionId: session.id,
-                    name,
-                    phone,
-                    guestToken: uuidv4(),
-                },
-            });
-
-        await tx.cart.create({
-            data: {
-                customerId: customer.id,
-            },
-        });
-
-        const order =
-            await tx.order.create({
-                data: {
-                    branchId: table.floor.branchId,
-                    sessionId: session.id,
-                    orderType: "DINE_IN",
-                    status: "PENDING",
-                    totalAmount: 0,
-                },
-            });
-
-        await tx.orderMember.create({
-            data: {
-                customerId: customer.id,
-                orderId: order.id,
-            },
-        });
-
-        return {
-            customer,
-            order,
-        };
-
-    });
-};
-
-
-// ======================================================
-// GET CUSTOMER BY ID - ADMIN/CASHIER
-// ======================================================
-
-const getById = async (id) => {
-
-    const customer =
-        await prisma.customer.findUnique({
-
-            where: {
-                id,
-            },
-
-            include: {
-
-                session: {
-                    include: {
-                        table: {
-                            include: {
-                                floor: {
-                                    include: {
-                                        branch: true,
-                                    },
-                                },
-                            },
-                        },
-                    },
-                },
-
-                orderMembers: {
-                    include: {
-                        order: {
-                            include: {
-                                payment: true,
-
-                                orderItems: {
-                                    include: {
-                                        food: true,
-                                    },
-                                },
-                            },
-                        },
-                    },
-                },
-
-            },
-
-        });
-
-    if (!customer) {
-        throw new Error(
-            "Khách hàng không tồn tại."
-        );
-    }
-
-    return customer;
-};
-
-
-// ======================================================
-// GET CUSTOMER BY GUEST TOKEN
-// ======================================================
-
-const getByGuestToken = async (token) => {
-
-    const customer =
-        await prisma.customer.findUnique({
-
-            where: {
-                guestToken: token,
-            },
-
-            include: {
-
-                cart: true,
-
-                orderMembers: {
-                    include: {
-                        order: true,
-                    },
-                },
-
-                session: {
-                    include: {
-                        table: {
-                            include: {
-                                floor: {
-                                    include: {
-                                        branch: true,
-                                    },
-                                },
-                            },
-                        },
-                    },
-                },
-
-            },
-
-        });
-
-    if (!customer) {
-        throw new Error(
-            "Guest Token không hợp lệ."
-        );
-    }
-
-    return customer;
-};
-
-
-// ======================================================
-// UPDATE CUSTOMER - ADMIN/CASHIER
-// ======================================================
-
-const update = async (id, data) => {
-
-    const customer =
-        await prisma.customer.findUnique({
-            where: {
-                id,
-            },
-        });
-
-    if (!customer) {
-        throw new Error(
-            "Khách hàng không tồn tại."
-        );
-    }
-
-    return await prisma.customer.update({
-
-        where: {
-            id,
-        },
-
-        data: {
-            name:
-                data.name ??
-                customer.name,
-
-            phone:
-                data.phone ??
-                customer.phone,
-        },
-
-    });
-}; */
 
 // ======================================================
 // UPDATE PROFILE - CUSTOMER
 // ======================================================
-
 const updateProfile = async (
     customerId,
     data
 ) => {
-
     const customer =
         await prisma.customer.findUnique({
             where: {
@@ -405,30 +25,28 @@ const updateProfile = async (
         );
     }
 
-    const updateData = {};
+    const name = data.name?.trim();
 
-    if (data.name !== undefined) {
-        const name = data.name.trim();
-
-        if (!name) {
-            throw new Error(
-                "Vui lòng nhập họ và tên."
-            );
-        }
-
-        updateData.name = name;
-    }
-
-    if (data.avatar !== undefined) {
-        updateData.avatar = data.avatar;
+    if (!name) {
+        throw new Error(
+            "Vui lòng nhập họ và tên."
+        );
     }
 
     return await prisma.customer.update({
         where: {
             id: customerId,
         },
-
-        data: updateData,
+        data: {
+            name,
+        },
+        select: {
+            id: true,
+            name: true,
+            email: true,
+            phone: true,
+            avatar: true,
+        },
     });
 };
 
@@ -562,48 +180,6 @@ const changePassword = async (
         },
     });
 };
-
-/* // ======================================================
-// REMOVE CUSTOMER
-// ======================================================
-
-const remove = async (id) => {
-
-    const customer =
-        await prisma.customer.findUnique({
-
-            where: {
-                id,
-            },
-
-            include: {
-                orderMembers: true,
-            },
-
-        });
-
-    if (!customer) {
-        throw new Error(
-            "Khách hàng không tồn tại."
-        );
-    }
-
-    if (
-        customer.orderMembers.length > 0
-    ) {
-        throw new Error(
-            "Khách hàng đã phát sinh đơn hàng, không thể xóa."
-        );
-    }
-
-    await prisma.customer.delete({
-        where: {
-            id,
-        },
-    });
-
-    return true;
-}; */
 
 const sendChangeEmailOtp = async (
     customerId,
@@ -878,15 +454,9 @@ const verifyChangeEmailOtp = async (
 
 
 module.exports = {
-    /* createGuest,
-    create,
-    getById,
-    getByGuestToken,
-    update, */
     updateProfile,
     updatePhone,
     changePassword,
-    /* remove, */
     sendChangeEmailOtp,
     verifyChangeEmailOtp,
 };

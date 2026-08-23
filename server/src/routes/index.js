@@ -3,9 +3,10 @@ const express = require("express");
 const router = express.Router();
 
 router.use("/auth", require("../components/Auth/auth.routes"));
+router.use("/events", require("../components/Events/event.routes"));
 
 router.use("/customer", require("../components/CustomerAuth/customerAuth.route"));
-router.use("/customer/orders", require("../components/customerOrder/customerOrder.routes"));
+router.use( "/customer/orders",require("../components/CustomerOrder/customerOrder.routes"));
 router.use("/customer-admin", require("../components/CustomerAdmin/customerAdmin.route"));
 
 router.use("/branches", require("../components/Branch/branch.route"));
@@ -23,5 +24,7 @@ router.use("/upload", require("../components/Upload/upload.route"));
 router.use("/statistics", require("../components/AdminStatistics/adminStatistics.routes"));
 router.use("/admin", require("../components/Admin/admin.routes"));
 router.use("/restaurant",require("../components/Restaurant/restaurant.routes"));
+router.use("/staff", require("../components/Staff/staff.routes"));
+router.use("/service-requests", require("../components/ServiceRequest/serviceRequest.routes"));
 
 module.exports = router;

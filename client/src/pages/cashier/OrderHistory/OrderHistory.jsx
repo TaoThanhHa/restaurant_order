@@ -1,11 +1,13 @@
 import { useEffect, useMemo, useState } from "react";
-
+import { Eye, X} from "lucide-react";
 import orderService from "../../../services/order.service";
 
 export default function OrderHistory() {
 
     const [orders, setOrders] = useState([]);
     const [dateFilter, setDateFilter] = useState("TODAY");
+    const [selectedOrder, setSelectedOrder] = useState(null);
+    const [loadingDetail, setLoadingDetail] = useState(false);
     const today = new Date();
     const [selectedDate, setSelectedDate] = useState(
         today.toISOString().split("T")[0]
@@ -60,6 +62,28 @@ export default function OrderHistory() {
         }
 
     };
+const handleViewDetail = async (orderId) => {
+    try {
+        setLoadingDetail(true);
+
+        const res = await orderService.getById(orderId);
+
+        console.log("=== ORDER DETAIL ===");
+        console.log(res.data.data);
+
+        setSelectedOrder(res.data.data);
+
+    } catch (err) {
+        console.error(err);
+
+        alert(
+            err.response?.data?.message ||
+            err.message
+        );
+    } finally {
+        setLoadingDetail(false);
+    }
+};
         const getWeekRange = (date) => {
 
         const selected = new Date(date);
@@ -81,21 +105,63 @@ export default function OrderHistory() {
         return { start, end };
 
     };
+    const formatMoney = (value) => {
+    const number = Number(value);
+
+    if (!Number.isFinite(number)) {
+        return "0đ";
+    }
+
+    return `${number.toLocaleString("vi-VN")}đ`;
+};
+
+const getItemPrice = (item) => {
+    return Number(
+        item.price ??
+        item.unitPrice ??
+        item.food?.price ??
+        0
+    );
+};
+
+const getItemTotal = (item) => {
+    return (
+        getItemPrice(item) *
+        Number(item.quantity || 0)
+    );
+};
+
+const getOrderTotal = (order) => {
+    if (order.totalAmount != null) {
+        return Number(order.totalAmount);
+    }
+
+    return (order.orderItems || [])
+        .filter(item => item.status !== "CANCELLED")
+        .reduce(
+            (total, item) =>
+                total + getItemTotal(item),
+            0
+        );
+};
 
     const filterOrders = useMemo(() => {
 
         return orders.filter(order => {
 
             const matchCode =
-                order.orderCode
-                    .toLowerCase()
-                    .includes(orderCode.toLowerCase());
+    String(order.orderCode || "")
+        .toLowerCase()
+        .includes(orderCode.toLowerCase());
 
-            const matchCustomer =
-                order.customerName
-                    .toLowerCase()
-                    .includes(customerName.toLowerCase());
-
+const matchCustomer =
+    String(
+        order.customerName ||
+        order.customer?.name ||
+        ""
+    )
+        .toLowerCase()
+        .includes(customerName.toLowerCase());
             const matchType =
                 orderType === "ALL" ||
                 order.orderType === orderType;
@@ -565,16 +631,16 @@ export default function OrderHistory() {
                                 </td>
 
                                 <td className="p-3 text-right font-semibold text-red-500">
-                                    {Number(
-                                        order.totalAmount
-                                    ).toLocaleString()}đ
+                                    {formatMoney(getOrderTotal(order))}
                                 </td>
 
                                 <td className="p-3 text-center">
 
                                     <button
-                                        className="rounded bg-blue-500 px-3 py-1 text-white hover:bg-blue-600"
+                                        onClick={() => handleViewDetail(order.id)}
+                                        className="inline-flex items-center gap-1 rounded-lg bg-blue-500 px-3 py-1.5 text-sm text-white hover:bg-blue-600"
                                     >
+                                        <Eye size={16} />
                                         Xem
                                     </button>
 
@@ -589,6 +655,257 @@ export default function OrderHistory() {
                 </table>
 
             </div>
+            {selectedOrder && (
+
+                <div
+                    className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
+                    onClick={() => setSelectedOrder(null)}
+                >
+
+                    <div
+                        className="w-full max-w-2xl rounded-2xl bg-white shadow-xl"
+                        onClick={e => e.stopPropagation()}
+                    >
+
+                        {/* HEADER */}
+
+                        <div className="flex items-center justify-between border-b p-5">
+
+                            <div>
+
+                                <h2 className="text-xl font-bold">
+                                    Chi tiết hóa đơn
+                                </h2>
+
+                                <p className="mt-1 text-sm text-gray-500">
+                                    {selectedOrder.orderCode}
+                                </p>
+
+                            </div>
+
+                            <button
+                                onClick={() => setSelectedOrder(null)}
+                                className="rounded-lg p-2 hover:bg-gray-100"
+                            >
+                                <X size={20} />
+                            </button>
+
+                        </div>
+
+
+                        {/* CONTENT */}
+
+                        <div className="max-h-[70vh] overflow-y-auto p-5">
+
+                            {/* THÔNG TIN */}
+
+                            <div className="grid grid-cols-2 gap-4 rounded-xl bg-gray-50 p-4">
+
+                                <div>
+                                    <p className="text-sm text-gray-500">
+                                        Khách hàng
+                                    </p>
+
+                                    <p className="font-medium">
+                                        {selectedOrder.customer?.name ||
+                                            "Khách lẻ"}
+                                    </p>
+                                </div>
+
+
+                                <div>
+                                    <p className="text-sm text-gray-500">
+                                        Loại đơn
+                                    </p>
+
+                                    <p className="font-medium">
+                                        {selectedOrder.orderType === "DINE_IN"
+                                            ? "🍽️ Tại bàn"
+                                            : "🥡 Mang về"}
+                                    </p>
+                                </div>
+
+
+                                {selectedOrder.session?.table && (
+
+                                    <div>
+                                        <p className="text-sm text-gray-500">
+                                            Bàn
+                                        </p>
+
+                                        <p className="font-medium">
+                                            {selectedOrder.session.table.tableNumber}
+                                        </p>
+                                    </div>
+
+                                )}
+
+
+                                <div>
+                                    <p className="text-sm text-gray-500">
+                                        Thời gian
+                                    </p>
+
+                                    <p className="font-medium">
+                                        {new Date(
+                                            selectedOrder.createdAt
+                                        ).toLocaleString("vi-VN")}
+                                    </p>
+                                </div>
+
+                            </div>
+
+
+                            {/* DANH SÁCH MÓN */}
+
+                            <div className="mt-5">
+
+                                <h3 className="mb-3 font-semibold">
+                                    Danh sách món
+                                </h3>
+
+                                <div className="overflow-hidden rounded-xl border">
+
+                                    <table className="w-full">
+
+                                        <thead>
+
+                                            <tr className="bg-gray-100 text-sm">
+
+                                                <th className="p-3 text-left">
+                                                    Món
+                                                </th>
+
+                                                <th className="p-3 text-center">
+                                                    SL
+                                                </th>
+
+                                                <th className="p-3 text-right">
+                                                    Đơn giá
+                                                </th>
+
+                                                <th className="p-3 text-right">
+                                                    Thành tiền
+                                                </th>
+
+                                            </tr>
+
+                                        </thead>
+
+                                        <tbody>
+
+                                            {selectedOrder.orderItems
+                                                ?.filter(
+                                                    item =>
+                                                        item.status !== "CANCELLED"
+                                                )
+                                                .map(item => (
+
+                                                    <tr
+                                                        key={item.id}
+                                                        className="border-t"
+                                                    >
+
+                                                        <td className="p-3">
+
+                                                            <div className="font-medium">
+                                                                {item.food?.name}
+                                                            </div>
+
+                                                            {item.note && (
+
+                                                                <div className="text-xs text-gray-500">
+                                                                    Ghi chú: {item.note}
+                                                                </div>
+
+                                                            )}
+
+                                                        </td>
+
+                                                        <td className="p-3 text-center">
+                                                            {item.quantity}
+                                                        </td>
+
+                                                        <td className="p-3 text-right">
+                                                            {Number(
+                                                                item.price
+                                                            ).toLocaleString()}đ
+                                                        </td>
+
+                                                        <td className="p-3 text-right font-medium">
+                                                            {(
+                                                                Number(item.price) *
+                                                                item.quantity
+                                                            ).toLocaleString()}đ
+                                                        </td>
+
+                                                    </tr>
+
+                                                ))}
+
+                                        </tbody>
+
+                                    </table>
+
+                                </div>
+
+                            </div>
+
+
+                            {/* THANH TOÁN */}
+
+                            <div className="mt-5 border-t pt-4">
+
+                                <div className="flex justify-between">
+
+                                    <span className="text-gray-500">
+                                        Phương thức thanh toán
+                                    </span>
+
+                                    <span className="font-medium">
+                                        {selectedOrder.payment?.paymentMethod === "CASH"
+                                            ? "💵 Tiền mặt"
+                                            : "🏦 Chuyển khoản"}
+                                    </span>
+
+                                </div>
+
+
+                                <div className="mt-3 flex justify-between text-lg">
+
+                                    <span className="font-semibold">
+                                        Tổng cộng
+                                    </span>
+
+                                    <span className="font-bold text-red-500">
+                                        {Number(
+                                            selectedOrder.totalAmount
+                                        ).toLocaleString()}đ
+                                    </span>
+
+                                </div>
+
+
+                                {selectedOrder.payment?.paidAt && (
+
+                                    <div className="mt-2 text-right text-sm text-gray-500">
+                                        Thanh toán lúc:{" "}
+                                        {new Date(
+                                            selectedOrder.payment.paidAt
+                                        ).toLocaleString("vi-VN")}
+                                    </div>
+
+                                )}
+
+                            </div>
+
+                        </div>
+
+                    </div>
+
+                </div>
+
+            )}
 
         </div>
 

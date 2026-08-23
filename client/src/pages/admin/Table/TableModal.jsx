@@ -1,8 +1,7 @@
 import { useEffect, useState } from "react";
-import { X, RefreshCw } from "lucide-react";
+import { X } from "lucide-react";
 
 import Button from "../../../components/Button/Button";
-
 import tableService from "../../../services/table.service";
 
 export default function TableModal({
@@ -16,10 +15,14 @@ export default function TableModal({
     const emptyForm = {
         tableNumber: "",
         floorId: "",
-        qrCode: "",
+        capacity: 4,
     };
 
     const [form, setForm] = useState(emptyForm);
+
+    // ========================================
+    // LOAD FORM
+    // ========================================
 
     useEffect(() => {
 
@@ -30,7 +33,7 @@ export default function TableModal({
             setForm({
                 tableNumber: table.tableNumber,
                 floorId: table.floorId,
-                qrCode: table.qrCode,
+                capacity: table.capacity || 4,
             });
 
         } else {
@@ -38,27 +41,16 @@ export default function TableModal({
             setForm({
                 tableNumber: "",
                 floorId: floors[0]?.id ?? "",
-                qrCode: generateQR(),
+                capacity: 4,
             });
 
         }
 
     }, [open, table, floors]);
 
-    if (!open) return null;
-
-       
-
-    function generateQR() {
-
-        return (
-            "QR-" +
-            Date.now().toString(36).toUpperCase()
-        );
-
-    }
-
-       
+    // ========================================
+    // CHANGE
+    // ========================================
 
     const handleChange = (e) => {
 
@@ -71,11 +63,13 @@ export default function TableModal({
 
     };
 
-       
+    // ========================================
+    // SAVE
+    // ========================================
 
     const handleSubmit = async () => {
 
-        if (!form.tableNumber.trim()) {
+        if (!form.tableNumber) {
 
             alert("Nhập số bàn.");
 
@@ -83,22 +77,55 @@ export default function TableModal({
 
         }
 
+        if (!form.floorId) {
+
+            alert("Vui lòng chọn tầng.");
+
+            return;
+
+        }
+
+        if (
+            !form.capacity ||
+            Number(form.capacity) < 1
+        ) {
+
+            alert("Số người trong bàn không hợp lệ.");
+
+            return;
+
+        }
+
         try {
+
+            const data = {
+                tableNumber: Number(
+                    form.tableNumber
+                ),
+
+                floorId: Number(
+                    form.floorId
+                ),
+
+                capacity: Number(
+                    form.capacity
+                ),
+            };
 
             if (table) {
 
                 await tableService.update(
                     table.id,
-                    form
+                    data
                 );
 
             } else {
 
-                await tableService.create(form);
+                await tableService.create(data);
 
             }
 
-            reload();
+            await reload();
 
             onClose();
 
@@ -113,15 +140,15 @@ export default function TableModal({
 
     };
 
-       
+    if (!open) return null;
 
     return (
 
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
 
             <div className="w-full max-w-lg rounded-2xl bg-white shadow-xl">
 
-                {/* Header */}
+                {/* HEADER */}
 
                 <div className="flex items-center justify-between border-b p-5">
 
@@ -137,21 +164,21 @@ export default function TableModal({
                         onClick={onClose}
                         className="rounded-lg p-2 hover:bg-gray-100"
                     >
-                        <X size={20}/>
+                        <X size={20} />
                     </button>
 
                 </div>
 
-                {/* Body */}
+                {/* BODY */}
 
                 <div className="space-y-5 p-6">
+
+                    {/* TẦNG */}
 
                     <div>
 
                         <label className="mb-2 block font-semibold">
-
                             Tầng
-
                         </label>
 
                         <select
@@ -176,63 +203,53 @@ export default function TableModal({
 
                     </div>
 
+                    {/* SỐ BÀN */}
+
                     <div>
 
                         <label className="mb-2 block font-semibold">
-
-                            Tên bàn
-
+                            Số bàn
                         </label>
 
                         <input
                             type="number"
+                            min="1"
                             name="tableNumber"
                             value={form.tableNumber}
                             onChange={handleChange}
                             className="w-full rounded-lg border p-3"
-                            placeholder="Ví dụ: Bàn 1"
+                            placeholder="Ví dụ: 1"
                         />
 
                     </div>
 
+                    {/* SỐ NGƯỜI */}
+
                     <div>
 
                         <label className="mb-2 block font-semibold">
-
-                            QR Code
-
+                            Số người tối đa
                         </label>
 
-                        <div className="flex gap-2">
+                        <input
+                            type="number"
+                            min="1"
+                            name="capacity"
+                            value={form.capacity}
+                            onChange={handleChange}
+                            className="w-full rounded-lg border p-3"
+                            placeholder="Ví dụ: 4"
+                        />
 
-                            <input
-                                readOnly
-                                value={form.qrCode}
-                                className="flex-1 rounded-lg border bg-gray-100 p-3"
-                            />
-
-                            <button
-                                onClick={() =>
-                                    setForm(prev => ({
-                                        ...prev,
-                                        qrCode:
-                                            generateQR(),
-                                    }))
-                                }
-                                className="rounded-lg border p-3 hover:bg-gray-100"
-                            >
-                                <RefreshCw
-                                    size={18}
-                                />
-                            </button>
-
-                        </div>
+                        <p className="mt-1 text-xs text-gray-500">
+                            Số lượng khách tối đa mà bàn có thể phục vụ.
+                        </p>
 
                     </div>
 
                 </div>
 
-                {/* Footer */}
+                {/* FOOTER */}
 
                 <div className="flex justify-end gap-3 border-t p-5">
 
@@ -243,12 +260,12 @@ export default function TableModal({
                         Hủy
                     </Button>
 
-                    <Button
-                        onClick={handleSubmit}
-                    >
+                    <Button onClick={handleSubmit}>
+
                         {table
                             ? "Lưu"
                             : "Thêm bàn"}
+
                     </Button>
 
                 </div>

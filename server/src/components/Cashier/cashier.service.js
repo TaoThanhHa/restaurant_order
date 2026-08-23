@@ -1,5 +1,5 @@
 const prisma = require("../../config/prisma");
-
+const sseService = require("../../services/sse.service");
 // DASHBOARD
 const dashboard = async (branchId) => {
 
@@ -80,6 +80,94 @@ const dashboard = async (branchId) => {
         availableTables,
         occupiedTables,
     };
+
+};
+
+// ======================================================
+// SSE ORDER
+// CUSTOMER + BRANCH
+// ======================================================
+
+const notifyOrderCustomers = async (
+    orderId,
+    event = "order.updated"
+) => {
+
+    const order =
+        await prisma.order.findUnique({
+
+            where: {
+                id: Number(orderId),
+            },
+
+            select: {
+
+                id: true,
+                branchId: true,
+
+                session: {
+                    select: {
+                        tableId: true,
+                    },
+                },
+
+                orderMembers: {
+                    select: {
+                        customerId: true,
+                    },
+                },
+
+            },
+
+        });
+
+    if (!order) {
+        return;
+    }
+
+    const payload = {
+
+        orderId: order.id,
+
+        tableId:
+            order.session?.tableId ||
+            null,
+
+    };
+
+
+    // ==========================================
+    // CUSTOMER
+    // ==========================================
+
+    const customerIds = [
+        ...new Set(
+            order.orderMembers
+                .map(item => item.customerId)
+                .filter(Boolean)
+        ),
+    ];
+
+    for (const customerId of customerIds) {
+
+        sseService.sendToCustomer(
+            customerId,
+            event,
+            payload
+        );
+
+    }
+
+
+    // ==========================================
+    // STAFF / CASHIER
+    // ==========================================
+
+    sseService.sendToBranch(
+        order.branchId,
+        event,
+        payload
+    );
 
 };
 
@@ -371,7 +459,6 @@ const updateOrderItemStatus = async (
 
     const flow = {
         PENDING: "CONFIRMED",
-        PREPARING:"PREPARING",
         CONFIRMED: "PREPARING",
         PREPARING: "READY",
         READY: "SERVED",
@@ -396,6 +483,9 @@ const updateOrderItemStatus = async (
                 food: true,
             },
         });
+        await notifyOrderCustomers(
+    item.order.id
+);
         return updated;
     }
     // Kiểm tra flow
@@ -416,7 +506,10 @@ const updateOrderItemStatus = async (
             food: true,
         },
     });
-    return updated;
+    await notifyOrderCustomers(
+    item.order.id
+);
+return updated;
 };
 
 // GET ORDER DETAIL
@@ -569,7 +662,10 @@ const payment = async (orderId, data) => {
         throw new Error("Hóa đơn không tồn tại.");
     }
 
-    if (item.order.status === "COMPLETED" || item.order.status === "CANCELLED") {
+    if (
+        order.status === "COMPLETED" ||
+        order.status === "CANCELLED"
+    ) {
         throw new Error("Hóa đơn đã thanh toán.");
     }
 
@@ -1077,6 +1173,7 @@ const getStatistics = async (branchId) => {
 
 module.exports = {
     dashboard,
+    notifyOrderCustomers,
     getTables,
     getPendingOrders,
     getServingOrders,

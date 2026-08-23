@@ -1,5 +1,75 @@
 const prisma = require("../../config/prisma");
 
+const sseService =  require("../../services/sse.service");
+const notifyOrderCustomers = async (
+    orderId,
+    event = "order.updated"
+) => {
+
+    const order = await prisma.order.findUnique({
+        where: {
+            id: Number(orderId),
+        },
+        select: {
+            id: true,
+            branchId: true,
+
+            session: {
+                select: {
+                    tableId: true,
+                },
+            },
+
+            orderMembers: {
+                select: {
+                    customerId: true,
+                },
+            },
+        },
+    });
+
+    if (!order) {
+        return;
+    }
+
+    const payload = {
+        orderId: order.id,
+        tableId: order.session?.tableId || null,
+    };
+
+    // ========================================
+    // GỬI CHO CUSTOMER
+    // ========================================
+
+    const customerIds = [
+        ...new Set(
+            order.orderMembers
+                .map(item => item.customerId)
+                .filter(Boolean)
+        ),
+    ];
+
+    for (const customerId of customerIds) {
+
+        sseService.sendToCustomer(
+            customerId,
+            event,
+            payload
+        );
+
+    }
+
+    // ========================================
+    // GỬI CHO CASHIER / STAFF CHI NHÁNH
+    // ========================================
+
+    sseService.sendToBranch(
+        order.branchId,
+        event,
+        payload
+    );
+};
+
 // ORDER
 const create = async (data) => {
   const {
@@ -68,7 +138,6 @@ const create = async (data) => {
                   orderId: order.id,
               },
           });
-
       }
 
       return order;
@@ -97,6 +166,8 @@ const create = async (data) => {
       },
   });
 
+  
+
   await updateTableStatus(customer.session.tableId);
 
   const tableUpdated = await prisma.table.update({
@@ -108,9 +179,10 @@ const create = async (data) => {
   },
 });
 
-console.log(tableUpdated);
+await notifyOrderCustomers(order.id);
   return await getById(order.id);
 };
+
 
   
 // UPDATE TABLE STATUS
@@ -147,8 +219,6 @@ const updateTableStatus = async (tableId) => {
     });
 };
 
-  
-// GET ORDER DETAIL
 // GET ORDER DETAIL
 const getById = async (id) => {
 
@@ -264,30 +334,6 @@ const addItem = async (orderId, data) => {
     throw new Error("Món ăn đã hết.");
   }
 
-  // Kiểm tra món đã có trong order chưa
-/*   const existed = await prisma.orderItem.findFirst({
-    where: {
-      orderId,
-      foodId: Number(foodId),
-    },
-  });
-
-  // Nếu đã có thì cộng số lượng
-  if (existed) {
-    return await prisma.orderItem.update({
-      where: {
-        id: existed.id,
-      },
-      data: {
-        quantity: existed.quantity + Number(quantity),
-        note: note ?? existed.note,
-      },
-      include: {
-        food: true,
-      },
-    });
-  } */
-
   // Thêm món mới
   const item = await prisma.orderItem.create({
       data: {
@@ -311,6 +357,10 @@ const addItem = async (orderId, data) => {
           status: "PENDING",
       },
   });
+
+  await notifyOrderCustomers(
+    orderId
+);
 
   return item;
 };
@@ -434,6 +484,9 @@ const confirmItems = async (orderId) => {
                 item.quantity,
             0
         );
+        await notifyOrderCustomers(
+            orderId
+        );
 
     return {
         ...updatedOrder,
@@ -475,24 +528,34 @@ const updateItem = async (itemId, data) => {
   if(item.status!="PENDING"){
     throw new Error("Món đã được bếp xác nhận, không thể chỉnh sửa.");
   }
-  return await prisma.orderItem.update({
-    where: {
-      id: itemId,
-    },
-    data: {
-      quantity:
-        quantity !== undefined
-          ? Number(quantity)
-          : item.quantity,
-      note:
-        note !== undefined
-          ? note
-          : item.note,
-    },
-    include: {
-      food: true,
-    },
-  });
+  const updatedItem =
+    await prisma.orderItem.update({
+        where: {
+            id: itemId,
+        },
+        data: {
+            quantity:
+                quantity !== undefined
+                    ? Number(quantity)
+                    : item.quantity,
+
+            note:
+                note !== undefined
+                    ? note
+                    : item.note,
+        },
+        include: {
+            food: true,
+        },
+    });
+
+
+await notifyOrderCustomers(
+    item.order.id
+);
+
+
+return updatedItem;
 };
 
   
@@ -602,7 +665,8 @@ const updateStatus = async (orderId, status) => {
             break;
     }
 
-    return await prisma.order.update({
+const updatedOrder =
+    await prisma.order.update({
         where: {
             id: orderId,
         },
@@ -610,6 +674,14 @@ const updateStatus = async (orderId, status) => {
             status,
         },
     });
+
+
+await notifyOrderCustomers(
+    orderId
+);
+
+
+return updatedOrder;
 };
 
   
@@ -881,7 +953,9 @@ const payment = async (orderId, data) => {
         }
 
     });
-
+await notifyOrderCustomers(
+    orderId
+);
 
     return {
 
@@ -1289,9 +1363,155 @@ const mergeOrders = async ({
 
 };
 
+const getActiveOrderByTable = async (tableQrCode) => {
+
+    if (!tableQrCode) {
+        throw new Error("Thiếu mã bàn.");
+    }
+
+    const table = await prisma.table.findUnique({
+        where: {
+            qrCode: tableQrCode,
+        },
+
+        include: {
+            floor: true,
+
+            sessions: {
+                where: {
+                    status: "ACTIVE",
+                },
+
+                include: {
+                    orders: {
+                        where: {
+                            status: {
+                                in: ACTIVE_ORDER_STATUSES,
+                            },
+                        },
+
+                        orderBy: {
+                            createdAt: "asc",
+                        },
+
+                        select: {
+                            id: true,
+                            orderCode: true,
+                            totalAmount: true,
+                            status: true,
+                            createdAt: true,
+                        },
+                    },
+                },
+            },
+        },
+    });
+
+    if (!table) {
+        throw new Error("Bàn không tồn tại.");
+    }
+
+    const session = table.sessions[0];
+
+    if (!session) {
+        return {
+            hasActiveOrder: false,
+            table: {
+                id: table.id,
+                tableNumber: table.tableNumber,
+                qrCode: table.qrCode,
+            },
+        };
+    }
+
+    const orders = session.orders;
+
+    return {
+        hasActiveOrder: orders.length > 0,
+
+        table: {
+            id: table.id,
+            tableNumber: table.tableNumber,
+            qrCode: table.qrCode,
+        },
+
+        sessionId: session.id,
+
+        orders,
+    };
+};
+
+// ========================================
+// STAFF LẤY ORDER ĐANG CHỜ XÁC NHẬN
+// ========================================
+const getPendingOrders = async (branchId) => {
+
+    return await prisma.order.findMany({
+
+        where: {
+            branchId: Number(branchId),
+
+            status: "PENDING",
+
+            orderType: {
+                in: [
+                    "DINE_IN",
+                    "TAKE_AWAY",
+                ],
+            },
+        },
+
+        include: {
+
+            createdBy: {
+                select: {
+                    id: true,
+                    name: true,
+                },
+            },
+
+            session: {
+                include: {
+                    table: {
+                        select: {
+                            id: true,
+                            tableNumber: true,
+                            qrCode: true,
+                        },
+                    },
+                },
+            },
+
+            orderItems: {
+                where: {
+                    status: "PENDING",
+                },
+
+                include: {
+                    food: {
+                        select: {
+                            id: true,
+                            name: true,
+                            price: true,
+                        },
+                    },
+                },
+            },
+
+        },
+
+        orderBy: {
+            createdAt: "asc",
+        },
+
+    });
+
+};
+
 module.exports = {
   create,
   updateTableStatus,
+  notifyOrderCustomers,
   getById,
 
   addItem,
@@ -1308,4 +1528,6 @@ module.exports = {
 
   getHistory,
   mergeOrders,
+  getActiveOrderByTable,
+  getPendingOrders,
 };

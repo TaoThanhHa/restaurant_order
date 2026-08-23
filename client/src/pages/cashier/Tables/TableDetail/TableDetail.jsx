@@ -1,4 +1,4 @@
-import { useEffect,useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 
 import tableService from "../../../../services/table.service";
@@ -9,138 +9,572 @@ import InvoicePanel from "./InvoicePanel";
 import FoodPanel from "./FoodPanel";
 import InvoicePanelOrder from "./InvoicePanelOrder";
 import MergeOrderModal from "../components/MergeOrderModal";
+
 export default function TableDetail() {
 
     const { tableId } = useParams();
 
-    const [loading,setLoading]=useState(true);
-    const [table,setTable]=useState(null);
-    const [selectedOrder,setSelectedOrder]=useState(null);
-    const [showFoodPanel, setShowFoodPanel] = useState(false);
-    const [cart,setCart]=useState([]);
+    const [loading, setLoading] =
+        useState(true);
 
-    const [openMerge, setOpenMerge] = useState(false);
+    const [table, setTable] =
+        useState(null);
 
-    const loadTable = async () => {
-    try {
+    const [selectedOrder, setSelectedOrder] =
+        useState(null);
 
-        setLoading(true);
+    const [showFoodPanel, setShowFoodPanel] =
+        useState(false);
 
-        const res = await tableService.getById(tableId);
+    const [cart, setCart] =
+        useState([]);
 
-        console.log("res.data =", res.data);
+    const [openMerge, setOpenMerge] =
+        useState(false);
 
-        const tableData = res.data;
 
-        console.log("table =", tableData);
+    // =================================================
+    // LOAD TABLE
+    // =================================================
 
-        setTable(tableData);
+    const loadTable = useCallback(
+    async (showLoading = false) => {
 
-        if (tableData.orders?.length) {
-            setSelectedOrder(tableData.orders[0]);
-        } else {
-            setSelectedOrder(null);
-        }
-
-    } catch (err) {
-
-        console.log(err);
-
-    } finally {
-
-        setLoading(false);
-
-    }
-};
-
-    const handleCreateOrder = async () => {
         try {
 
-            // mở bàn nếu chưa có customer
-            const customerRes = await tableService.open(
-                table.id,
-                {
-                    name: `Khách bàn ${table.tableNumber}`
+            if (showLoading) {
+                setLoading(true);
+            }
+
+            const res =
+                await tableService.getById(
+                    tableId
+                );
+
+            const newTable =
+                res?.data;
+
+            if (!newTable) {
+                return;
+            }
+
+            setTable(prev => {
+
+                if (!prev) {
+                    return newTable;
+                }
+
+                const oldOrders =
+                    prev.orders || [];
+
+                const newOrders =
+                    newTable.orders || [];
+
+                const ordersChanged =
+                    oldOrders.length !==
+                        newOrders.length ||
+
+                    oldOrders.some(
+                        (oldOrder, index) => {
+
+                            const newOrder =
+                                newOrders[index];
+
+                            if (!newOrder) {
+                                return true;
+                            }
+
+                            return (
+                                oldOrder.id !==
+                                    newOrder.id ||
+
+                                oldOrder.status !==
+                                    newOrder.status ||
+
+                                oldOrder.updatedAt !==
+                                    newOrder.updatedAt
+                            );
+                        }
+                    );
+
+                const tableChanged =
+                    prev.status !==
+                        newTable.status ||
+                    ordersChanged;
+
+                return tableChanged
+                    ? newTable
+                    : prev;
+            });
+
+            setSelectedOrder(
+                prevSelected => {
+
+                    const newOrders =
+                        newTable.orders || [];
+
+                    if (!prevSelected) {
+
+                        return newOrders.length > 0
+                            ? newOrders[0]
+                            : null;
+
+                    }
+
+                    const updatedOrder =
+                        newOrders.find(
+                            order =>
+                                order.id ===
+                                prevSelected.id
+                        );
+
+                    if (!updatedOrder) {
+
+                        return newOrders.length > 0
+                            ? newOrders[0]
+                            : null;
+
+                    }
+
+                    if (
+                        updatedOrder.status ===
+                            prevSelected.status &&
+
+                        updatedOrder.updatedAt ===
+                            prevSelected.updatedAt
+                    ) {
+                        return prevSelected;
+                    }
+
+                    return updatedOrder;
                 }
             );
 
-            // tạo order
-            const orderRes = await orderService.create({
-                customerId: customerRes.data.customer.id,
-            });
-
-            await loadTable();
-
-            setSelectedOrder(orderRes.data.data);
-
-            setShowFoodPanel(true);
-
         } catch (err) {
 
-            alert(
-                err.response?.data?.message ||
-                err.message
+            console.error(
+                "LOAD TABLE DETAIL ERROR:",
+                err
+            );
+
+        } finally {
+
+            if (showLoading) {
+                setLoading(false);
+            }
+
+        }
+
+    },
+    [tableId]
+);
+
+
+    // =================================================
+    // LOAD LẦN ĐẦU + POLLING
+    // =================================================
+
+    useEffect(() => {
+
+        if (!tableId) {
+            return;
+        }
+
+
+        // Load lần đầu
+
+        loadTable(true);
+
+
+    }, [tableId]);
+
+    // =================================================
+// SSE BRANCH
+// =================================================
+
+useEffect(() => {
+
+    const token =
+        localStorage.getItem("token");
+
+    if (!token) {
+        return;
+    }
+
+    const eventSource =
+        new EventSource(
+            `${import.meta.env.VITE_API_URL}/events/branch?token=${encodeURIComponent(token)}`
+        );
+
+    eventSource.addEventListener(
+        "connected",
+        event => {
+
+            console.log(
+                "SSE TABLE CONNECTED:",
+                JSON.parse(event.data)
             );
 
         }
+    );
+
+    eventSource.addEventListener(
+        "order.updated",
+        event => {
+
+            try {
+
+                const data =
+                    JSON.parse(event.data);
+
+                console.log(
+                    "TABLE ORDER UPDATED:",
+                    data
+                );
+
+                if (
+                    data?.tableId &&
+                    Number(data.tableId) !==
+                    Number(tableId)
+                ) {
+                    return;
+                }
+
+                loadTable(false);
+
+            } catch (error) {
+
+                console.error(
+                    "SSE ORDER ERROR:",
+                    error
+                );
+
+            }
+
+        }
+    );
+
+    eventSource.onerror = error => {
+
+        console.error(
+            "SSE ERROR:",
+            error
+        );
+
     };
 
-    const handleAddFood = (order) => {
-        setSelectedOrder(order);
-        setShowFoodPanel(true);
+    return () => {
+        eventSource.close();
     };
 
-    useEffect(()=>{
-        loadTable();
-    },[tableId]);
+}, [tableId, loadTable]);
 
-    if(loading){
-        return(
-            <div className="flex h-full items-center justify-center">
+
+    // =================================================
+    // ORDER UPDATED TỪ COMPONENT CON
+    // =================================================
+
+    const handleOrderUpdated =
+        (updatedOrder) => {
+
+            if (!updatedOrder) {
+                return;
+            }
+
+
+            // selected order
+
+            setSelectedOrder(
+                updatedOrder
+            );
+
+
+            // table.orders
+
+            setTable(prev => {
+
+                if (!prev) {
+                    return prev;
+                }
+
+
+                const orders =
+                    prev.orders || [];
+
+
+                const exists =
+                    orders.some(
+                        order =>
+                            order.id ===
+                            updatedOrder.id
+                    );
+
+
+                if (!exists) {
+
+                    return {
+                        ...prev,
+                        orders: [
+                            ...orders,
+                            updatedOrder,
+                        ],
+                    };
+
+                }
+
+
+                return {
+
+                    ...prev,
+
+                    orders:
+                        orders.map(order =>
+                            order.id ===
+                            updatedOrder.id
+                                ? updatedOrder
+                                : order
+                        ),
+
+                };
+
+            });
+
+        };
+
+
+    // =================================================
+    // CREATE ORDER
+    // =================================================
+
+    const handleCreateOrder =
+        async () => {
+
+            try {
+
+                const customerRes =
+                    await tableService.open(
+                        table.id,
+                        {
+                            name:
+                                `Khách bàn ${table.tableNumber}`,
+                        }
+                    );
+
+
+                const orderRes =
+                    await orderService.create({
+
+                        customerId:
+                            customerRes.data.customer.id,
+
+                    });
+
+
+                // Load lại ngay
+                await loadTable(false);
+
+
+                const createdOrder =
+                    orderRes?.data?.data;
+
+
+                if (createdOrder) {
+
+                    setSelectedOrder(
+                        createdOrder
+                    );
+
+                }
+
+
+                setShowFoodPanel(true);
+
+
+            } catch (err) {
+
+                alert(
+                    err.response?.data?.message ||
+                    err.message ||
+                    "Không thể tạo đơn."
+                );
+
+            }
+
+        };
+
+
+    // =================================================
+    // ADD FOOD
+    // =================================================
+
+    const handleAddFood =
+        (order) => {
+
+            setSelectedOrder(order);
+
+            setCart([]);
+
+            setShowFoodPanel(true);
+
+        };
+
+
+    // =================================================
+    // LOADING
+    // =================================================
+
+    if (loading) {
+
+        return (
+
+            <div className="flex min-h-[50vh] items-center justify-center">
+
                 Đang tải...
+
             </div>
+
         );
+
     }
 
-    if(!table){
-        return(
-            <div className="flex h-full items-center justify-center">
+
+    // =================================================
+    // NOT FOUND
+    // =================================================
+
+    if (!table) {
+
+        return (
+
+            <div className="flex min-h-[50vh] items-center justify-center">
+
                 Không tìm thấy bàn.
+
             </div>
+
         );
+
     }
+
+
+    // =================================================
+    // RENDER
+    // =================================================
 
     return (
-        <>
-            {!showFoodPanel ? (
-            <div className="grid h-[calc(100vh-85px)] grid-cols-2 gap-2 bg-[#FEF8F2]">
-                <div className="rounded-xl bg-white shadow overflow-hidden">
-                    <OrderList
-                        table={table}
-                        orders={table.orders}
-                        selectedOrder={selectedOrder}
-                        onSelectOrder={setSelectedOrder}
-                        onCreateOrder={handleCreateOrder}
-                        reload={loadTable}
-                        onMergeOrders={() => setOpenMerge(true)}
-                    />
-                </div>
 
-                <div className="flex-1 rounded-xl bg-white shadow overflow-hidden">
-                    <InvoicePanel
-                        order={selectedOrder}
-                        reload={loadTable}
-                        onAddFood={handleAddFood}
-                        table={table}
-                    />
+        <>
+
+            {!showFoodPanel ? (
+
+                <div
+                    className="
+                        grid
+                        min-h-[calc(100vh-85px)]
+                        grid-cols-1
+                        gap-3
+                        bg-[var(--color-background)]
+                        p-2
+                        lg:grid-cols-2
+                        lg:gap-2
+                    "
+                >
+
+                    {/* ORDER LIST */}
+
+                    <div
+                        className="
+                            min-h-[400px]
+                            overflow-hidden
+                            rounded-xl
+                            bg-white
+                            shadow
+                            lg:h-[calc(100vh-85px)]
+                        "
+                    >
+
+                        <OrderList
+                            table={table}
+                            orders={table.orders || []}
+                            selectedOrder={selectedOrder}
+                            onSelectOrder={
+                                setSelectedOrder
+                            }
+                            onCreateOrder={
+                                handleCreateOrder
+                            }
+                            reload={
+                                loadTable
+                            }
+                            onMergeOrders={() =>
+                                setOpenMerge(true)
+                            }
+                            onOrderUpdated={
+                                handleOrderUpdated
+                            }
+                        />
+
+                    </div>
+
+
+                    {/* INVOICE */}
+
+                    <div
+                        className="
+                            min-h-[500px]
+                            overflow-hidden
+                            rounded-xl
+                            bg-white
+                            shadow
+                            lg:h-[calc(100vh-85px)]
+                        "
+                    >
+
+                        <InvoicePanel
+                            order={selectedOrder}
+                            reload={loadTable}
+                            onAddFood={
+                                handleAddFood
+                            }
+                            table={table}
+                            onOrderUpdated={
+                                handleOrderUpdated
+                            }
+                        />
+
+                    </div>
+
                 </div>
-            </div>
 
             ) : (
 
-                <div className="grid h-[calc(100vh-85px)] grid-cols-12 gap-2 bg-[#FEF8F2]">
+                <div
+                    className="
+                        grid
+                        min-h-[calc(100vh-85px)]
+                        grid-cols-1
+                        gap-3
+                        bg-[#FEF8F2]
+                        p-2
+                        lg:grid-cols-12
+                        lg:gap-2
+                    "
+                >
 
-                    <div className="col-span-8 overflow-hidden rounded-3xl bg-white shadow">
+                    {/* FOOD PANEL */}
+
+                    <div
+                        className="
+                            min-h-[600px]
+                            overflow-hidden
+                            rounded-2xl
+                            bg-white
+                            shadow
+                            lg:col-span-8
+                            lg:h-[calc(100vh-85px)]
+                        "
+                    >
+
                         <FoodPanel
                             title="Order"
                             table={table}
@@ -148,32 +582,72 @@ export default function TableDetail() {
                             cart={cart}
                             setCart={setCart}
                             reload={loadTable}
-                            onBack={() => setShowFoodPanel(false)}
+                            onBack={() =>
+                                setShowFoodPanel(false)
+                            }
                             showBack
                         />
+
                     </div>
 
-                    <div className="col-span-4 flex h-full flex-col overflow-hidden rounded-3xl bg-white shadow">
+
+                    {/* CART */}
+
+                    <div
+                        className="
+                            min-h-[400px]
+                            overflow-hidden
+                            rounded-2xl
+                            bg-white
+                            shadow
+                            lg:col-span-4
+                            lg:h-[calc(100vh-85px)]
+                        "
+                    >
+
                         <InvoicePanelOrder
                             cart={cart}
                             setCart={setCart}
                             table={table}
                             order={selectedOrder}
                             reload={loadTable}
-                            onBack={() => setShowFoodPanel(false)}
+                            onBack={() =>
+                                setShowFoodPanel(false)
+                            }
                         />
+
                     </div>
+
                 </div>
-                
+
             )}
+
+
+            {/* MERGE */}
 
             <MergeOrderModal
                 open={openMerge}
-                onClose={() => setOpenMerge(false)}
-                orders={table.orders || []}
-                reload={loadTable}
-                onSelectOrder={setSelectedOrder}
+
+                onClose={() =>
+                    setOpenMerge(false)
+                }
+
+                orders={
+                    table.orders || []
+                }
+
+                reload={
+                    loadTable
+                }
+
+                onSelectOrder={
+                    setSelectedOrder
+                }
+
             />
+
         </>
+
     );
+
 }

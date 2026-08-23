@@ -19,11 +19,25 @@ router.post(
 );
 
 router.get(
-    "/history",
+  "/table/:tableId/active",
+  auth,
+  orderController.getActiveOrderByTable
+);
+
+router.get(
+    "/pending",
     auth,
     authorize("CASHIER"),
+    orderController.getPendingOrders
+);
+
+router.get(
+    "/history",
+    auth,
+    authorize("CASHIER", "ORDER"),
     orderController.getHistory
 );
+
 
 // Chi tiết đơn
 router.get(
