@@ -280,34 +280,22 @@ const create = async (
         // ========================================
 
         if (!order) {
+            order = await tx.order.create({
+                data: {
+                    orderCode: `OD${Date.now()}`,
+                    sessionId: session.id,
+                    branchId: table.floor.branchId,
+                    orderType: "DINE_IN",
+                    status: "PENDING",
+                    totalAmount: 0,
+                    createdByCustomerId: customerId,
+                },
 
-            order =
-                await tx.order.create({
-                    data: {
-                        orderCode:
-                            `OD${Date.now()}-${Math.floor(
-                                Math.random() * 1000
-                            )}`,
-
-                        sessionId: session.id,
-
-                        branchId:
-                            table.floor.branchId,
-
-                        orderType:
-                            "DINE_IN",
-
-                        status:
-                            "PENDING",
-
-                        totalAmount: 0,
-                    },
-
-                    include: {
-                        orderItems: true,
-                        orderMembers: true,
-                    },
-                });
+                include: {
+                    orderItems: true,
+                    orderMembers: true,
+                },
+            });
         }
 
         // ========================================
@@ -437,6 +425,10 @@ const create = async (
         // UPDATE TOTAL
         // ========================================
 
+        // ========================================
+        // UPDATE TOTAL + ĐƯA ORDER VỀ CHỜ XÁC NHẬN
+        // ========================================
+
         return tx.order.update({
             where: {
                 id: order.id,
@@ -444,6 +436,7 @@ const create = async (
 
             data: {
                 totalAmount: total,
+                status: "PENDING",
             },
 
             include: {

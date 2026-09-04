@@ -1,4 +1,4 @@
-// src/pages/cashier/Dashboard.jsx
+// src/pages/branch/Dashboard.jsx
 
 import { Link } from "react-router-dom";
 import { Building2, UtensilsCrossed, ChartNoAxesCombined, Table2, Users } from "lucide-react";

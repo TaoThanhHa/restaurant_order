@@ -57,11 +57,8 @@ export default function CurrentOrderCard({ order }) {
 
     return (
         <div className="rounded-3xl bg-white p-6 shadow">
-
             {/* HEADER */}
-
             <div className="flex items-center justify-between">
-
                 <div>
                     <h3 className="text-xl font-bold">
                         Đơn hiện tại
@@ -72,17 +69,12 @@ export default function CurrentOrderCard({ order }) {
                     </p>
                 </div>
 
-                <span
-                    className={`rounded-full px-3 py-1 text-sm font-semibold ${status.className}`}
-                >
+                <span  className={`rounded-full px-3 py-1 text-sm font-semibold ${status.className}`}>
                     {status.text}
                 </span>
-
             </div>
 
-
             {/* ITEMS */}
-
             <div className="mt-5 space-y-3">
 
                 {order.orderItems?.map((item) => (
@@ -93,7 +85,6 @@ export default function CurrentOrderCard({ order }) {
                     >
 
                         <div className="min-w-0">
-
                             <div className="font-medium">
                                 {item.food?.name}
                             </div>
@@ -103,11 +94,9 @@ export default function CurrentOrderCard({ order }) {
                                     Ghi chú: {item.note}
                                 </div>
                             )}
-
                         </div>
 
                         <div className="ml-4 text-right">
-
                             <div className="font-medium">
                                 x{item.quantity}
                             </div>
@@ -115,20 +104,13 @@ export default function CurrentOrderCard({ order }) {
                             <div className="text-sm text-gray-500">
                                 {Number(item.price).toLocaleString()}đ
                             </div>
-
                         </div>
-
                     </div>
-
                 ))}
-
             </div>
 
-
             {/* TOTAL */}
-
             <div className="mt-5 flex items-center justify-between border-t pt-4">
-
                 <span className="font-semibold">
                     Tổng tiền
                 </span>
@@ -136,9 +118,7 @@ export default function CurrentOrderCard({ order }) {
                 <span className="text-xl font-bold text-red-500">
                     {total.toLocaleString()}đ
                 </span>
-
             </div>
-
         </div>
     );
 }

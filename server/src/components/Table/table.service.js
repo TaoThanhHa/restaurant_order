@@ -71,6 +71,7 @@ const notifyOrderCustomers = async (
 };
 
 // GET TABLES BY FLOOR
+// GET TABLES BY FLOOR
 const getByFloor = async (branchId, floorId) => {
 
   if (!floorId) {
@@ -79,8 +80,8 @@ const getByFloor = async (branchId, floorId) => {
 
   const floor = await prisma.floor.findFirst({
     where: {
-      id: floorId,
-      branchId,
+      id: Number(floorId),
+      branchId: Number(branchId),
     },
   });
 
@@ -90,13 +91,15 @@ const getByFloor = async (branchId, floorId) => {
 
   const tables = await prisma.table.findMany({
     where: {
-      floorId,
+      floorId: Number(floorId),
     },
+
     include: {
       sessions: {
         where: {
           status: "ACTIVE",
         },
+
         include: {
           orders: {
             where: {
@@ -104,37 +107,56 @@ const getByFloor = async (branchId, floorId) => {
                 notIn: ["COMPLETED", "CANCELLED"],
               },
             },
+
             include: {
-              createdBy: true,
+              // Người tạo đơn có thể là nhân viên
+              createdByUser: true,
+
+              // Hoặc khách hàng
+              createdByCustomer: true,
+
               orderItems: true,
             },
           },
         },
       },
     },
+
     orderBy: {
       tableNumber: "asc",
     },
   });
 
   return tables.map((table) => {
+
     const session = table.sessions[0];
+
     const orders = session
-        ? session.orders.map(order => ({
-              ...order,
-              customer: order.createdBy,
-          }))
-        : [];
+      ? session.orders.map((order) => ({
+          ...order,
+
+          // Chuẩn hóa lại để frontend cashier vẫn có thể dùng `customer`
+          customer:
+            order.createdByCustomer ||
+            order.createdByUser ||
+            null,
+        }))
+      : [];
 
     return {
-        ...table,
-        orders, // tất cả đơn của bàn
-        currentOrder: orders[0] || null, // giữ lại nếu chỗ khác đang dùng
-        hasOrder: orders.length > 0,
-        totalItems: orders.reduce(
-            (sum, order) => sum + order.orderItems.length,
-            0
-        ),
+      ...table,
+
+      orders,
+
+      currentOrder: orders[0] || null,
+
+      hasOrder: orders.length > 0,
+
+      totalItems: orders.reduce(
+        (sum, order) =>
+          sum + order.orderItems.length,
+        0
+      ),
     };
   });
 };
@@ -168,7 +190,8 @@ const getById = async (id) => {
                 }
             },
             include:{
-                createdBy:true,
+                createdByUser:true,
+                createdByCustomer: true,
                 orderMembers:{
                     include:{
                         customer:true
@@ -196,11 +219,14 @@ const getById = async (id) => {
   const session = table.sessions[0];
 
   const orders = session
-      ? session.orders.map(order => ({
-            ...order,
-            customer: order.createdBy, // dùng người tạo đơn làm khách đại diện
-        }))
-      : [];
+    ? session.orders.map((order) => ({
+          ...order,
+          customer:
+              order.createdByCustomer ||
+              order.createdByUser ||
+              null,
+      }))
+    : [];
 
   return {
       ...table,
@@ -419,7 +445,7 @@ const scanQr = async (qrCode) => {
           },
         },
         include: {
-          customer: true,
+          createdByCustomer: true,
           orderItems: {
             include: {
               food: true,

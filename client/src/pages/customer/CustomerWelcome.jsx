@@ -15,9 +15,9 @@ import useCustomerAuth from "../../hooks/useCustomerAuth";
 import styles from "./Customer.module.css";
 
 
-// =================================================
+
 // DEVICE ID
-// =================================================
+
 
 function getDeviceId() {
 
@@ -38,9 +38,9 @@ function getDeviceId() {
 }
 
 
-// =================================================
+
 // CUSTOMER WELCOME
-// =================================================
+
 
 export default function CustomerWelcome() {
 
@@ -62,18 +62,18 @@ export default function CustomerWelcome() {
     const { login } = useCustomerAuth();
 
 
-    // =================================================
+    
     // SERVER URL
-    // =================================================
+    
 
     const SERVER_URL =
         import.meta.env.VITE_API_URL
             ?.replace(/\/api\/?$/, "") || "";
 
 
-    // =================================================
+    
     // IMAGE URL
-    // =================================================
+    
 
     const getImageUrl = (url) => {
 
@@ -93,9 +93,9 @@ export default function CustomerWelcome() {
     };
 
 
-    // =================================================
+    
     // LOAD RESTAURANT
-    // =================================================
+    
 
     useEffect(() => {
 
@@ -112,9 +112,9 @@ export default function CustomerWelcome() {
                 );
 
 
-                // =====================================
+                
                 // API CỦA BẠN TRẢ DATA Ở res.message
-                // =====================================
+                
 
                 const data = res?.message;
 
@@ -148,9 +148,9 @@ export default function CustomerWelcome() {
     }, []);
 
 
-    // =================================================
+    
     // CHECK AUTH + LOAD TABLE
-    // =================================================
+    
 
     useEffect(() => {
 
@@ -167,9 +167,9 @@ export default function CustomerWelcome() {
                 }
 
 
-                // =====================================
+                
                 // LẤY THÔNG TIN BÀN
-                // =====================================
+                
 
                 const tableRes =
                     await customerAuthService.getTable(
@@ -182,9 +182,9 @@ export default function CustomerWelcome() {
                 setTable(currentTable);
 
 
-                // =====================================
+                
                 // KIỂM TRA TOKEN
-                // =====================================
+                
 
                 const token =
                     localStorage.getItem(
@@ -202,9 +202,9 @@ export default function CustomerWelcome() {
                 }
 
 
-                // =====================================
+                
                 // KIỂM TRA TOKEN CÒN HỢP LỆ
-                // =====================================
+                
 
                 try {
 
@@ -223,10 +223,10 @@ export default function CustomerWelcome() {
                     }
 
 
-                    // =================================
+                    
                     // ĐÃ ĐĂNG NHẬP
                     // → VÀO HOME
-                    // =================================
+                    
 
                     navigate(
                         `/customer/home/${currentTable.qrCode}`,
@@ -270,9 +270,9 @@ export default function CustomerWelcome() {
     }, [qrCode, navigate]);
 
 
-    // =================================================
+    
     // GUEST
-    // =================================================
+    
 
     const handleGuest = async () => {
 
@@ -292,9 +292,9 @@ export default function CustomerWelcome() {
             setLoadingGuest(true);
 
 
-            // =====================================
+            
             // GUEST LOGIN
-            // =====================================
+            
 
             const res =
                 await customerAuthService.guest({
@@ -308,9 +308,9 @@ export default function CustomerWelcome() {
                 });
 
 
-            // =====================================
+            
             // CUSTOMER CONTEXT
-            // =====================================
+            
 
             login(
                 res.data.token,
@@ -318,9 +318,9 @@ export default function CustomerWelcome() {
             );
 
 
-            // =====================================
+            
             // TOKEN
-            // =====================================
+            
 
             localStorage.setItem(
                 "customerToken",
@@ -328,9 +328,9 @@ export default function CustomerWelcome() {
             );
 
 
-            // =====================================
+            
             // TABLE
-            // =====================================
+            
 
             localStorage.setItem(
                 "customerTable",
@@ -340,9 +340,9 @@ export default function CustomerWelcome() {
             );
 
 
-            // =====================================
+            
             // HOME
-            // =====================================
+            
 
             navigate(
                 `/customer/home/${res.data.table.qrCode}`,
@@ -373,22 +373,16 @@ export default function CustomerWelcome() {
     };
 
 
-    // =================================================
+    
     // CHECKING
-    // =================================================
+    
 
     if (checkingAuth) {
 
         return (
 
             <div
-                className="
-                    flex
-                    min-h-screen
-                    items-center
-                    justify-center
-                "
-            >
+                className=" flex min-h-screen items-center justify-center">
 
                 <div className="text-gray-500">
 
@@ -403,57 +397,23 @@ export default function CustomerWelcome() {
     }
 
 
-    // =================================================
+    
     // RENDER
-    // =================================================
+    
 
     return (
 
-        <div
-            className={`
-                flex
-                min-h-screen
-                items-center
-                justify-center
-                bg-cover
-                bg-center
-                bg-no-repeat
-                px-4
-                ${styles.section}
-            `}
-        >
+        <div  className={` flex min-h-screen items-center justify-center bg-cover bg-center bg-no-repeat px-4 ${styles.section}`}>
 
-            <div
-                className="
-                    w-full
-                    max-w-sm
-                    rounded-3xl
-                    bg-white/90
-                    px-8
-                    py-10
-                    shadow-2xl
-                    backdrop-blur
-                "
-            >
+            <div className=" w-full max-w-sm rounded-3xl bg-white/90 px-8 py-10 shadow-2xl backdrop-blur ">
 
-                {/* ================================= */}
+                
                 {/* LOGO */}
-                {/* ================================= */}
+                
 
                 <div className="flex justify-center">
 
-                    <div
-                        className="
-                            flex
-                            h-20
-                            w-20
-                            items-center
-                            justify-center
-                            overflow-hidden
-                            rounded-full
-                            bg-[#FEF8F2]
-                        "
-                    >
+                    <div className=" flex h-20 w-20 items-center justify-center overflow-hidden rounded-full bg-[#FEF8F2]">
 
                         {restaurant.logo ? (
 
@@ -462,28 +422,15 @@ export default function CustomerWelcome() {
                                     restaurant.logo
                                 )}
                                 alt={restaurant.name}
-                                className="
-                                    h-full
-                                    w-full
-                                    rounded-full
-                                    object-cover
-                                "
+                                className=" h-full w-full rounded-full object-cover"
                             />
 
                         ) : (
 
-                            <span
-                                className="
-                                    text-2xl
-                                    font-bold
-                                    text-[#4f7d4f]
-                                "
-                            >
-
+                            <span className=" text-2xl font-bold text-[var(--color-primary)]">
                                 {restaurant.name
                                     ?.charAt(0)
                                     ?.toUpperCase()}
-
                             </span>
 
                         )}
@@ -493,67 +440,38 @@ export default function CustomerWelcome() {
                 </div>
 
 
-                {/* ================================= */}
+                
                 {/* TITLE */}
-                {/* ================================= */}
+                
 
-                <h1
-                    className="
-                        mt-6
-                        text-center
-                        text-3xl
-                        font-bold
-                    "
-                >
-
+                <h1 className=" mt-6 text-center text-3xl font-bold">
                     Chào mừng tới
-
                 </h1>
 
 
-                {/* ================================= */}
+                
                 {/* RESTAURANT NAME */}
-                {/* ================================= */}
+                
 
-                <h2
-                    className="
-                        text-center
-                        text-3xl
-                        font-extrabold
-                        text-[#4f7d4f]
-                    "
-                >
+                <h2 className=" text-center text-3xl font-extrabold text-[var(--color-primary)]">
 
                     {restaurant.name}
 
                 </h2>
 
 
-                {/* ================================= */}
+                
                 {/* TABLE */}
-                {/* ================================= */}
+                
 
-                <p
-                    className="
-                        mt-3
-                        text-center
-                        text-gray-500
-                    "
-                >
+                <p className=" mt-3 text-center text-gray-500 ">
 
                     Bạn đang ngồi tại
 
                 </p>
 
 
-                <p
-                    className="
-                        text-center
-                        text-xl
-                        font-semibold
-                        text-[#4f7d4f]
-                    "
-                >
+                <p className=" text-center text-xl font-semibold text-[var(--color-primary)]">
 
                     Bàn{" "}
 
@@ -562,28 +480,15 @@ export default function CustomerWelcome() {
                 </p>
 
 
-                {/* ================================= */}
+                
                 {/* GUEST */}
-                {/* ================================= */}
+                
 
                 <button
                     type="button"
                     disabled={loadingGuest}
                     onClick={handleGuest}
-                    className="
-                        mt-8
-                        w-full
-                        rounded-2xl
-                        bg-[#4f7d4f]
-                        py-4
-                        text-lg
-                        font-semibold
-                        text-white
-                        transition
-                        hover:opacity-90
-                        disabled:cursor-not-allowed
-                        disabled:opacity-60
-                    "
+                    className=" mt-8 w-full rounded-2xl bg-[var(--color-primary)] py-4 text-lg font-semibold text-white transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60"
                 >
 
                     {loadingGuest
@@ -594,52 +499,26 @@ export default function CustomerWelcome() {
                 </button>
 
 
-                {/* ================================= */}
+                
                 {/* DIVIDER */}
-                {/* ================================= */}
+                
 
-                <div
-                    className="
-                        my-7
-                        flex
-                        items-center
-                        gap-3
-                    "
-                >
+                <div className=" my-7 flex items-center gap-3">
 
-                    <div
-                        className="
-                            h-px
-                            flex-1
-                            bg-gray-300
-                        "
-                    />
+                    <div className=" h-px flex-1 bg-gray-300 "/>
 
-                    <span
-                        className="
-                            text-sm
-                            text-gray-400
-                        "
-                    >
-
+                    <span className=" text-sm text-gray-400 ">
                         hoặc
-
                     </span>
 
-                    <div
-                        className="
-                            h-px
-                            flex-1
-                            bg-gray-300
-                        "
-                    />
+                    <div className=" h-px flex-1 bg-gray-300 " />
 
                 </div>
 
 
-                {/* ================================= */}
+                
                 {/* LOGIN */}
-                {/* ================================= */}
+                
 
                 <button
                     type="button"
@@ -648,26 +527,16 @@ export default function CustomerWelcome() {
                             `/customer/login/${qrCode}`
                         )
                     }
-                    className="
-                        w-full
-                        rounded-2xl
-                        border-2
-                        border-[#4f7d4f]
-                        py-3
-                        font-semibold
-                        text-[#4f7d4f]
-                        hover:bg-green-50
-                    "
-                >
+                    className=" w-full rounded-2xl border-2 border-[var(--color-primary)] py-3 font-semibold text-[var(--color-primary)] hover:bg-[var(--color-secondary)]">
 
                     Đăng nhập
 
                 </button>
 
 
-                {/* ================================= */}
+                
                 {/* REGISTER */}
-                {/* ================================= */}
+                
 
                 <button
                     type="button"
@@ -676,19 +545,7 @@ export default function CustomerWelcome() {
                             `/customer/register/${qrCode}`
                         )
                     }
-                    className="
-                        mt-4
-                        w-full
-                        rounded-2xl
-                        border-2
-                        border-[#4f7d4f]
-                        py-3
-                        font-semibold
-                        text-[#4f7d4f]
-                        hover:bg-green-50
-                    "
-                >
-
+                    className=" mt-4 w-full rounded-2xl border-2 border-[var(--color-primary)] py-3 font-semibold text-[var(--color-primary)] hover:bg-[var(--color-secondary)]">
                     Đăng ký
 
                 </button>

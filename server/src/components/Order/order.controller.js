@@ -6,18 +6,21 @@ const response = require("../../utils/response");
   
 
 const create = async (req, res) => {
-  try {
-    const order = await orderService.create(req.body);
+    try {
+        const order = await orderService.create({
+            ...req.body,
+            userId: req.user.id,
+        });
 
-    return response.success(
-      res,
-      "Tạo đơn hàng thành công.",
-      order,
-      201
-    );
-  } catch (error) {
-    return response.error(res, error.message, 400);
-  }
+        return response.success(
+            res,
+            "Tạo đơn hàng thành công.",
+            order,
+            201
+        );
+    } catch (error) {
+        return response.error(res, error.message, 400);
+    }
 };
 
   // CHECK ACTIVE ORDER BY TABLE
@@ -223,7 +226,8 @@ const createTakeAway = async (req, res) => {
     try {
         const order = await orderService.createTakeAway(
             req.user.branchId,
-            req.body
+            req.body,
+            req.user.id
         );
         return response.success(
             res,

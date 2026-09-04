@@ -239,7 +239,7 @@ export default function Branch() {
 
                                         <div className="flex justify-center gap-1 pr-1">
 
-                                            {/* NHÂN VIÊN */}
+                                            {/* NHÂN VIÊN 
 
                                             <Button
                                                 disabled={!branch.isActive}
@@ -252,7 +252,7 @@ export default function Branch() {
                                                 }
                                             >
                                                 <Users size={16} />
-                                            </Button>
+                                            </Button>*/}
 
                                             {/* SỬA */}
 
@@ -307,13 +307,6 @@ export default function Branch() {
                 </table>
 
             </div>
-
-            <BranchFormModal
-                open={openModal}
-                branch={selectedBranch}
-                onClose={() => setOpenModal(false)}
-                reload={loadBranches}
-            />
 
         </div>
     );

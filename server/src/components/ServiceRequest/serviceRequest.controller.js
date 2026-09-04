@@ -38,7 +38,7 @@ const create = async (req, res) => {
 
 
 // ========================================
-// CASHIER LẤY DANH SÁCH
+// BRANCH LẤY DANH SÁCH
 // ========================================
 
 const getAll = async (req, res) => {

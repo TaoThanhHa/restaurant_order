@@ -8,14 +8,10 @@ async function main() {
 
     
   // PASSWORD
-    
-
   const password = await bcrypt.hash("123456", 10);
 
     
   // ROLES
-    
-
   const adminRole = await prisma.role.upsert({
     where: {
       name: "ADMIN",
@@ -26,13 +22,13 @@ async function main() {
     },
   });
 
-  const cashierRole = await prisma.role.upsert({
+  const BranchRole = await prisma.role.upsert({
     where: {
-      name: "CASHIER",
+      name: "BRANCH",
     },
     update: {},
     create: {
-      name: "CASHIER",
+      name: "BRANCH",
     },
   });
 

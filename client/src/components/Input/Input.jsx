@@ -4,7 +4,7 @@ export default function Input({
     ...props
 }) {
     return (
-        <div className={`flex items-center h-14 rounded-xl border bg-white/20 px-4 ${className}`}>
+        <div className={`flex items-center h-10 rounded-xl border bg-white/20 px-4 ${className}`}>
             {icon}
             <input
                 {...props}

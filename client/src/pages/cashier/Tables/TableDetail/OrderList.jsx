@@ -53,7 +53,7 @@ export default function OrderList({
             <div className="flex items-center justify-between m-4">
                 <div className="mb-4">
                     <button
-                        onClick={() => navigate("/cashier/tables")}
+                        onClick={() => navigate("/branch/tables")}
                         className=" flex items-center gap-2 text-sm text-gray-500 transition hover:text-[var(--color-primary)]"
                     >
                         <ArrowLeft size={25} />

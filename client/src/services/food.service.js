@@ -25,7 +25,7 @@ const remove = (id) => {
 };
 
   
-// BRANCH / CASHIER
+// BRANCH / BRANCH
   
 
 const getByBranch = () => {

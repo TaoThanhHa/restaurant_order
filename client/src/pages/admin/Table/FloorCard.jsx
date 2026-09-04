@@ -7,7 +7,7 @@ import {
 import { useState } from "react";
 
 import tableService from "../../../services/table.service";
-import TableQRModal from "./TableQRModal";
+import TableQRModal from "../../cashier/Tables/components/TableQRModal";
 
 export default function FloorCard({
     floor,
@@ -54,7 +54,7 @@ export default function FloorCard({
 
         <>
 
-            <div className="mb-8 rounded-xl bg-white p-6 shadow">
+            <div className="mb-8 rounded-xl bg-white p-3 shadow">
 
                 {/* HEADER */}
 

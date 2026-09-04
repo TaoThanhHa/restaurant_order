@@ -75,6 +75,11 @@ enum ServiceRequestStatus {
   CANCELLED
 }
 
+enum KitchenMode {
+  SCREEN
+  PRINT
+}
+
 // ROLE
 
 model Role {
@@ -86,7 +91,6 @@ model Role {
 }
 
 // BRANCH
-
 model Branch {
   id       Int     @id @default(autoincrement())
   name     String
@@ -97,9 +101,16 @@ model Branch {
 
   restaurantId Int? @map("restaurant_id")
 
+  // Cấu hình xử lý order
+  kitchenMode KitchenMode @default(PRINT)
+
   createdAt DateTime @default(now()) @map("created_at")
 
-  restaurant Restaurant? @relation(fields: [restaurantId], references: [id], onDelete: SetNull)
+  restaurant Restaurant? @relation(
+    fields: [restaurantId],
+    references: [id],
+    onDelete: SetNull
+  )
 
   users           User[]
   floors          Floor[]
@@ -125,15 +136,13 @@ model Restaurant {
 }
 
 // USER
-
 model User {
   id       Int    @id @default(autoincrement())
   username String @unique
   password String
   email    String @unique
 
-  isActive Boolean @default(true)
-
+  isActive           Boolean          @default(true)
   mustChangePassword Boolean          @default(true)
   emailChangeOtps    EmailChangeOtp[]
 
@@ -148,14 +157,14 @@ model User {
 
   restaurant Restaurant? @relation("RestaurantAdmin")
 
-  endedSessions DiningSession[]
+  endedSessions          DiningSession[]
   handledServiceRequests ServiceRequest[]
+  createdOrders          Order[]          @relation("UserCreatedOrders")
 
   @@map("users")
 }
 
 // FLOOR
-
 model Floor {
   id          Int      @id @default(autoincrement())
   branchId    Int      @map("branch_id")
@@ -233,33 +242,32 @@ model ReservationTable {
 model ServiceRequest {
   id Int @id @default(autoincrement())
 
-  branchId Int @map("branch_id")
-  tableId Int @map("table_id")
+  branchId   Int  @map("branch_id")
+  tableId    Int  @map("table_id")
   customerId Int? @map("customer_id")
 
   message String
 
   status ServiceRequestStatus @default(PENDING)
 
-  handledById Int? @map("handled_by_id")
-  handledAt DateTime? @map("handled_at")
+  handledById Int?      @map("handled_by_id")
+  handledAt   DateTime? @map("handled_at")
 
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
-  branch Branch @relation( fields: [branchId], references: [id], onDelete: Cascade)
+  branch Branch @relation(fields: [branchId], references: [id], onDelete: Cascade)
 
-  table Table @relation( fields: [tableId], references: [id], onDelete: Cascade)
+  table Table @relation(fields: [tableId], references: [id], onDelete: Cascade)
 
-  customer Customer? @relation( fields: [customerId], references: [id], onDelete: SetNull)
+  customer Customer? @relation(fields: [customerId], references: [id], onDelete: SetNull)
 
-  handledBy User? @relation( fields: [handledById], references: [id], onDelete: SetNull)
+  handledBy User? @relation(fields: [handledById], references: [id], onDelete: SetNull)
 
   @@index([branchId])
   @@index([tableId])
   @@index([status])
   @@index([createdAt])
-
   @@map("service_requests")
 }
 
@@ -335,24 +343,23 @@ model Category {
 // FOOD
 
 model Food {
-  id          Int          @id @default(autoincrement())
-  categoryId  Int          @map("category_id")
+  id          Int      @id @default(autoincrement())
+  categoryId  Int      @map("category_id")
   name        String
-  price       Decimal      @db.Decimal(12, 2)
+  price       Decimal  @db.Decimal(12, 2)
   description String?
   image       String?
-  createdAt   DateTime     @default(now()) @map("created_at")
-  updatedAt   DateTime     @updatedAt @map("updated_at")
-  category    Category     @relation(fields: [categoryId], references: [id], onDelete: Restrict)
-  branchFoods BranchFood[]
-  orderItems  OrderItem[]
-  cartItems   CartItem[]
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+  category    Category @relation(fields: [categoryId], references: [id], onDelete: Restrict)
+
+  branchFoods     BranchFood[]
+  orderItems      OrderItem[]
+  cartItems       CartItem[]
 
   @@unique([categoryId, name])
   @@map("foods")
 }
-
-// BRANCH FOOD
 
 model BranchFood {
   id        Int        @id @default(autoincrement())
@@ -397,16 +404,16 @@ model Customer {
   id        Int  @id @default(autoincrement())
   sessionId Int? @map("session_id")
 
-  name              String?
-  phone             String?   @unique
-  email             String?   @unique
-  password          String?
-  deviceId          String?   @unique @map("device_id")
-  guestToken        String?   @unique @map("guest_token")
-  tableId           Int?      @map("table_id")
-  table             Table?    @relation(fields: [tableId], references: [id])
+  name       String?
+  phone      String? @unique
+  email      String? @unique
+  password   String?
+  deviceId   String? @unique @map("device_id")
+  guestToken String? @unique @map("guest_token")
+  tableId    Int?    @map("table_id")
+  table      Table?  @relation(fields: [tableId], references: [id])
 
-  avatar            String?
+  avatar String?
 
   createdAt         DateTime  @default(now()) @map("created_at")
   expiredAt         DateTime? @map("expired_at")
@@ -415,15 +422,15 @@ model Customer {
   isGuest           Boolean   @default(true)
   isActive          Boolean   @default(true)
 
-  currentOrderId    Int?
+  currentOrderId Int?
 
-  session           DiningSession? @relation(fields: [sessionId], references: [id])
-  cart              Cart?
-  orderMembers      OrderMember[]
-  createdOrders     Order[] @relation("CreatedOrders")
-  serviceRequests   ServiceRequest[]
+  session         DiningSession?   @relation(fields: [sessionId], references: [id])
+  cart            Cart?
+  orderMembers    OrderMember[]
+  createdOrders   Order[]          @relation("CustomerCreatedOrders")
+  serviceRequests ServiceRequest[]
 
-  currentOrder Order? @relation( "CustomerCurrentOrder", fields: [currentOrderId], references: [id] )
+  currentOrder Order? @relation("CustomerCurrentOrder", fields: [currentOrderId], references: [id])
 
   @@map("customers")
 }
@@ -431,28 +438,36 @@ model Customer {
 // ORDER
 
 model Order {
-  id           Int            @id @default(autoincrement())
-  orderCode    String         @unique @map("order_code")
-  branchId     Int            @map("branch_id")
-  sessionId    Int?           @map("session_id")
-  session      DiningSession? @relation(fields: [sessionId], references: [id])
-  branch       Branch         @relation(fields: [branchId], references: [id], onDelete: Restrict)
-  payment      Payment?
-  orderType    OrderType      @default(DINE_IN)
-  status       OrderStatus    @default(PENDING)
-  totalAmount  Decimal        @default(0) @map("total_amount") @db.Decimal(12, 2)
-  note         String?
-  createdById  Int?           @map("created_by")
-  createdBy    Customer?      @relation("CreatedOrders", fields: [createdById], references: [id])
-  createdAt    DateTime       @default(now()) @map("created_at")
-  updatedAt    DateTime       @updatedAt @map("updated_at")
-  orderMembers OrderMember[]
-  orderItems   OrderItem[]
-  currentCustomers Customer[] @relation("CustomerCurrentOrder")
-  
+  id          Int            @id @default(autoincrement())
+  orderCode   String         @unique @map("order_code")
+  branchId    Int            @map("branch_id")
+  sessionId   Int?           @map("session_id")
+  session     DiningSession? @relation(fields: [sessionId], references: [id])
+  branch      Branch         @relation(fields: [branchId], references: [id], onDelete: Restrict)
+  payment     Payment?
+  orderType   OrderType      @default(DINE_IN)
+  status      OrderStatus    @default(PENDING)
+  totalAmount Decimal        @default(0) @map("total_amount") @db.Decimal(12, 2)
+  note        String?
+
+  createdByUserId Int?  @map("created_by_user_id")
+  createdByUser   User? @relation("UserCreatedOrders", fields: [createdByUserId], references: [id])
+
+  createdByCustomerId Int?      @map("created_by_customer_id")
+  createdByCustomer   Customer? @relation("CustomerCreatedOrders", fields: [createdByCustomerId], references: [id])
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  orderMembers     OrderMember[]
+  orderItems       OrderItem[]
+  currentCustomers Customer[]    @relation("CustomerCurrentOrder")
+
   @@index([branchId])
   @@index([sessionId])
   @@index([status])
+  @@index([createdByUserId])
+  @@index([createdByCustomerId])
   @@map("orders")
 }
 

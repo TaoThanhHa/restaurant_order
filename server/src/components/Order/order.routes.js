@@ -27,14 +27,14 @@ router.get(
 router.get(
     "/pending",
     auth,
-    authorize("CASHIER"),
+    authorize("BRANCH", "CASHIER"),
     orderController.getPendingOrders
 );
 
 router.get(
     "/history",
     auth,
-    authorize("CASHIER", "ORDER"),
+    authorize("BRANCH", "ORDER", "CASHIER"),
     orderController.getHistory
 );
 
@@ -50,7 +50,7 @@ router.get(
 router.put(
   "/:id/status",
   auth,
-  authorize("ADMIN", "CASHIER"),
+  authorize("ADMIN", "BRANCH", "CASHIER"),
   orderController.updateStatus
 );
 
@@ -82,7 +82,7 @@ router.post(
 router.patch(
     "/:id/confirm",
     auth,
-    authorize("ADMIN","CASHIER"),
+    authorize("ADMIN", "BRANCH", "CASHIER"),
     orderController.confirmItems
 );
 
@@ -90,7 +90,7 @@ router.patch(
 router.put(
   "/:orderId/items/:itemId",
   auth,
-  authorize("ADMIN", "CASHIER"),
+  authorize("ADMIN", "BRANCH", "CASHIER"),
   orderController.updateItem
 );
 
@@ -98,20 +98,20 @@ router.put(
 router.delete(
     "/:orderId/items/:itemId",
     auth,
-    authorize("ADMIN", "CASHIER"),
+    authorize("ADMIN", "BRANCH", "CASHIER"),
     orderController.removeItem
 );
 //Order mang về
 router.post(
     "/take-away",
     auth,
-    authorize("ADMIN","CASHIER"),
+    authorize("ADMIN","BRANCH", "CASHIER"),
     orderController.createTakeAway
 );
 router.get(
     "/take-away",
     auth,
-    authorize("ADMIN","CASHIER"),
+    authorize("ADMIN","BRANCH", "CASHIER"),
     orderController.getTakeAway
 );
 module.exports = router;

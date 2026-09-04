@@ -1,17 +1,4 @@
-import {
-    ArrowLeft,
-    User,
-    Phone,
-    Mail,
-    Lock,
-    ChevronRight,
-    Pencil,
-    LogOut,
-    ReceiptText,
-    Camera,
-    Check,
-    X,
-} from "lucide-react";
+import { ArrowLeft, User, Phone, Mail, Lock, ChevronRight, Pencil, LogOut, ReceiptText, Camera, Check, X,} from "lucide-react";
 
 import { useEffect, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
@@ -24,6 +11,8 @@ import useCustomerAuth from "../../../hooks/useCustomerAuth";
 
 import Input from "../../../components/Input/Input";
 import Button from "../../../components/Button/Button";
+import FormMail from "./FormMail";
+import FormPass from "./FormPass";
 
 export default function CustomerAccount() {
     const navigate = useNavigate();
@@ -35,7 +24,6 @@ export default function CustomerAccount() {
     const [profile, setProfile] = useState(null);
     const [loading, setLoading] = useState(true);
 
-    // Chỉ sửa từng field riêng
     const [editing, setEditing] = useState(null);
 
     const [name, setName] = useState("");
@@ -45,20 +33,11 @@ export default function CustomerAccount() {
     const [savingPhone, setSavingPhone] = useState(false);
     const [uploadingAvatar, setUploadingAvatar] = useState(false);
 
-    // ======================================================
     // SERVER URL
-    // ======================================================
-
-    const API_URL =
-        import.meta.env.VITE_API_URL ||
-        "http://localhost:5000/api";
-
+    const API_URL = import.meta.env.VITE_API_URL || "http://localhost:5000/api";
     const SERVER_URL = API_URL.replace(/\/api\/?$/, "");
 
-    // ======================================================
     // AVATAR URL
-    // ======================================================
-
     const getAvatarUrl = (avatar) => {
         if (!avatar) {
             return null;
@@ -71,16 +50,11 @@ export default function CustomerAccount() {
         return `${SERVER_URL}${avatar}`;
     };
 
-    // ======================================================
     // LOAD PROFILE
-    // ======================================================
-
     useEffect(() => {
         const loadProfile = async () => {
             try {
-                const res =
-                    await customerAuthService.profile();
-
+                const res = await customerAuthService.profile();
                 const data = res.data;
 
                 setProfile(data);
@@ -99,20 +73,13 @@ export default function CustomerAccount() {
         loadProfile();
     }, []);
 
-    // ======================================================
+    
     // UPLOAD AVATAR
-    // Chọn ảnh -> upload ngay
-    // ======================================================
-
     const handleAvatarChange = async (e) => {
         const file = e.target.files?.[0];
-
-        // Reset input để chọn lại cùng một ảnh vẫn trigger change
         e.target.value = "";
 
-        if (!file) {
-            return;
-        }
+        if (!file) {  return; }
 
         // Kiểm tra định dạng
         const allowedTypes = [
@@ -128,7 +95,6 @@ export default function CustomerAccount() {
             return;
         }
 
-        // Kiểm tra dung lượng
         if (file.size > 5 * 1024 * 1024) {
             alert("Ảnh không được vượt quá 5MB.");
             return;
@@ -136,15 +102,9 @@ export default function CustomerAccount() {
 
         try {
             setUploadingAvatar(true);
-
-            const res =
-                await uploadService.uploadCustomerAvatar(
-                    file
-                );
-
+            const res = await uploadService.uploadCustomerAvatar( file );
             const updatedProfile = res.data;
 
-            // API upload trả về customer
             setProfile((prev) => ({
                 ...prev,
                 ...updatedProfile,
@@ -172,19 +132,15 @@ export default function CustomerAccount() {
         }
     };
 
-    // ======================================================
+    
     // EDIT NAME
-    // ======================================================
-
     const handleEditName = () => {
         setName(profile?.name || "");
         setEditing("name");
     };
 
-    // ======================================================
+    
     // SAVE NAME
-    // ======================================================
-
     const handleSaveName = async () => {
         const value = name.trim();
 
@@ -201,10 +157,7 @@ export default function CustomerAccount() {
         try {
             setSavingName(true);
 
-            const res =
-                await customerService.updateProfile({
-                    name: value,
-                });
+            const res = await customerService.updateProfile({ name: value,});
 
             const updatedProfile = res.data;
 
@@ -235,20 +188,14 @@ export default function CustomerAccount() {
             setSavingName(false);
         }
     };
-
-    // ======================================================
+    
     // EDIT PHONE
-    // ======================================================
-
     const handleEditPhone = () => {
         setPhone(profile?.phone || "");
         setEditing("phone");
     };
 
-    // ======================================================
     // SAVE PHONE
-    // ======================================================
-
     const handleSavePhone = async () => {
         const value = phone.trim();
 
@@ -311,35 +258,44 @@ export default function CustomerAccount() {
         }
     };
 
-    // ======================================================
-    // CANCEL EDIT
-    // ======================================================
+    if (editing === "email") {
+        return (
+            <FormMail
+                profile={profile}
+                onBack={() => setEditing(null)}
+                onSuccess={(updatedProfile) => {
+                    setProfile(updatedProfile);
+                    setEditing(null);
+                }}
+            />
+        );
+    }
 
+    // CHANGE PASSWORD
+    if (editing === "password") {
+        return (
+            <FormPass
+                onBack={() => setEditing(null)}
+                onSuccess={() => setEditing(null)}
+            />
+        );
+
+    }
+
+    // CANCEL EDIT
     const handleCancelEdit = () => {
         setName(profile?.name || "");
         setPhone(profile?.phone || "");
         setEditing(null);
     };
 
-    // ======================================================
     // LOGOUT
-    // ======================================================
-
     const handleLogout = () => {
         logout();
-
-        navigate(
-            `/customer/${qrCode}`,
-            {
-                replace: true,
-            }
-        );
+        navigate( `/customer/${qrCode}`, {replace: true,});
     };
 
-    // ======================================================
     // LOADING
-    // ======================================================
-
     if (loading) {
         return (
             <div className="flex min-h-screen items-center justify-center bg-slate-100">
@@ -350,9 +306,9 @@ export default function CustomerAccount() {
         );
     }
 
-    // ======================================================
+    
     // PROFILE ERROR
-    // ======================================================
+    
 
     if (!profile) {
         return (
@@ -364,35 +320,24 @@ export default function CustomerAccount() {
         );
     }
 
-    // ======================================================
     // CURRENT AVATAR
-    // ======================================================
-
     const currentAvatar =
         getAvatarUrl(profile.avatar);
 
-    // ======================================================
     // RENDER
-    // ======================================================
-
     return (
-        <div className="min-h-screen bg-slate-100 pb-8">
+        <div className="min-h-screen bg-[var(--color-background)] pb-8">
+            {/* HEADER*/}
 
-            {/* ==================================================
-                HEADER
-            ================================================== */}
-
-            <div className="bg-[#4f7d4f] px-5 py-4 shadow-sm">
+            <div className="bg-[var(--color-primary)] px-5 py-4 shadow-sm">
                 <div className="flex items-center gap-3">
 
                     <button
                         type="button"
                         onClick={() =>
-                            navigate(
-                                `/customer/home/${qrCode}`
-                            )
+                            navigate(`/customer/home/${qrCode}`)
                         }
-                        className="rounded-full pt-1 text-white transition hover:bg-white/10"
+                        className="rounded-full pt-1 text-white transition"
                     >
                         <ArrowLeft size={30} />
                     </button>
@@ -406,9 +351,7 @@ export default function CustomerAccount() {
 
             <div className="space-y-4 p-5">
 
-                {/* ==================================================
-                    PROFILE CARD
-                ================================================== */}
+                {/* PROFILE CARD*/}
 
                 <div className="rounded-3xl bg-white p-6 shadow-sm">
 
@@ -490,9 +433,9 @@ export default function CustomerAccount() {
 
                 </div>
 
-                {/* ==================================================
+                {/* 
                     PERSONAL INFORMATION
-                ================================================== */}
+                 */}
 
                 <div className="rounded-3xl bg-white p-5 shadow-sm">
 
@@ -500,9 +443,9 @@ export default function CustomerAccount() {
                         Thông tin cá nhân
                     </h2>
 
-                    {/* ==================================================
+                    {/* 
                         NAME
-                    ================================================== */}
+                     */}
 
                     {editing === "name" ? (
                         <div className="border-b py-4">
@@ -577,9 +520,9 @@ export default function CustomerAccount() {
                         />
                     )}
 
-                    {/* ==================================================
+                    {/* 
                         PHONE
-                    ================================================== */}
+                     */}
 
                     {editing === "phone" ? (
                         <div className="border-b py-4">
@@ -655,9 +598,9 @@ export default function CustomerAccount() {
                         />
                     )}
 
-                    {/* ==================================================
+                    {/* 
                         EMAIL
-                    ================================================== */}
+                     */}
 
                     <AccountRow
                         icon={<Mail size={19} />}
@@ -667,28 +610,28 @@ export default function CustomerAccount() {
                             "Chưa cập nhật"
                         }
                         onEdit={() => {
-                            // Giữ logic đổi email OTP
+                            setEditing("email")
                         }}
                     />
 
-                    {/* ==================================================
+                    {/* 
                         PASSWORD
-                    ================================================== */}
+                     */}
 
                     <AccountRow
                         icon={<Lock size={19} />}
                         label="Mật khẩu"
                         value="••••••••"
                         onEdit={() => {
-                            // Giữ logic đổi mật khẩu
+                            setEditing("password")
                         }}
                     />
 
                 </div>
 
-                {/* ==================================================
+                {/* 
                     ORDER HISTORY
-                ================================================== */}
+                 */}
 
                 <button
                     type="button"
@@ -727,9 +670,9 @@ export default function CustomerAccount() {
 
                 </button>
 
-                {/* ==================================================
+                {/* 
                     LOGOUT
-                ================================================== */}
+                 */}
 
                 <button
                     type="button"
@@ -752,9 +695,9 @@ export default function CustomerAccount() {
     );
 }
 
-// ======================================================
+
 // ACCOUNT ROW
-// ======================================================
+
 
 function AccountRow({
     icon,

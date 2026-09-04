@@ -149,13 +149,13 @@ const create = async (data) => {
     const cashierRole = await prisma.role.findUnique({
 
         where: {
-            name: "CASHIER",
+            name: "BRANCH",
         },
 
     });
 
     if (!cashierRole) {
-        throw new Error("Không tìm thấy role CASHIER.");
+        throw new Error("Không tìm thấy role BRANCH.");
     }
 
     const tempPassword = generatePassword();
@@ -297,7 +297,7 @@ const update = async (id, data) => {
 
                     role: {
 
-                        name: "CASHIER",
+                        name: "BRANCH",
 
                     },
 
@@ -447,7 +447,7 @@ const update = async (id, data) => {
 
                     role: {
 
-                        name: "CASHIER",
+                        name: "BRANCH",
 
                     },
 
@@ -511,7 +511,7 @@ const remove = async (id) => {
 
                     role: {
 
-                        name: "CASHIER",
+                        name: "BRANCH",
 
                     },
 
@@ -548,7 +548,7 @@ const remove = async (id) => {
             branchId:id,
 
             role:{
-                name:"CASHIER"
+                name:"BRANCH"
             }
 
         },

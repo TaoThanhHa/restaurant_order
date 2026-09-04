@@ -14,7 +14,7 @@ export default function Foods() {
                     Quản lý thực đơn
                 </h1>
 
-                <div className="mt-5 inline-flex rounded-xl bg-[var(--color-background)] p-1">
+                <div className="mt-2 inline-flex rounded-xl bg-[var(--color-background)] p-1">
                     <button
                         onClick={() => setTab("food")}
                         className={`rounded-lg px-6 py-2 text-sm font-semibold transition ${

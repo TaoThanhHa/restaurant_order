@@ -3,24 +3,30 @@ const { PrismaClient } = require("@prisma/client");
 const prisma = new PrismaClient();
 
 async function main() {
-    await prisma.role.upsert({
-        where: {
-            name: "ORDER",
-        },
-        update: {},
-        create: {
-            name: "ORDER",
-        },
-    });
+  const roles = [
+    "ADMIN",
+    "BRANCH",
+    "CASHIER",
+    "ORDER",
+    "WAREHOUSE",
+  ];
 
-    console.log("✅ ORDER role đã được thêm.");
+  for (const name of roles) {
+    await prisma.role.upsert({
+      where: { name },
+      update: {},
+      create: { name },
+    });
+  }
+
+  console.log("Default roles created successfully!");
 }
 
 main()
-    .catch((error) => {
-        console.error(error);
-        process.exit(1);
-    })
-    .finally(async () => {
-        await prisma.$disconnect();
-    });
+  .catch((error) => {
+    console.error(error);
+    process.exit(1);
+  })
+  .finally(async () => {
+    await prisma.$disconnect();
+  });

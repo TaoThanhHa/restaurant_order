@@ -27,17 +27,29 @@ export default function Login() {
     useEffect(() => {
         if (!user) return;
 
-        if (user.role === "ADMIN") {
-            navigate("/admin/dashboard", { replace: true });
-        }
+        switch (user.role) {
+            case "ADMIN":
+                navigate("/admin/dashboard", { replace: true });
+                break;
 
-        if (user.role === "CASHIER") {
-            navigate("/cashier/dashboard", { replace: true });
-        }
-        if (user.role === "ORDER") {
-            navigate("/cashier/tables", {
-                replace: true,
-            });
+            case "BRANCH":
+                navigate("/branch/dashboard", { replace: true });
+                break;
+            
+            case "CASHIER":
+                navigate("/branch/dashboard", { replace: true });
+                break;
+
+            case "ORDER":
+                navigate("/branch/tables", { replace: true });
+                break;
+
+            case "WAREHOUSE":
+                navigate("/warehouse", { replace: true });
+                break;
+
+            default:
+                break;
         }
     }, [user, navigate]);
 
@@ -81,14 +93,26 @@ export default function Login() {
                 });
                 break;
 
+            case "BRANCH":
+                navigate("/branch/dashboard", {
+                    replace: true,
+                });
+                break;
+            
             case "CASHIER":
-                navigate("/cashier/dashboard", {
+                navigate("/branch/dashboard", {
                     replace: true,
                 });
                 break;
 
             case "ORDER":
-                navigate("/cashier/tables", {
+                navigate("/branch/tables", {
+                    replace: true,
+                });
+                break;
+
+            case "WAREHOUSE":
+                navigate("/warehouse", {
                     replace: true,
                 });
                 break;
@@ -118,7 +142,7 @@ export default function Login() {
                         Đăng nhập
                     </h2>
                     <form onSubmit={handleSubmit} className="space-y-8">
-                        <div className="flex items-center m-1">
+                        <div className="flex items-center m-4">
                             <label className="w-20 shrink-0">
                                 Email
                             </label>
@@ -132,7 +156,7 @@ export default function Login() {
                                 placeholder="Nhập mail của bạn"
                             />
                         </div>
-                        <div className="flex items-center m-1">
+                        <div className="flex items-center m-4">
                             <label className="w-20 shrink-0">
                                 Mật khẩu
                             </label>

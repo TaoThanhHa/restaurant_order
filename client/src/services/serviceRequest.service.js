@@ -23,7 +23,7 @@ const create = async ({
 
 
 // ========================================
-// CASHIER LẤY YÊU CẦU
+// BRANCH LẤY YÊU CẦU
 // ========================================
 
 const getAll = async () => {

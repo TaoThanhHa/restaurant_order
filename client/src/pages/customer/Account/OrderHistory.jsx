@@ -157,11 +157,11 @@ export default function CustomerOrderHistory() {
 
     return (
 
-        <div className="min-h-screen bg-slate-100 pb-8">
+        <div className="min-h-screen bg-[var(--color-background)] pb-8">
 
             {/* HEADER */}
 
-            <div className="sticky top-0 z-10 bg-[#4f7d4f] px-5 py-4 shadow-sm">
+            <div className="sticky top-0 z-10 bg-[var(--color-primary)] px-5 py-4 shadow-sm">
 
                 <div className="flex items-center gap-3">
 

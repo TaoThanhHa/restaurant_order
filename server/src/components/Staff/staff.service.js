@@ -6,17 +6,27 @@ const mailService = require("../Mail/mail.server");
 
 
 // ========================================
+// STAFF ROLES
+// ========================================
+
+const STAFF_ROLES = [
+    "ORDER",
+    "CASHIER",
+    "KITCHEN",
+    "WAREHOUSE",
+];
+
+
+// ========================================
 // GENERATE PASSWORD
 // ========================================
 
 const generatePassword = () => {
-
     return crypto
         .randomBytes(8)
         .toString("base64")
         .replace(/[+/=]/g, "")
         .substring(0, 10);
-
 };
 
 
@@ -29,7 +39,6 @@ const getAll = async (branchId) => {
     branchId = Number(branchId);
 
     const branch = await prisma.branch.findUnique({
-
         where: {
             id: branchId,
         },
@@ -39,76 +48,49 @@ const getAll = async (branchId) => {
             name: true,
             isActive: true,
         },
-
     });
 
     if (!branch) {
         throw new Error("Chi nhánh không tồn tại.");
     }
 
-
     const staff = await prisma.user.findMany({
-
         where: {
-
             branchId,
 
             role: {
-
                 name: {
-
-                    in: [
-                        "ORDER",
-                        "KITCHEN",
-                    ],
-
+                    in: STAFF_ROLES,
                 },
-
             },
-
         },
 
         select: {
-
             id: true,
-
             username: true,
-
             email: true,
-
             isActive: true,
-
             mustChangePassword: true,
-
             createdAt: true,
-
             updatedAt: true,
 
             role: {
-
                 select: {
                     id: true,
                     name: true,
                 },
-
             },
-
         },
 
         orderBy: {
             id: "asc",
         },
-
     });
 
     return {
-
         branch,
-
         staff,
-
     };
-
 };
 
 
@@ -116,77 +98,46 @@ const getAll = async (branchId) => {
 // GET STAFF BY ID
 // ========================================
 
-const getById = async (
-    branchId,
-    userId
-) => {
+const getById = async (branchId, userId) => {
 
     branchId = Number(branchId);
     userId = Number(userId);
 
     const user = await prisma.user.findFirst({
-
         where: {
-
             id: userId,
-
             branchId,
 
             role: {
-
                 name: {
-
-                    in: [
-                        "ORDER",
-                        "KITCHEN",
-                    ],
-
+                    in: STAFF_ROLES,
                 },
-
             },
-
         },
 
         select: {
-
             id: true,
-
             username: true,
-
             email: true,
-
             isActive: true,
-
             mustChangePassword: true,
-
             createdAt: true,
-
             updatedAt: true,
 
             role: {
-
                 select: {
-
                     id: true,
                     name: true,
-
                 },
-
             },
 
             branch: {
-
                 select: {
-
                     id: true,
                     name: true,
-
                 },
-
             },
-
         },
-
     });
 
     if (!user) {
@@ -196,7 +147,6 @@ const getById = async (
     }
 
     return user;
-
 };
 
 
@@ -204,21 +154,13 @@ const getById = async (
 // CREATE STAFF
 // ========================================
 
-const create = async (
-    branchId,
-    data
-) => {
+const create = async (branchId, data) => {
 
     branchId = Number(branchId);
 
-    const username =
-        data.username?.trim();
-
-    const email =
-        data.email?.trim().toLowerCase();
-
-    const roleName =
-        data.role?.trim().toUpperCase();
+    const username = data.username?.trim();
+    const email = data.email?.trim().toLowerCase();
+    const roleName = data.role?.trim().toUpperCase();
 
 
     // VALIDATE BRANCH
@@ -227,6 +169,7 @@ const create = async (
         where: {
             id: branchId,
         },
+
         select: {
             id: true,
             name: true,
@@ -248,46 +191,33 @@ const create = async (
     // VALIDATE USERNAME
 
     if (!username) {
-
         throw new Error(
             "Tên tài khoản không được để trống."
         );
-
     }
 
 
     // VALIDATE EMAIL
 
     if (!email) {
-
         throw new Error(
             "Email không được để trống."
         );
-
     }
 
     if (!validator.isEmail(email)) {
-
         throw new Error(
             "Email không hợp lệ."
         );
-
     }
 
 
     // VALIDATE ROLE
 
-    const allowedRoles = [
-        "ORDER",
-        "KITCHEN",
-    ];
-
-    if (!allowedRoles.includes(roleName)) {
-
+    if (!STAFF_ROLES.includes(roleName)) {
         throw new Error(
             "Chức vụ không hợp lệ."
         );
-
     }
 
 
@@ -295,19 +225,15 @@ const create = async (
 
     const existedUsername =
         await prisma.user.findUnique({
-
             where: {
                 username,
             },
-
         });
 
     if (existedUsername) {
-
         throw new Error(
             "Tên tài khoản đã tồn tại."
         );
-
     }
 
 
@@ -315,46 +241,36 @@ const create = async (
 
     const existedEmail =
         await prisma.user.findUnique({
-
             where: {
                 email,
             },
-
         });
 
     if (existedEmail) {
-
         throw new Error(
             "Email đã được sử dụng."
         );
-
     }
 
 
     // GET ROLE
 
-    const role =
-        await prisma.role.findUnique({
-
-            where: {
-                name: roleName,
-            },
-
-        });
+    const role = await prisma.role.findUnique({
+        where: {
+            name: roleName,
+        },
+    });
 
     if (!role) {
-
         throw new Error(
-            `Không tìm thấy role ${roleName}.`
+            `Không tìm thấy chức vụ ${roleName}.`
         );
-
     }
 
 
     // GENERATE PASSWORD
 
-    const tempPassword =
-        generatePassword();
+    const tempPassword = generatePassword();
 
     const hashedPassword =
         await bcrypt.hash(
@@ -365,66 +281,41 @@ const create = async (
 
     // CREATE USER
 
-    const staff =
-        await prisma.user.create({
+    const staff = await prisma.user.create({
+        data: {
+            username,
+            email,
+            password: hashedPassword,
 
-            data: {
+            roleId: role.id,
+            branchId,
 
-                username,
+            isActive: true,
+            mustChangePassword: true,
+        },
 
-                email,
+        select: {
+            id: true,
+            username: true,
+            email: true,
+            isActive: true,
+            createdAt: true,
 
-                password:
-                    hashedPassword,
-
-                roleId:
-                    role.id,
-
-                branchId,
-
-                isActive: true,
-
-                mustChangePassword: true,
-
+            role: {
+                select: {
+                    id: true,
+                    name: true,
+                },
             },
 
-            select: {
-
-                id: true,
-
-                username: true,
-
-                email: true,
-
-                isActive: true,
-
-                createdAt: true,
-
-                role: {
-
-                    select: {
-
-                        id: true,
-                        name: true,
-
-                    },
-
+            branch: {
+                select: {
+                    id: true,
+                    name: true,
                 },
-
-                branch: {
-
-                    select: {
-
-                        id: true,
-                        name: true,
-
-                    },
-
-                },
-
             },
-
-        });
+        },
+    });
 
 
     // SEND EMAIL
@@ -441,23 +332,16 @@ const create = async (
 
     } catch (error) {
 
-        // Nếu gửi mail lỗi
-        // xóa tài khoản vừa tạo
-
         await prisma.user.delete({
-
             where: {
                 id: staff.id,
             },
-
         });
 
         throw error;
-
     }
 
     return staff;
-
 };
 
 
@@ -465,236 +349,81 @@ const create = async (
 // UPDATE STAFF
 // ========================================
 
-const update = async (
-    branchId,
-    userId,
-    data
-) => {
-
+const update = async (branchId, userId, data) => {
     branchId = Number(branchId);
     userId = Number(userId);
 
-
-    // CHECK STAFF
-
-    const staff =
-        await prisma.user.findFirst({
-
-            where: {
-
-                id: userId,
-
-                branchId,
-
-                role: {
-
-                    name: {
-
-                        in: [
-                            "ORDER",
-                            "KITCHEN",
-                        ],
-
-                    },
-
-                },
-
-            },
-
-            include: {
-
-                role: true,
-
-            },
-
-        });
-
-    if (!staff) {
-
-        throw new Error(
-            "Nhân viên không tồn tại trong chi nhánh này."
-        );
-
-    }
-
-
-    const username =
-        data.username?.trim()
-        ?? staff.username;
-
-    const email =
-        data.email
-            ? data.email.trim().toLowerCase()
-            : staff.email;
-
-    const roleName =
-        data.role
-            ? data.role.trim().toUpperCase()
-            : staff.role.name;
-
-
-    // VALIDATE
-
-    if (!username) {
-
-        throw new Error(
-            "Tên tài khoản không được để trống."
-        );
-
-    }
-
-    if (!validator.isEmail(email)) {
-
-        throw new Error(
-            "Email không hợp lệ."
-        );
-
-    }
-
-
-    const allowedRoles = [
-        "ORDER",
-        "KITCHEN",
-    ];
-
-    if (!allowedRoles.includes(roleName)) {
-
-        throw new Error(
-            "Không thể gán chức vụ này."
-        );
-
-    }
-
-
-    // CHECK USERNAME
-
-    const existedUsername =
-        await prisma.user.findFirst({
-
-            where: {
-
-                username,
-
-                NOT: {
-                    id: userId,
-                },
-
-            },
-
-        });
-
-    if (existedUsername) {
-
-        throw new Error(
-            "Tên tài khoản đã tồn tại."
-        );
-
-    }
-
-
-    // CHECK EMAIL
-
-    const existedEmail =
-        await prisma.user.findFirst({
-
-            where: {
-
-                email,
-
-                NOT: {
-                    id: userId,
-                },
-
-            },
-
-        });
-
-    if (existedEmail) {
-
-        throw new Error(
-            "Email đã được sử dụng."
-        );
-
-    }
-
-
-    // GET ROLE
-
-    const role =
-        await prisma.role.findUnique({
-
-            where: {
-                name: roleName,
-            },
-
-        });
-
-    if (!role) {
-
-        throw new Error(
-            "Không tìm thấy chức vụ."
-        );
-
-    }
-
-
-    // UPDATE
-
-    return await prisma.user.update({
-
+    const staff = await prisma.user.findFirst({
         where: {
             id: userId,
+            branchId,
+            role: { name: { in: STAFF_ROLES } },
         },
-
-        data: {
-
-            username,
-
-            email,
-
-            roleId: role.id,
-
-        },
-
-        select: {
-
-            id: true,
-
-            username: true,
-
-            email: true,
-
-            isActive: true,
-
-            createdAt: true,
-
-            role: {
-
-                select: {
-
-                    id: true,
-                    name: true,
-
-                },
-
-            },
-
-            branch: {
-
-                select: {
-
-                    id: true,
-                    name: true,
-
-                },
-
-            },
-
-        },
-
+        include: { role: true },
     });
 
+    if (!staff) {
+        throw new Error("Nhân viên không tồn tại trong chi nhánh này.");
+    }
+
+    const username = data.username?.trim() || staff.username;
+    const roleName = data.role?.trim().toUpperCase() || staff.role.name;
+
+    if (!username) {
+        throw new Error("Tên tài khoản không được để trống.");
+    }
+
+    if (!STAFF_ROLES.includes(roleName)) {
+        throw new Error("Không thể gán chức vụ này.");
+    }
+
+    const existedUsername = await prisma.user.findFirst({
+        where: {
+            username,
+            NOT: { id: userId },
+        },
+    });
+
+    if (existedUsername) {
+        throw new Error("Tên tài khoản đã tồn tại.");
+    }
+
+    const role = await prisma.role.findUnique({
+        where: { name: roleName },
+    });
+
+    if (!role) {
+        throw new Error("Không tìm thấy chức vụ.");
+    }
+
+    return prisma.user.update({
+        where: { id: userId },
+        data: {
+            username,
+            roleId: role.id,
+        },
+        select: {
+            id: true,
+            username: true,
+            email: true,
+            isActive: true,
+            createdAt: true,
+            role: {
+                select: {
+                    id: true,
+                    name: true,
+                },
+            },
+            branch: {
+                select: {
+                    id: true,
+                    name: true,
+                },
+            },
+        },
+    });
 };
+
 
 
 // ========================================
@@ -712,84 +441,56 @@ const toggleStatus = async (
 
     const staff =
         await prisma.user.findFirst({
-
             where: {
-
                 id: userId,
-
                 branchId,
 
                 role: {
-
                     name: {
-
-                        in: [
-                            "ORDER",
-                            "KITCHEN",
-                        ],
-
+                        in: STAFF_ROLES,
                     },
-
                 },
-
             },
-
         });
 
 
     if (!staff) {
-
         throw new Error(
             "Nhân viên không tồn tại trong chi nhánh này."
         );
-
     }
 
 
     return await prisma.user.update({
-
         where: {
             id: userId,
         },
 
         data: {
-
-            isActive:
-                !staff.isActive,
-
+            isActive: !staff.isActive,
         },
 
         select: {
-
             id: true,
-
             username: true,
-
             email: true,
-
             isActive: true,
 
             role: {
-
                 select: {
+                    id: true,
                     name: true,
                 },
-
             },
-
         },
-
     });
-
 };
 
 
 module.exports = {
-
     getAll,
     getById,
     create,
     update,
     toggleStatus,
-
 };

@@ -41,14 +41,14 @@ router.get(
 
 
 // ======================================================
-// CASHIER
+// BRANCH
 // ======================================================
 
 // Cashier lấy danh sách yêu cầu
 router.get(
     "/",
     auth,
-    authorize("CASHIER"),
+    authorize("BRANCH"),
     controller.getAll
 );
 
@@ -56,7 +56,7 @@ router.get(
 router.patch(
     "/:id/accept",
     auth,
-    authorize("CASHIER"),
+    authorize("BRANCH"),
     controller.accept
 );
 
@@ -64,7 +64,7 @@ router.patch(
 router.patch(
     "/:id/complete",
     auth,
-    authorize("CASHIER"),
+    authorize("BRANCH"),
     controller.complete
 );
 

@@ -117,11 +117,7 @@ export default function AddFoodModal({
 
                         <div className="flex items-center justify-center gap-4">
                             <button
-                                onClick={() =>
-                                    setQuantity(q =>
-                                        Math.max(1, q - 1)
-                                    )
-                                }
+                                onClick={() => setQuantity(q => Math.max(1, q - 1))}
                                 className="rounded-lg border p-2 hover:bg-gray-100"
                             >
                                 <Minus size={18} />
@@ -132,9 +128,7 @@ export default function AddFoodModal({
                             </span>
 
                             <button
-                                onClick={() =>
-                                    setQuantity(q => q + 1)
-                                }
+                                onClick={() =>  setQuantity(q => q + 1)}
                                 className="rounded-lg border p-2 hover:bg-gray-100"
                             >
                                 <Plus size={18} />
@@ -157,9 +151,7 @@ export default function AddFoodModal({
                         <textarea
                             rows={3}
                             value={note}
-                            onChange={e =>
-                                setNote(e.target.value)
-                            }
+                            onChange={e => setNote(e.target.value)}
                             placeholder="Ví dụ: Không hành, ít cay..."
                             className="w-full rounded-lg border p-3 outline-none focus:border-blue-500"
                         />

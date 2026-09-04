@@ -123,7 +123,7 @@ if (customerId) {
 
 
 // ========================================
-// CASHIER LẤY YÊU CẦU
+// BRANCH LẤY YÊU CẦU
 // ========================================
 
 const getAll = async (branchId) => {
@@ -177,7 +177,7 @@ const getAll = async (branchId) => {
 
 
 // ========================================
-// CASHIER XÁC NHẬN
+// BRANCH XÁC NHẬN
 // ========================================
 
 const accept = async ({

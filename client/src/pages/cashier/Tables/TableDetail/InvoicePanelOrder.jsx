@@ -4,6 +4,7 @@ import orderService from "../../../../services/order.service";
 import customerOrderService from "../../../../services/customerOrder.service";
 import { X } from "lucide-react";
 import CustomerMergeOrderModal from "../../../customer/Order/CustomerMergeOrderModal";
+import NotiModal from "../../../../components/NotiModal/NotiModal";
 
 export default function InvoicePanelOrder({
     cart = [],
@@ -18,7 +19,12 @@ export default function InvoicePanelOrder({
     const [sending, setSending] = useState(false);
     const [openMerge, setOpenMerge] = useState(false);
     const [existingOrders, setExistingOrders] = useState([]);
-    
+    const [notiModal, setNotiModal] = useState({
+        open: false,
+        type: "success",
+        title: "",
+        message: "",
+    });
 
     const safeCart = Array.isArray(cart) ? cart : [];
 
@@ -86,12 +92,23 @@ export default function InvoicePanelOrder({
     } = {}) => {
 
         if (!safeCart.length) {
-            alert("Chưa chọn món.");
+            setNotiModal({
+                open: true,
+                type: "warning",
+                title: "Chưa có món",
+                message: "Vui lòng chọn ít nhất một món trước khi gửi.",
+            });
             return;
         }
 
         if (!qrCode) {
-            throw new Error("Không xác định được bàn.");
+            setNotiModal({
+                open: true,
+                type: "error",
+                title: "Không xác định được bàn",
+                message: "Không thể xác định bàn hiện tại. Vui lòng quét lại mã QR.",
+            });
+            return;
         }
 
         try {
@@ -135,17 +152,16 @@ export default function InvoicePanelOrder({
                 await reload();
             }
 
-            if (orderId) {
-                alert("Đã thêm món vào đơn.");
-            } else if (newOrder) {
-                alert("Đã tạo đơn riêng.");
-            } else {
-                alert("Đã gửi món.");
-            }
-
-            if (onBack) {
-                onBack();
-            }
+            setNotiModal({
+                open: true,
+                type: "success",
+                title: "Đặt món thành công",
+                message: orderId
+                    ? "Các món đã được thêm vào đơn hàng."
+                    : newOrder
+                        ? "Đã tạo đơn hàng mới thành công."
+                        : "Đã gửi món thành công.",
+            });
 
             return res;
 
@@ -175,10 +191,14 @@ export default function InvoicePanelOrder({
                     data?.data?.orders || [];
 
                 if (!orders.length) {
-                    alert(
-                        data?.message ||
-                        "Bàn đang có đơn hàng."
-                    );
+                    setNotiModal({
+                        open: true,
+                        type: "warning",
+                        title: "Bàn đang có đơn",
+                        message:
+                            data?.message ||
+                            "Bàn hiện đang có đơn hàng.",
+                    });
                     return;
                 }
 
@@ -188,11 +208,15 @@ export default function InvoicePanelOrder({
                 return;
             }
 
-            alert(
-                data?.message ||
-                err.message ||
-                "Không thể tạo đơn."
-            );
+            setNotiModal({
+                open: true,
+                type: "error",
+                title: "Không thể gửi món",
+                message:
+                    data?.message ||
+                    err.message ||
+                    "Đã xảy ra lỗi khi gửi món. Vui lòng thử lại.",
+            });
 
         } finally {
             setSending(false);
@@ -234,7 +258,12 @@ export default function InvoicePanelOrder({
     const handleSubmit = async () => {
 
     if (!safeCart.length) {
-        alert("Chưa chọn món.");
+        setNotiModal({
+            open: true,
+            type: "warning",
+            title: "Chưa có món",
+            message: "Vui lòng chọn món trước khi tạo đơn.",
+        });
         return;
     }
 
@@ -248,7 +277,7 @@ export default function InvoicePanelOrder({
     }
 
     // ====================================
-    // CASHIER
+    // BRANCH
     // ====================================
 
     try {
@@ -292,7 +321,7 @@ export default function InvoicePanelOrder({
         }
 
         // ====================================
-        // CASHIER ADD ITEM
+        // BRANCH ADD ITEM
         // ====================================
 
         for (const item of safeCart) {
@@ -320,16 +349,20 @@ export default function InvoicePanelOrder({
     } catch (err) {
 
         console.error(
-            "CASHIER ORDER ERROR:",
+            "BRANCH ORDER ERROR:",
             err.response?.data ||
             err
         );
 
-        alert(
-            err.response?.data?.message ||
-            err.message ||
-            "Không thể tạo đơn."
-        );
+        setNotiModal({
+            open: true,
+            type: "error",
+            title: "Không thể tạo đơn",
+            message:
+                err.response?.data?.message ||
+                err.message ||
+                "Đã xảy ra lỗi khi tạo đơn. Vui lòng thử lại.",
+        });
 
     } finally {
 
@@ -491,10 +524,7 @@ export default function InvoicePanelOrder({
 
                 <Button
                     className="w-full"
-                    disabled={
-                        sending ||
-                        safeCart.length === 0
-                    }
+                    disabled={sending}
                     onClick={handleSubmit}
                 >
                     {sending
@@ -528,6 +558,25 @@ export default function InvoicePanelOrder({
                     }}
                 />
             )}
+
+            <NotiModal
+                open={notiModal.open}
+                type={notiModal.type}
+                title={notiModal.title}
+                message={notiModal.message}
+                onClose={() => {
+                    setNotiModal({
+                        open: false,
+                        type: "success",
+                        title: "",
+                        message: "",
+                    });
+
+                    if (notiModal.type === "success" && onBack) {
+                        onBack();
+                    }
+                }}
+            />
 
         </div>
     );

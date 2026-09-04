@@ -1,10 +1,5 @@
 import { useState } from "react";
-import {
-    Store,
-    User,
-    Lock,
-    Palette,
-} from "lucide-react";
+import { Store, User, Lock, Palette, } from "lucide-react";
 
 import RestaurantSection from "./components/RestaurantSection";
 import AccountSection from "./components/AccountSection";
@@ -43,38 +38,27 @@ function AdminProfile() {
     ];
 
     const renderSection = () => {
-
         switch (activeSection) {
+            case "restaurant": return <RestaurantSection />;
 
-            case "restaurant":
-                return <RestaurantSection />;
+            case "account": return <AccountSection />;
 
-            case "account":
-                return <AccountSection />;
+            case "security": return <SecuritySection />;
 
-            case "security":
-                return <SecuritySection />;
+            case "appearance": return <AppearanceSection />;
 
-            case "appearance":
-                return <AppearanceSection />;
-
-            default:
-                return <RestaurantSection />;
+            default: return <RestaurantSection />;
         }
     };
 
     return (
-        <div className="p-6">
+        <div>
 
             {/* TITLE */}
-            <div className="mb-6">
+            <div className="mb-4">
                 <h1 className="text-2xl font-bold text-[var(--color-text)]">
                     Cài đặt
                 </h1>
-
-                <p className="mt-1 text-[var(--color-text-muted)]">
-                    Quản lý thông tin tài khoản và nhà hàng
-                </p>
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
@@ -89,10 +73,9 @@ function AdminProfile() {
                                 type="button"
                                 onClick={() => setActiveSection(section.id)}
                                 className={` w-full flex items-center gap-3 p-3 rounded-lg text-left transition mb-1
-                                    ${
-                                        active
-                                            ? "bg-[var(--color-primary)] text-white"
-                                            : "text-[var(--color-text)] hover:bg-gray-100"
+                                    ${ active
+                                        ? "bg-[var(--color-primary)] text-white"
+                                        : "text-[var(--color-text)] hover:bg-gray-100"
                                     }
                                 `}
                             >
@@ -103,10 +86,9 @@ function AdminProfile() {
                                     </div>
                                     <div
                                         className={` text-xs mt-0.5
-                                            ${
-                                                active
-                                                    ? "text-white/80"
-                                                    : "text-[var(--color-text-muted)]"
+                                            ${ active
+                                                ? "text-white/80"
+                                                : "text-[var(--color-text-muted)]"
                                             }
                                         `}
                                     >

@@ -6,7 +6,7 @@ export default function Button({
     return (
         <button
             {...props}
-            className={`mb-2 p-2 align-center rounded-xl bg-[var(--color-primary)] text-white hover:bg-[var(--color-primary-hover)] duration-300 font-medium ${className}`}
+            className={`flex justify-center items-center gap-2 mb-2 p-2 align-center rounded-xl bg-[var(--color-primary)] text-white hover:bg-[var(--color-primary-hover)] duration-300 font-medium ${className}`}
         >
             {children}
         </button>

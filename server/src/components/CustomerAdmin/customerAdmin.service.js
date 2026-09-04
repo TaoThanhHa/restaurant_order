@@ -38,78 +38,39 @@ const getCustomers = async ({
     value,
     sort = "visits_desc",
 } = {}) => {
-
-    const {
-        from,
-        to,
-    } = getDateRange(
-        period,
-        year,
-        value
-    );
-
-    console.log("CUSTOMER FILTER:", {
-    period,
-    year,
-    value,
-    from,
-    to,
-});
-
-    // ==================================================
-    // CUSTOMER
-    // ==================================================
+    const { from, to } = getDateRange(period, year, value);
 
     const customers = await prisma.customer.findMany({
         where: {
             isGuest: false,
-
-            // ==================================================
-            // PHẢI CÓ ÍT NHẤT 1 ORDER TRONG KHOẢNG THỜI GIAN
-            // ==================================================
-
             orderMembers: {
                 some: {
                     order: {
-                        createdAt: {
-                            gte: from,
-                            lt: to,
-                        },
+                        createdAt: { gte: from, lt: to },
                     },
                 },
             },
-
             ...(search
                 ? {
-                    OR: [
-                        {
-                            name: {
-                                contains: search,
-                                mode: "insensitive",
-                            },
-                        },
-                        {
-                            email: {
-                                contains: search,
-                                mode: "insensitive",
-                            },
-                        },
-                        {
-                            phone: {
-                                contains: search,
-                                mode: "insensitive",
-                            },
-                        },
-                    ],
-                }
+                      OR: [
+                          { name: { contains: search, mode: "insensitive" } },
+                          { email: { contains: search, mode: "insensitive" } },
+                          { phone: { contains: search, mode: "insensitive" } },
+                      ],
+                  }
                 : {}),
         },
-
         include: {
             orderMembers: {
+                where: {
+                    order: {
+                        createdAt: { gte: from, lt: to },
+                    },
+                },
                 include: {
                     order: {
                         include: {
+                            branch: true,
                             session: {
                                 include: {
                                     table: {
@@ -128,316 +89,180 @@ const getCustomers = async ({
                 },
             },
         },
-
-        orderBy: {
-            id: "desc",
-        },
+        orderBy: { id: "desc" },
     });
 
-    // ==================================================
-    // MAP CUSTOMER STATISTICS
-    // ==================================================
-
-    const result = customers
-        .map((customer) => {
-
-            const orders = customer.orderMembers
-                .map((member) => member.order)
-                .filter(Boolean);
-
-            // ------------------------------------------
-            // Đơn trong khoảng thời gian
-            // ------------------------------------------
-
-            const periodOrders = orders.filter((order) => {
-
-                return (
-                    order.createdAt >= from &&
-                    order.createdAt < to
-                );
-
-            });
-
-            // ------------------------------------------
-            // SESSION = SỐ LẦN GHÉ
-            // ------------------------------------------
-
-            const sessionIds = new Set();
-
-            periodOrders.forEach((order) => {
-
-                if (order.sessionId) {
-                    sessionIds.add(order.sessionId);
-                }
-
-            });
-
-            const visits = sessionIds.size;
-
-            // ------------------------------------------
-            // TOTAL SPENT
-            // ------------------------------------------
-
-            const totalSpent = periodOrders.reduce(
-                (sum, order) => {
-
-                    return (
-                        sum +
-                        Number(
-                            order.totalAmount || 0
-                        )
-                    );
-
-                },
-                0
-            );
-
-            // ------------------------------------------
-            // BRANCH
-            // ------------------------------------------
-
-            const branchMap = new Map();
-
-            periodOrders.forEach((order) => {
-
-                const branch =
-                    order.session
-                        ?.table
-                        ?.floor
-                        ?.branch;
-
-                if (!branch) {
-                    return;
-                }
-
-                if (!branchMap.has(branch.id)) {
-
-                    branchMap.set(
-                        branch.id,
-                        {
-                            branchId: branch.id,
-                            branchName: branch.name,
-                            sessionIds: new Set(),
-                            totalSpent: 0,
-                        }
-                    );
-
-                }
-
-                const branchData =
-                    branchMap.get(branch.id);
-
-                if (order.sessionId) {
-
-                    branchData.sessionIds.add(
-                        order.sessionId
-                    );
-
-                }
-
-                branchData.totalSpent +=
-                    Number(
-                        order.totalAmount || 0
-                    );
-
-            });
-
-            const branches =
-                Array.from(branchMap.values())
-                    .map((branch) => ({
-                        branchId:
-                            branch.branchId,
-
-                        branchName:
-                            branch.branchName,
-
-                        visits:
-                            branch.sessionIds.size,
-
-                        totalSpent:
-                            branch.totalSpent,
-                    }))
-                    .sort(
-                        (a, b) =>
-                            b.visits -
-                            a.visits
-                    );
-
-            const favoriteBranch =
-                branches[0] || null;
-
-            // ------------------------------------------
-            // LAST VISIT
-            // ------------------------------------------
-
-            let lastVisit = null;
-
-            if (periodOrders.length > 0) {
-
-                const latestOrder =
-                    periodOrders.reduce(
-                        (latest, order) => {
-
-                            if (
-                                !latest ||
-                                order.createdAt >
-                                    latest.createdAt
-                            ) {
-                                return order;
-                            }
-
-                            return latest;
-
-                        },
-                        null
-                    );
-
-                lastVisit =
-                    latestOrder?.createdAt ||
-                    null;
-            }
-
-            return {
-
-                id:
-                    customer.id,
-
-                name:
-                    customer.name,
-
-                email:
-                    customer.email,
-
-                phone:
-                    customer.phone,
-
-                avatar:
-                    customer.avatar,
-
-                isActive:
-                    customer.isActive,
-
-                createdAt:
-                    customer.createdAt,
-
-                visits,
-
-                totalSpent,
-
-                lastVisit,
-
-                favoriteBranch:
-                    favoriteBranch?.branchName ||
-                    null,
-
-                branches,
-
-            };
-
-        })
-
-        // Chỉ lấy khách có phát sinh hoạt động
-        // trong khoảng thời gian đã chọn
-        .filter((customer) => customer.visits > 0);
-
-    // ==================================================
-    // SORT
-    // ==================================================
-
-    result.sort((a, b) => {
-
-        switch (sort) {
-
-            case "visits_asc":
-                return a.visits - b.visits;
-
-            case "spent_desc":
-                return b.totalSpent - a.totalSpent;
-
-            case "spent_asc":
-                return a.totalSpent - b.totalSpent;
-
-            case "last_visit_desc":
-                return (
-                    new Date(b.lastVisit) -
-                    new Date(a.lastVisit)
-                );
-
-            case "last_visit_asc":
-                return (
-                    new Date(a.lastVisit) -
-                    new Date(b.lastVisit)
-                );
-
-            case "visits_desc":
-            default:
-                return b.visits - a.visits;
-        }
-
-    });
-
-    // ==================================================
-    // OVERVIEW STATISTICS
-    // ==================================================
-
-    const totalCustomers =
-        result.length;
-
-    const returningCustomers =
-        result.filter(
-            (customer) =>
-                customer.visits >= 2
-        ).length;
-
-    const newCustomers =
-        result.filter(
-            (customer) =>
-                customer.visits === 1
-        ).length;
-
-    const totalSpent =
-        result.reduce(
-            (sum, customer) =>
-                sum +
-                Number(
-                    customer.totalSpent || 0
-                ),
+    const result = customers.map((customer) => {
+        const orders = customer.orderMembers
+            .map((member) => member.order)
+            .filter(Boolean);
+
+        const sessionIds = new Set();
+        let takeawayVisits = 0;
+
+        orders.forEach((order) => {
+            if (order.sessionId) sessionIds.add(order.sessionId);
+            else if (order.orderType === "TAKE_AWAY") takeawayVisits++;
+        });
+
+        const visits = sessionIds.size + takeawayVisits;
+
+        const totalSpent = orders.reduce(
+            (sum, order) => sum + Number(order.totalAmount || 0),
             0
         );
 
-    return {
+        const branchMap = new Map();
 
-        period,
+        orders.forEach((order) => {
+            const branch =
+                order.branch ||
+                order.session?.table?.floor?.branch;
 
-        year:
-            Number(year) ||
-            new Date().getFullYear(),
+            if (!branch) return;
 
-        value:
-            Number(value),
+            if (!branchMap.has(branch.id)) {
+                branchMap.set(branch.id, {
+                    branchId: branch.id,
+                    branchName: branch.name,
+                    sessionIds: new Set(),
+                    takeawayCount: 0,
+                    totalSpent: 0,
+                });
+            }
 
-        from,
+            const branchData = branchMap.get(branch.id);
 
-        to,
+            if (order.sessionId) {
+                branchData.sessionIds.add(order.sessionId);
+            } else if (order.orderType === "TAKE_AWAY") {
+                branchData.takeawayCount++;
+            }
 
-        statistics: {
+            branchData.totalSpent += Number(order.totalAmount || 0);
+        });
 
-            totalCustomers,
+        const branches = Array.from(branchMap.values())
+            .map((branch) => ({
+                branchId: branch.branchId,
+                branchName: branch.branchName,
+                visits:
+                    branch.sessionIds.size +
+                    branch.takeawayCount,
+                totalSpent: branch.totalSpent,
+            }))
+            .sort((a, b) => b.visits - a.visits);
 
-            returningCustomers,
+        const latestOrder = orders.reduce(
+            (latest, order) =>
+                !latest || order.createdAt > latest.createdAt
+                    ? order
+                    : latest,
+            null
+        );
 
-            newCustomers,
-
+        return {
+            id: customer.id,
+            name: customer.name,
+            email: customer.email,
+            phone: customer.phone,
+            avatar: customer.avatar,
+            isActive: customer.isActive,
+            createdAt: customer.createdAt,
+            visits,
             totalSpent,
+            lastVisit: latestOrder?.createdAt || null,
+            favoriteBranch: branches[0]?.branchName || null,
+            branches,
+        };
+    });
 
+    result.sort((a, b) => {
+        switch (sort) {
+            case "visits_asc":
+                return a.visits - b.visits;
+            case "spent_desc":
+                return b.totalSpent - a.totalSpent;
+            case "spent_asc":
+                return a.totalSpent - b.totalSpent;
+            case "last_visit_desc":
+                return new Date(b.lastVisit) - new Date(a.lastVisit);
+            case "last_visit_asc":
+                return new Date(a.lastVisit) - new Date(b.lastVisit);
+            default:
+                return b.visits - a.visits;
+        }
+    });
+
+    const registeredCustomers = await prisma.customer.findMany({
+        where: {
+            isGuest: false,
+            orderMembers: {
+                some: {
+                    order: {
+                        createdAt: { gte: from, lt: to },
+                    },
+                },
+            },
         },
+        select: {
+            id: true,
+            createdAt: true,
+        },
+    });
 
-        customers:
-            result,
+    const newCustomers = registeredCustomers.filter((customer) => {
+        const createdAt = new Date(customer.createdAt);
+        return createdAt >= from && createdAt < to;
+    }).length;
 
+    const returningCustomers = registeredCustomers.length - newCustomers;
+
+    const guestCustomers = await prisma.customer.count({
+        where: {
+            isGuest: true,
+            orderMembers: {
+                some: {
+                    order: {
+                        createdAt: { gte: from, lt: to },
+                    },
+                },
+            },
+        },
+    });
+
+    const statisticsOrders = await prisma.order.findMany({
+        where: {
+            createdAt: { gte: from, lt: to },
+            orderMembers: {
+                some: {},
+            },
+        },
+        select: {
+            totalAmount: true,
+        },
+    });
+
+    const totalSpent = statisticsOrders.reduce(
+        (sum, order) => sum + Number(order.totalAmount || 0),
+        0
+    );
+
+    return {
+        period,
+        year: Number(year) || new Date().getFullYear(),
+        value: Number(value),
+        from,
+        to,
+        statistics: {
+            totalCustomers: newCustomers + returningCustomers + guestCustomers,
+            guestCustomers,
+            returningCustomers,
+            newCustomers,
+            totalSpent,
+        },
+        customers: result,
     };
-    
-
 };
 
 // GET CUSTOMER DETAIL
@@ -470,6 +295,7 @@ const getCustomers = async ({
                                         food: true,
                                     },
                                 },
+                                branch: true,
                                 session: {
                                     include: {
                                         table: {
@@ -518,7 +344,8 @@ const getCustomers = async ({
     orders.forEach(
         (order) => {
             const branch =
-                order.session ?.table ?.floor ?.branch;
+    order.branch ||
+    order.session?.table?.floor?.branch;
 
             if (!branch) {
                 return;
@@ -548,15 +375,18 @@ const getCustomers = async ({
     );      
     // SESSION COUNT
     const sessionIds = new Set();
-    orders.forEach(
-        (order) => {
-            if (order.sessionId) {
-                sessionIds.add(
-                    order.sessionId
-                );
-            }
-        }
-    );
+let takeawayVisits = 0;
+
+orders.forEach((order) => {
+    if (order.sessionId) {
+        sessionIds.add(order.sessionId);
+    } else if (order.orderType === "TAKE_AWAY") {
+        takeawayVisits += 1;
+    }
+});
+
+const visitCount =
+    sessionIds.size + takeawayVisits;
     // TOTAL SPENT
     const totalSpent =
         orders.reduce(
@@ -578,7 +408,7 @@ const getCustomers = async ({
         createdAt: customer.createdAt,
         statistics: {
             orderCount: orders.length,
-            visitCount: sessionIds.size,
+            visitCount,
             totalSpent,
             favoriteBranch: branches[0] || null,
             branches,
@@ -634,6 +464,7 @@ const getStatistics = async ({
                         customer: true,
                     },
                 },
+                branch: true,
                 session: {
                     include: {
                         table: {
@@ -672,10 +503,8 @@ const getStatistics = async ({
     orders.forEach(
         (order) => {
             const branch =
-                order.session
-                    ?.table
-                    ?.floor
-                    ?.branch;
+    order.branch ||
+    order.session?.table?.floor?.branch;
 
             if (!branch) {
                 return;

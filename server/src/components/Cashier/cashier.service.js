@@ -160,7 +160,7 @@ const notifyOrderCustomers = async (
 
 
     // ==========================================
-    // STAFF / CASHIER
+    // STAFF / BRANCH
     // ==========================================
 
     sseService.sendToBranch(

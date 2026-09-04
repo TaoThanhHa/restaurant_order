@@ -60,7 +60,7 @@ const notifyOrderCustomers = async (
     }
 
     // ========================================
-    // GỬI CHO CASHIER / STAFF CHI NHÁNH
+    // GỬI CHO BRANCH / STAFF CHI NHÁNH
     // ========================================
 
     sseService.sendToBranch(
@@ -72,10 +72,7 @@ const notifyOrderCustomers = async (
 
 // ORDER
 const create = async (data) => {
-  const {
-        customerId,
-        joinOrderId
-    } = data;
+    const { customerId, joinOrderId, userId } = data;
 
   if (!customerId) {
     throw new Error("Vui lòng chọn khách hàng.");
@@ -146,18 +143,21 @@ const create = async (data) => {
   if (!customer.session) {
     throw new Error("Khách chưa thuộc phiên phục vụ.");
   }
+  console.log("USER ID TẠO ĐƠN:", userId);
+console.log("USER ID NUMBER:", Number(userId));
   const session = customer.session;
   const order = await prisma.order.create({
-    data: {
-      orderCode: `B-${Date.now()}`,
-      branchId: session.table.floor.branchId,
-      sessionId: session.id,
-      createdById: customer.id,
-      status: "PENDING",
-      orderType: "DINE_IN",
-      totalAmount: 0,
-    },
-  });
+        data: {
+            orderCode: `B-${Date.now()}`,
+            branchId: session.table.floor.branchId,
+            sessionId: session.id,
+            createdByUserId: Number(userId),
+            createdByCustomerId: customer.id,
+            status: "PENDING",
+            orderType: "DINE_IN",
+            totalAmount: 0,
+        },
+    });
 
   await prisma.orderMember.create({
       data: {
@@ -231,7 +231,7 @@ const getById = async (id) => {
         include: {
 
             // Quan hệ khách hàng của Order
-            createdBy: true,
+            createdByUser: true,
 
             // Bàn / phiên phục vụ
             session: {
@@ -270,99 +270,109 @@ const getById = async (id) => {
         ...order,
 
         // Để FE vẫn có thể dùng order.customer
-        customer: order.createdBy,
+        customer: order.createdByUser,
 
         totalAmount,
     };
 };
 // ADD ITEM
 const addItem = async (orderId, data) => {
-  const { foodId, quantity, note } = data;
+    const { foodId, quantity, note } = data;
 
-  if (!foodId) {
-    throw new Error("Vui lòng chọn món.");
-  }
+    if (!foodId) {
+        throw new Error("Vui lòng chọn món.");
+    }
 
-  if (!quantity || quantity <= 0) {
-    throw new Error("Số lượng không hợp lệ.");
-  }
+    if (!quantity || quantity <= 0) {
+        throw new Error("Số lượng không hợp lệ.");
+    }
 
-  // Kiểm tra order
-  const order = await prisma.order.findUnique({
-    where: {
-      id: orderId,
-    },
-  });
+    const order = await prisma.order.findUnique({
+        where: {
+            id: Number(orderId),
+        },
+    });
 
-  if (!order) {
-    throw new Error("Đơn hàng không tồn tại.");
-  }
+    if (!order) {
+        throw new Error("Đơn hàng không tồn tại.");
+    }
 
-  if (
-    order.status === "COMPLETED" ||
-    order.status === "CANCELLED"
-  ) {
-    throw new Error("Đơn hàng đã đóng.");
-  }
+    if (
+        order.status === "COMPLETED" ||
+        order.status === "CANCELLED"
+    ) {
+        throw new Error("Đơn hàng đã đóng.");
+    }
 
-  // Kiểm tra món
-  const food = await prisma.food.findUnique({
-    where: {
-      id: Number(foodId),
-    },
-  });
+    const food = await prisma.food.findUnique({
+        where: {
+            id: Number(foodId),
+        },
+    });
 
-  if (!food) {
-    throw new Error("Món ăn không tồn tại.");
-  }
+    if (!food) {
+        throw new Error("Món ăn không tồn tại.");
+    }
 
-  // Kiểm tra chi nhánh có bán món không
-  const branchFood = await prisma.branchFood.findUnique({
-    where: {
-      branchId_foodId: {
-        branchId: order.branchId,
-        foodId: Number(foodId),
-      },
-    },
-  });
+    const branchFood = await prisma.branchFood.findUnique({
+        where: {
+            branchId_foodId: {
+                branchId: order.branchId,
+                foodId: Number(foodId),
+            },
+        },
+    });
 
-  if (!branchFood) {
-    throw new Error("Chi nhánh chưa có món này.");
-  }
+    if (!branchFood) {
+        throw new Error("Chi nhánh chưa có món này.");
+    }
 
-  if (branchFood.status === "OUT_OF_STOCK") {
-    throw new Error("Món ăn đã hết.");
-  }
+    if (branchFood.status === "OUT_OF_STOCK") {
+        throw new Error("Món ăn đã hết.");
+    }
 
-  // Thêm món mới
-  const item = await prisma.orderItem.create({
-      data: {
-          orderId,
-          foodId: Number(foodId),
-          quantity: Number(quantity),
-          price: food.price,
-          note,
-          status: "PENDING",
-      },
-      include: {
-          food: true,
-      },
-  });
+    // ========================================
+    // MÓN MỚI LUÔN CHỜ XÁC NHẬN
+    // ========================================
 
-  await prisma.order.update({
-      where: {
-          id: orderId,
-      },
-      data: {
-          status: "PENDING",
-      },
-  });
+    const item = await prisma.orderItem.create({
+        data: {
+            orderId: Number(orderId),
+            foodId: Number(foodId),
+            quantity: Number(quantity),
+            price: food.price,
+            note: note || null,
+            status: "PENDING",
+        },
+        include: {
+            food: true,
+        },
+    });
 
-  await notifyOrderCustomers(
-    orderId
-);
+    // ========================================
+    // ORDER CÓ MÓN MỚI
+    // → CHỜ XÁC NHẬN
+    // ========================================
 
-  return item;
+    await prisma.order.update({
+        where: {
+            id: Number(orderId),
+        },
+        data: {
+            status: "PENDING",
+        },
+    });
+
+    // ========================================
+    // SSE
+    // ========================================
+
+    await notifyOrderCustomers(
+        Number(orderId),
+        "order.updated"
+    );
+
+    return item;
 };
 
 const confirmItems = async (orderId) => {
@@ -971,7 +981,7 @@ await notifyOrderCustomers(
     };
 };
 
-const createTakeAway = async (branchId, data) => {
+const createTakeAway = async (branchId, data, userId) => {
 
     const {
         items,
@@ -1043,25 +1053,27 @@ const createTakeAway = async (branchId, data) => {
         // -----------------------------------------
 
         const order = await tx.order.create({
-
             data: {
-
                 orderCode: `TA-${Date.now()}`,
-
                 branchId,
-
                 orderType: "TAKE_AWAY",
-
                 status: "COMPLETED",
-
                 note,
-
                 totalAmount: total,
+
+                // Thu ngân tạo đơn
+                createdByUserId: Number(userId),
+
+                // Nếu tìm được khách thì lưu khách
+                ...(customer
+                    ? {
+                        createdByCustomerId: customer.id,
+                    }
+                    : {}),
 
                 orderItems: {
                     create: orderItems,
                 },
-
             },
 
             include: {
@@ -1202,23 +1214,29 @@ const getTakeAway = async (branchId) => {
 
 };
 // ORDER HISTORY
-  const getHistory = async (branchId) => {
-
+const getHistory = async (branchId) => {
     const orders = await prisma.order.findMany({
-
+        
         where: {
             branchId: Number(branchId),
             status: "COMPLETED",
         },
 
         include: {
-            createdBy: true,
+            // Người tạo đơn: nhân viên / thu ngân
+            createdByUser: true,
+
+            // Khách hàng
+            createdByCustomer: true,
+
             session: {
                 include: {
                     table: true,
                 },
             },
+
             payment: true,
+
             orderItems: {
                 include: {
                     food: true,
@@ -1230,23 +1248,61 @@ const getTakeAway = async (branchId) => {
             createdAt: "desc",
         },
     });
-
-    return orders.map(order => ({
+    console.log(
+    orders.map(order => ({
         id: order.id,
         orderCode: order.orderCode,
-        customerName: order.createdBy?.name || "Khách lẻ",
+        createdByUserId: order.createdByUserId,
+        createdByUser: order.createdByUser,
+        createdByCustomerId: order.createdByCustomerId,
+        createdByCustomer: order.createdByCustomer,
+    }))
+);
+    
+
+    return orders.map((order) => ({
+        
+        id: order.id,
+        orderCode: order.orderCode,
+
+        // ==============================
+        // KHÁCH HÀNG
+        // ==============================
+        customer: order.createdByCustomer
+            ? {
+                id: order.createdByCustomer.id,
+                name: order.createdByCustomer.name,
+                phone: order.createdByCustomer.phone,
+            }
+            : null,
+
+        // ==============================
+        // NHÂN VIÊN / THU NGÂN
+        // ==============================
+        createdByUser: order.createdByUser
+            ? {
+                id: order.createdByUser.id,
+                name: order.createdByUser.username,
+                role: order.createdByUser.role,
+            }
+            : null,
         tableName: order.session?.table?.name || null,
+
         orderType: order.orderType,
-        totalItems:
-            order.orderItems.reduce(
-                (sum, item) => sum + item.quantity,
-                0
-            ),
+
+        totalItems: order.orderItems.reduce(
+            (sum, item) => sum + item.quantity,
+            0
+        ),
 
         totalAmount: Number(order.totalAmount),
+
         paymentMethod: order.payment?.paymentMethod,
+
         createdAt: order.createdAt,
+        
     }));
+
 };
 
 const mergeOrders = async ({
@@ -1463,7 +1519,7 @@ const getPendingOrders = async (branchId) => {
 
         include: {
 
-            createdBy: {
+            createdByUser: {
                 select: {
                     id: true,
                     name: true,

@@ -80,9 +80,9 @@ export default function FormPass({
     };
 
     return (
-        <div className="min-h-screen bg-slate-100">
+        <div className="min-h-screen bg-[var(--color-background)]">
 
-            <div className="bg-[#4f7d4f] px-5 py-4 shadow-sm">
+            <div className="bg-[var(--color-primary)] px-5 py-4 shadow-sm">
 
                 <div className="flex items-center gap-3">
 

@@ -2,24 +2,48 @@ import api from "../api/axiosClient";
 
 const staffService = {
 
-    getAll: (branchId) =>
-        api.get(`/staff/branch/${branchId}`),
+    // ========================================
+    // GET ALL STAFF
+    // ========================================
 
-    getById: (branchId, userId) =>
-        api.get(`/staff/branch/${branchId}/${userId}`),
+    getAll: () =>
+        api.get("/employee"),
 
-    create: (branchId, data) =>
-        api.post(`/staff/branch/${branchId}`, data),
 
-    update: (branchId, userId, data) =>
+    // ========================================
+    // GET STAFF BY ID
+    // ========================================
+
+    getById: (userId) =>
+        api.get(`/employee/${userId}`),
+
+
+    // ========================================
+    // CREATE STAFF
+    // ========================================
+
+    create: (data) =>
+        api.post("/employee", data),
+
+
+    // ========================================
+    // UPDATE STAFF
+    // ========================================
+
+    update: (userId, data) =>
         api.put(
-            `/staff/branch/${branchId}/${userId}`,
+            `/employee/${userId}`,
             data
         ),
 
-    toggleStatus: (branchId, userId) =>
+
+    // ========================================
+    // TOGGLE STATUS
+    // ========================================
+
+    toggleStatus: (userId) =>
         api.patch(
-            `/staff/branch/${branchId}/${userId}/toggle-status`
+            `/employee/${userId}/status`
         ),
 
 };

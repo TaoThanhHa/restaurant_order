@@ -292,20 +292,20 @@ const handleRemoveItem = async (itemId) => {
                 </div>
 
                 {newItems.length>0&&(
-                    <Button className="w-[200px] !bg-red-100" onClick={handleConfirm}>
+                    <Button className=" mt-2 w-full !bg-red-500" onClick={handleConfirm}>
                         Xác nhận món mới
                     </Button>
                 )}
 
                 {newItems.length===0&&order.status==="CONFIRMED"&&(
-                    <Button className="mt-2 w-full" onClick={handlePreparing}>
+                    <Button className="mt-2 w-full !bg-green-500" onClick={handlePreparing}>
 
                         Bắt đầu chế biến
                     </Button>
                 )}
 
                 {order.status==="PREPARING"&&(
-                    <Button className="mt-2 w-full" onClick={handleServed}>
+                    <Button className="mt-2 w-full !bg-blue-500" onClick={handleServed}>
                         Phục vụ
                     </Button>
                 )}

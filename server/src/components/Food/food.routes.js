@@ -14,8 +14,5 @@ router.post("/", auth, authorize("ADMIN"), foodController.create);
 router.put("/:id", auth, authorize("ADMIN"), foodController.update);
 router.delete("/:id", auth, authorize("ADMIN"), foodController.remove);
 
-router.get(
-    "/qr/:qrCode",
-    foodController.getByQrCode
-);
+router.get("/qr/:qrCode", foodController.getByQrCode);
 module.exports = router;

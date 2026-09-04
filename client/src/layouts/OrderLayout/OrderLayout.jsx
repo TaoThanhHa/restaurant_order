@@ -21,7 +21,7 @@ export default function OrderLayout() {
             {/* HEADER ORDER */}
             <header className="flex h-16 items-center justify-between border-b bg-[var(--color-primary)] px-6 shadow-sm text-white">
 
-                <Link to={`/cashier/table`} className="font-bold text-lg">
+                <Link to={`/branch/table`} className="font-bold text-lg">
                     Gọi món
                 </Link>
 
@@ -36,13 +36,8 @@ export default function OrderLayout() {
                         <div>
                             <button
                                 type="button"
-                                onClick={() => navigate("/cashier/profile")}
-                                className="
-                                    text-sm font-medium
-                                    cursor-pointer
-                                    hover:text-[var(--color-primary)]
-                                    transition
-                                "
+                                onClick={() => navigate("/branch/profile")}
+                                className="text-sm font-medium cursor-pointer hover:text-[var(--color-primary)] transition"
                             >
                                 {user?.username}
                             </button>

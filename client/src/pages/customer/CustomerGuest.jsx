@@ -12,7 +12,6 @@ function getDeviceId() {
         id = crypto.randomUUID();
         localStorage.setItem("deviceId", id);
     }
-
     return id;
 }
 
@@ -23,11 +22,8 @@ export default function CustomerWelcome() {
     const { login } = useCustomerAuth();
 
     useEffect(() => {
-
         const autoLogin = async () => {
-
             try {
-
                 const result = await customerAuthService.guest({
                     tableId: qrCode,
                     deviceId: getDeviceId(),
@@ -47,17 +43,13 @@ export default function CustomerWelcome() {
             }
 
         };
-
         autoLogin();
-
     }, []);
 
     return (
 
         <div className="min-h-screen bg-gradient-to-b from-sky-300 to-indigo-500 flex items-center justify-center">
-
             <div className="text-center text-white">
-
                 <Coffee
                     size={70}
                     className="mx-auto mb-5 animate-pulse"
@@ -72,8 +64,6 @@ export default function CustomerWelcome() {
                 </p>
 
             </div>
-
         </div>
-
     );
 }

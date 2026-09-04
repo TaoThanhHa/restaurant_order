@@ -24,7 +24,8 @@ router.use("/upload", require("../components/Upload/upload.route"));
 router.use("/statistics", require("../components/AdminStatistics/adminStatistics.routes"));
 router.use("/admin", require("../components/Admin/admin.routes"));
 router.use("/restaurant",require("../components/Restaurant/restaurant.routes"));
-router.use("/staff", require("../components/Staff/staff.routes"));
+router.use("/employee", require("../components/Staff/staff.routes"));
 router.use("/service-requests", require("../components/ServiceRequest/serviceRequest.routes"));
+router.use("/inventory", require("../components/Inventory/inventory.routes"));
 
 module.exports = router;

@@ -36,7 +36,7 @@ export default function FoodPanel({
     showBack = true,
 
     // ==========================================
-    // CASHIER / CUSTOMER
+    // BRANCH / CUSTOMER
     // ==========================================
 
     mode = "cashier",
@@ -82,7 +82,7 @@ export default function FoodPanel({
 
         } else {
 
-            // GIỮ NGUYÊN CASHIER
+            // GIỮ NGUYÊN BRANCH
             foodRes = await foodService.getByBranch();
 
         }

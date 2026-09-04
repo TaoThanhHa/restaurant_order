@@ -1,7 +1,4 @@
-/* =========================
-   DEFAULT / LÀNG TRE
-========================= */
-
+/*  DEFAULT / LÀNG TRE */
 :root,
 [data-theme="lang-tre"] {
     --color-primary: #315C45;
@@ -26,10 +23,7 @@
 }
 
 
-/* =========================
-   1. BẾP GỖ
-========================= */
-
+/*  1. BẾP GỖ */
 [data-theme="bep-go"] {
     --color-primary: #795548;
     --color-primary-hover: #5D4037;
@@ -53,10 +47,7 @@
 }
 
 
-/* =========================
-   2. TÍM HUẾ
-========================= */
-
+/*  2. TÍM HUẾ */
 [data-theme="tim-hue"] {
     --color-primary: #6B4C6D;
     --color-primary-hover: #513951;
@@ -80,10 +71,7 @@
 }
 
 
-/* =========================
-   3. BIỂN VIỆT
-========================= */
-
+/*  3. BIỂN VIỆT */
 [data-theme="bien-viet"] {
     --color-primary: #287C8E;
     --color-primary-hover: #1E6271;
@@ -107,10 +95,7 @@
 }
 
 
-/* =========================
-   4. NẮNG VIỆT
-========================= */
-
+/*  4. NẮNG VIỆT */
 [data-theme="nang-viet"] {
     --color-primary: #C58A24;
     --color-primary-hover: #A97019;
@@ -134,10 +119,7 @@
 }
 
 
-/* =========================
-   5. ĐẤT VIỆT
-========================= */
-
+/*  5. ĐẤT VIỆT */
 [data-theme="dat-viet"] {
     --color-primary: #A64032;
     --color-primary-hover: #863329;
@@ -161,10 +143,7 @@
 }
 
 
-/* =========================
-   6. LÀNG TRE
-========================= */
-
+/*  6. LÀNG TRE */
 [data-theme="lang-tre"] {
     --color-primary: #315C45;
     --color-primary-hover: #244735;
@@ -188,10 +167,7 @@
 }
 
 
-/* =========================
-   7. HOA SEN
-========================= */
-
+/*  7. HOA SEN */
 [data-theme="hoa-sen"] {
     --color-primary: #B85C70;
     --color-primary-hover: #98475A;

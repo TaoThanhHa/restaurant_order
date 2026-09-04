@@ -26,9 +26,7 @@ export default function AuthLayout() {
                 <main className="content">
                     <Outlet />
                 </main>
-
             </div>
-
         </div>
     );
 }

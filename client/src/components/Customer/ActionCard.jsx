@@ -8,12 +8,8 @@ export default function ActionCard({
 }) {
     return (
         <div className="rounded-2xl bg-white p-5 shadow">
-
             <div className="flex items-center gap-4">
-
-                <div
-                    className={`flex h-16 w-16 items-center justify-center rounded-2xl text-white ${color}`}
-                >
+                <div className={`flex h-16 w-16 items-center justify-center rounded-2xl text-white ${color}`}>
                     {icon}
                 </div>
 
@@ -26,7 +22,6 @@ export default function ActionCard({
                         {description}
                     </p>
                 </div>
-
             </div>
 
             <button

@@ -1,12 +1,16 @@
 import { useEffect, useState } from "react";
 import { NavLink } from "react-router-dom";
 
-import {Utensils,} from "lucide-react";
+import { Utensils } from "lucide-react";
 
 import restaurantService from "../../services/restaurant.service";
+import useAuth from "../../hooks/useAuth";
+
 import "./SidebarAuth.css";
 
 export default function Sidebar() {
+
+    const { user } = useAuth();
 
     const [restaurant, setRestaurant] = useState({
         name: "Làng Tre",
@@ -62,32 +66,74 @@ export default function Sidebar() {
 
     }, []);
 
+    // ==========================================
+    // ROLE
+    // ==========================================
+
+    const roleName =
+        user?.role?.name ||
+        user?.role ||
+        "";
+
+    // ==========================================
+    // MENU
+    // ==========================================
+
     const menus = [
         {
             name: "Tổng quan",
-            path: "/cashier/dashboard",
+            path: "/branch/dashboard",
+            allRoles: true,
         },
         {
             name: "Bàn ăn",
-            path: "/cashier/tables",
+            path: "/branch/tables",
+            cashierOnly: true,
         },
         {
             name: "Thực đơn",
-            path: "/cashier/foods",
+            path: "/branch/foods",
+            cashierOnly: true,
         },
         {
             name: "Đơn mang về",
-            path: "/cashier/take-away",
+            path: "/branch/take-away",
+            cashierOnly: true,
+        },
+        {
+            name: "Nhân viên",
+            path: "/branch/employee",
+            branchOnly: true,
         },
         {
             name: "Hóa đơn",
-            path: "/cashier/order-history",
+            path: "/branch/order-history",
+            allRoles: true,
         },
         {
             name: "Thông tin",
-            path: "/cashier/profile",
+            path: "/branch/profile",
+            allRoles: true,
         },
     ];
+
+    // ==========================================
+    // LỌC MENU THEO ROLE
+    // ==========================================
+
+    const visibleMenus = menus.filter((menu) => {
+
+        if (menu.allRoles) {
+            return true;
+        }
+        if (menu.branchOnly) { return roleName === "BRANCH"; }
+        
+        if (menu.cashierOnly) {
+            return roleName === "CASHIER";
+        }
+
+        return false;
+    });
 
     return (
 
@@ -122,11 +168,10 @@ export default function Sidebar() {
 
             </div>
 
-
             {/* MENU */}
             <div className="sidebar_auth-menu">
 
-                {menus.map((menu) => (
+                {visibleMenus.map((menu) => (
 
                     <NavLink
                         key={menu.path}

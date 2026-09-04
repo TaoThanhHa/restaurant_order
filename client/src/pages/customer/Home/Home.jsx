@@ -797,12 +797,12 @@ export default function Home() {
 
     return (
 
-        <div className="min-h-screen bg-slate-100 pb-24">
+        <div className="min-h-screen bg-[var(--color-background)] pb-24">
 
 
-            {/* ================================================= */}
+            
             {/* THÔNG BÁO */}
-            {/* ================================================= */}
+            
 
             {notification && (
 
@@ -855,9 +855,9 @@ export default function Home() {
             )}
 
 
-            {/* ================================================= */}
+            
             {/* HEADER */}
-            {/* ================================================= */}
+            
 
             <HomeHeader
                 profile={profile}
@@ -868,9 +868,9 @@ export default function Home() {
             <div className="space-y-5 p-5">
 
 
-                {/* ================================================= */}
+                
                 {/* YÊU CẦU GỌI NHÂN VIÊN */}
-                {/* ================================================= */}
+                
 
                 {activeServiceRequest && (
 
@@ -981,9 +981,9 @@ export default function Home() {
                 )}
 
 
-                {/* ================================================= */}
+                
                 {/* ĐẶT MÓN */}
-                {/* ================================================= */}
+                
 
                 <ActionCard
                     icon={
@@ -1003,9 +1003,9 @@ export default function Home() {
                 />
 
 
-                {/* ================================================= */}
+                
                 {/* GỌI NHÂN VIÊN */}
-                {/* ================================================= */}
+                
 
                 <ActionCard
                     icon={
@@ -1054,9 +1054,9 @@ export default function Home() {
                 />
 
 
-                {/* ================================================= */}
+                
                 {/* ĐƠN HIỆN TẠI */}
-                {/* ================================================= */}
+                
 
                 <CurrentOrderCard
                     order={currentOrder}
@@ -1065,9 +1065,9 @@ export default function Home() {
             </div>
 
 
-            {/* ================================================= */}
+            
             {/* MODAL GỌI NHÂN VIÊN */}
-            {/* ================================================= */}
+            
 
             <ServiceRequestModal
                 open={showServiceRequest}
