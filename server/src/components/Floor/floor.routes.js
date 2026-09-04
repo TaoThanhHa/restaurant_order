@@ -7,11 +7,7 @@ const auth = require("../../middlewares/auth.middleware");
 const authorize = require("../../middlewares/role.middleware");
 
 router.get("/", auth, floorController.getAll);
-router.get(
-    "/branch/:branchId",
-    auth,
-    floorController.getByBranch
-);
+router.get("/branch/:branchId", auth, floorController.getByBranch);
 router.get("/:id", auth, floorController.getById);
 router.post("/", auth, authorize("ADMIN"), floorController.create);
 router.put("/:id", auth, authorize("ADMIN"), floorController.update);

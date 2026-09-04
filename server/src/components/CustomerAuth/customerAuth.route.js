@@ -6,48 +6,12 @@ const controller = require("./customerAuth.controller");
 
 const customerAuth = require("../../middlewares/customerAuth.middleware");
 
-//
-// PUBLIC
-//
-
-router.post(
-    "/guest",
-    controller.guest
-);
-
-router.post(
-    "/register",
-    controller.register
-);
-
-router.post(
-    "/login",
-    controller.login
-);
-
-router.post(
-    "/forgot-password",
-    controller.forgotPassword
-);
-
-router.post(
-    "/reset-password",
-    controller.resetPassword
-);
-
-//
-// PRIVATE
-//
-
-router.get(
-    "/profile",
-    customerAuth,
-    controller.profile
-);
-
-router.get(
-    "/table/:qrCode",
-    controller.getTable
-);
+router.post("/guest", controller.guest);
+router.post("/register", controller.register);
+router.post("/login", controller.login);
+router.post("/forgot-password", controller.forgotPassword);
+router.post("/reset-password", controller.resetPassword);
+router.get("/profile", customerAuth, controller.profile);
+router.get("/table/:qrCode", controller.getTable);
 
 module.exports = router;

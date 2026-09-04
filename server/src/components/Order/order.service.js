@@ -1522,7 +1522,7 @@ const getPendingOrders = async (branchId) => {
             createdByUser: {
                 select: {
                     id: true,
-                    name: true,
+                    username: true,
                 },
             },
 

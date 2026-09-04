@@ -11,35 +11,8 @@ const {
 const uploadController = require("./upload.controller");
 const customerAuth = require("../../middlewares/customerAuth.middleware");
 
-// ========================================
-// UPLOAD FOOD
-// ========================================
-
-router.post(
-    "/food",
-    foodUpload.single("image"),
-    uploadController.uploadFoodImage
-);
-
-// ========================================
-// UPLOAD RESTAURANT LOGO
-// ========================================
-
-router.post(
-    "/restaurant-logo",
-    restaurantUpload.single("image"),
-    uploadController.uploadRestaurantLogo
-);
-
-// ========================================
-// UPLOAD CUSTOMER AVATAR
-// ========================================
-
-router.post(
-    "/customer-avatar",
-    customerAuth,
-    customerAvatarUpload.single("image"),
-    uploadController.uploadCustomerAvatar
-);
+router.post( "/food", foodUpload.single("image"), uploadController.uploadFoodImage);
+router.post( "/restaurant-logo", restaurantUpload.single("image"), uploadController.uploadRestaurantLogo);
+router.post( "/customer-avatar", customerAuth, customerAvatarUpload.single("image"), uploadController.uploadCustomerAvatar);
 
 module.exports = router;

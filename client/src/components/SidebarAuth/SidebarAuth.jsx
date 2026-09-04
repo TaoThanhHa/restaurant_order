@@ -80,11 +80,7 @@ export default function Sidebar() {
     // ==========================================
 
     const menus = [
-        {
-            name: "Tổng quan",
-            path: "/branch/dashboard",
-            allRoles: true,
-        },
+        
         {
             name: "Bàn ăn",
             path: "/branch/tables",
