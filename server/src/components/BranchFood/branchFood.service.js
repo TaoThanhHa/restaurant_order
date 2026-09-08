@@ -1,67 +1,72 @@
 const prisma = require("../../config/prisma");
 
-const getAll = async (branchId) => {
-  return await prisma.branchFood.findMany({
-    where: {
-      branchId,
-      status:{
-        not:"INACTIVE"
-      }
-    },
-    include: {
-      food: {
-        include: {
-          category: true,
+const getAll = async branchId => {
+    return await prisma.branchFood.findMany({
+        where: {
+            branchId: Number(branchId),
         },
-      },
-    },
-    orderBy: {
-      food: {
-        name: "asc",
-      },
-    },
-  });
+        include: {
+            food: {
+                include: {
+                    category: true,
+                },
+            },
+        },
+        orderBy: {
+            food: {
+                name: "asc",
+            },
+        },
+    });
 };
 
 const updateStatus = async (
-  branchId,
-  foodId,
-  status
+    branchId,
+    foodId,
+    status
 ) => {
-  const validStatus = [
-    "AVAILABLE",
-    "OUT_OF_STOCK",
-    "INACTIVE",
-  ];
+    const validStatus = [
+        "AVAILABLE",
+        "OUT_OF_STOCK",
+        "INACTIVE",
+    ];
 
-  if (!validStatus.includes(status)) {
-    throw new Error("Trạng thái không hợp lệ.");
-  }
-  const branchFood = await prisma.branchFood.findUnique({
-    where: {
-      branchId_foodId: {
-        branchId,
-        foodId,
-      },
-    },
-  });
-  if (!branchFood) {
-    throw new Error("Không tìm thấy món ăn.");
-  }
-  return await prisma.branchFood.update({
-    where: {
-      branchId_foodId: {
-        branchId,
-        foodId,
-      },
-    },
-    data: {
-      status,
-    },
-  });
+    if (!validStatus.includes(status)) {
+        throw new Error(
+            "Trạng thái không hợp lệ."
+        );
+    }
+
+    const branchFood =
+        await prisma.branchFood.findUnique({
+            where: {
+                branchId_foodId: {
+                    branchId: Number(branchId),
+                    foodId: Number(foodId),
+                },
+            },
+        });
+
+    if (!branchFood) {
+        throw new Error(
+            "Không tìm thấy món ăn tại chi nhánh."
+        );
+    }
+
+    return await prisma.branchFood.update({
+        where: {
+            branchId_foodId: {
+                branchId: Number(branchId),
+                foodId: Number(foodId),
+            },
+        },
+        data: {
+            status,
+        },
+    });
 };
 
 module.exports = {
-  getAll,
-  updateStatus,
-}
+    getAll,
+    updateStatus,
+};

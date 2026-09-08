@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Plus, Search } from "lucide-react";
 
 import Button from "../../../../components/Button/Button";
@@ -20,6 +20,7 @@ export default function FoodManagement() {
 
     const [selectedCategory, setSelectedCategory] = useState(null);
     const [selectedBranch, setSelectedBranch] = useState("");
+    const [statusTab, setStatusTab] = useState("active");
     const [keyword, setKeyword] = useState("");
 
     useEffect(() => {
@@ -40,10 +41,7 @@ export default function FoodManagement() {
             setCategories(categoryRes.data.data);
             setBranches(branchRes.data);
         } catch (err) {
-            alert(
-                err.response?.data?.message ||
-                    err.message
-            );
+            alert(err.response?.data?.message || err.message);
         } finally {
             setLoading(false);
         }
@@ -54,12 +52,12 @@ export default function FoodManagement() {
         setOpenModal(true);
     };
 
-    const handleEdit = (food) => {
+    const handleEdit = food => {
         setSelectedFood(food);
         setOpenModal(true);
     };
 
-    const handleSave = async (data) => {
+    const handleSave = async data => {
         try {
             if (selectedFood) {
                 await foodService.update(selectedFood.id, data);
@@ -71,58 +69,80 @@ export default function FoodManagement() {
             setSelectedFood(null);
             await loadData();
         } catch (err) {
-            alert(
-                err.response?.data?.message ||
-                    err.message
-            );
+            alert(err.response?.data?.message || err.message);
         }
     };
 
-    const handleInactive = async (food) => {
-        if (
-            !window.confirm(
-                `Ngừng kinh doanh "${food.name}"?`
-            )
-        ) {
-            return;
-        }
+    const handleInactive = async food => {
+        if (!window.confirm(`Ngừng kinh doanh "${food.name}"?`)) return;
 
         try {
-            await foodService.update(food.id, {
-                status: "INACTIVE",
-            });
-
+            await foodService.update(food.id, { status: "INACTIVE" });
             await loadData();
         } catch (err) {
-            alert(
-                err.response?.data?.message ||
-                    err.message
-            );
+            alert(err.response?.data?.message || err.message);
         }
     };
 
-    const displayFoods = foods.filter((food) => {
-        const matchCategory =
-            !selectedCategory ||
-            food.categoryId === selectedCategory;
+    const getBranchFood = food => {
+        if (!selectedBranch) return null;
 
-        const matchKeyword = food.name
-            .toLowerCase()
-            .includes(keyword.toLowerCase());
-
-        const matchBranch =
-            !selectedBranch ||
-            food.branchFoods.some(
-                (item) =>
-                    item.branchId === Number(selectedBranch)
-            );
-
-        return (
-            matchCategory &&
-            matchKeyword &&
-            matchBranch
+        return food.branchFoods?.find(
+            item => item.branchId === Number(selectedBranch)
         );
-    });
+    };
+
+    const isFoodActive = food => {
+        if (selectedBranch) {
+            const branchFood = getBranchFood(food);
+
+            if (!branchFood) {
+                return false;
+            }
+
+            return branchFood.status !== "INACTIVE";
+        }
+
+        return food.branchFoods?.some(
+            item => item.status !== "INACTIVE"
+        ) ?? false;
+    };
+
+    const displayFoods = useMemo(() => {
+        const text = keyword.toLowerCase().trim();
+
+        return foods.filter(food => {
+            const matchCategory =
+                !selectedCategory ||
+                food.categoryId === selectedCategory;
+
+            const matchKeyword =
+                food.name?.toLowerCase().includes(text);
+
+            const matchStatus =
+                statusTab === "active"
+                    ? isFoodActive(food)
+                    : !isFoodActive(food);
+
+            return matchCategory && matchKeyword && matchStatus;
+        });
+    }, [
+        foods,
+        selectedCategory,
+        selectedBranch,
+        statusTab,
+        keyword,
+    ]);
+
+    const filteredFoodsByBranch = useMemo(() => {
+        if (!selectedBranch) return foods;
+
+        return foods.filter(food =>
+            food.branchFoods?.some(
+                item => item.branchId === Number(selectedBranch)
+            )
+        );
+    }, [foods, selectedBranch]);
 
     return (
         <div className="flex h-full flex-col">
@@ -137,6 +157,7 @@ export default function FoodManagement() {
                             {displayFoods.length} món
                         </p>
                     </div>
+
                     <div className="mt-3 flex gap-4">
                         <div className="relative flex-1">
                             <Search
@@ -146,9 +167,7 @@ export default function FoodManagement() {
 
                             <input
                                 value={keyword}
-                                onChange={(e) =>
-                                    setKeyword(e.target.value)
-                                }
+                                onChange={e => setKeyword(e.target.value)}
                                 placeholder="Tìm theo tên món..."
                                 className="w-full rounded-lg border py-2 pl-10 pr-3 outline-none focus:border-[var(--color-primary)]"
                             />
@@ -156,21 +175,17 @@ export default function FoodManagement() {
 
                         <select
                             value={selectedBranch}
-                            onChange={(e) =>
-                                setSelectedBranch(e.target.value)
-                            }
-                            className="w-60 h-9 rounded-lg border px-3 outline-none focus:border-[var(--color-primary)]"
+                            onChange={e => {
+                                setSelectedBranch(e.target.value);
+                                setStatusTab("active");
+                            }}
+                            className="h-9 w-60 rounded-lg border px-3 outline-none focus:border-[var(--color-primary)]"
                         >
-                            <option value="">
-                                Tất cả cơ sở
-                            </option>
+                            <option value="">Tất cả cơ sở</option>
 
                             {Array.isArray(branches) &&
-                                branches.map((branch) => (
-                                    <option
-                                        key={branch.id}
-                                        value={branch.id}
-                                    >
+                                branches.map(branch => (
+                                    <option key={branch.id} value={branch.id}>
                                         {branch.name}
                                     </option>
                                 ))}
@@ -188,9 +203,31 @@ export default function FoodManagement() {
 
                 <div className="mt-5 flex gap-3 overflow-x-auto hide-scrollbar">
                     <button
-                        onClick={() =>
-                            setSelectedCategory(null)
-                        }
+                        onClick={() => setStatusTab("active")}
+                        className={`rounded-full px-4 py-2 ${
+                            statusTab === "active"
+                                ? "bg-[var(--color-primary)] text-white"
+                                : "border bg-white hover:bg-[var(--color-secondary)]"
+                        }`}
+                    >
+                        Đang kinh doanh
+                    </button>
+
+                    <button
+                        onClick={() => setStatusTab("inactive")}
+                        className={`rounded-full px-4 py-2 ${
+                            statusTab === "inactive"
+                                ? "bg-[var(--color-danger)] text-white"
+                                : "border bg-white hover:bg-[var(--color-secondary)]"
+                        }`}
+                    >
+                        Ngừng kinh doanh
+                    </button>
+                </div>
+
+                <div className="mt-3 flex gap-3 overflow-x-auto hide-scrollbar">
+                    <button
+                        onClick={() => setSelectedCategory(null)}
                         className={`rounded-full px-4 py-2 ${
                             selectedCategory === null
                                 ? "bg-[var(--color-primary)] text-white"
@@ -200,12 +237,10 @@ export default function FoodManagement() {
                         Tất cả
                     </button>
 
-                    {categories.map((category) => (
+                    {categories.map(category => (
                         <button
                             key={category.id}
-                            onClick={() =>
-                                setSelectedCategory(category.id)
-                            }
+                            onClick={() => setSelectedCategory(category.id)}
                             className={`rounded-full px-4 py-2 ${
                                 selectedCategory === category.id
                                     ? "bg-[var(--color-primary)] text-white"
@@ -225,11 +260,13 @@ export default function FoodManagement() {
                     </div>
                 ) : displayFoods.length === 0 ? (
                     <div className="flex h-60 items-center justify-center text-gray-400">
-                        Không có món ăn nào.
+                        {statusTab === "inactive"
+                            ? "Không có món nào ngừng kinh doanh."
+                            : "Không có món ăn nào."}
                     </div>
                 ) : (
                     <div className="grid grid-cols-2 gap-5 xl:grid-cols-4 2xl:grid-cols-5">
-                        {displayFoods.map((food) => (
+                        {displayFoods.map(food => (
                             <FoodCard
                                 key={food.id}
                                 food={food}
@@ -257,3 +294,4 @@ export default function FoodManagement() {
         </div>
     );
 }
+

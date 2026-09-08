@@ -1,5 +1,5 @@
 .bg{
-    background-image: url("/image/bg-2.jfif");
+    background-image: url("/image/bg-login.png");
     background-size: cover;
     background-position: center;
     background-repeat: no-repeat;
@@ -26,13 +26,12 @@
     font-size:64px;
     font-weight:300;
     color:#303030;
-    margin-bottom:20px;
 }
 
 .loginTitle{
     font-size:34px;
     font-weight:300;
-    margin-bottom:20px;
+    margin-bottom:30px;
 }
 
 .btnLogin{

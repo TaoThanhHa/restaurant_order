@@ -4,10 +4,6 @@ const customerService =
 const response =
     require("../../utils/response");
 
-// ======================================================
-// UPDATE PROFILE
-// ======================================================
-
 const updateProfile = async (req, res) => {
     try {
         const data = {

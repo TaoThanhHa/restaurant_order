@@ -7,7 +7,6 @@ const getAll = async ({
     search = "",
     sort = "visits_desc",
 } = {}) => {
-
     const res = await api.get("/customer-admin", {
         params: {
             period,
@@ -22,16 +21,11 @@ const getAll = async ({
 };
 
 const getById = async (id, period = "month") => {
-
-    const res = await api.get(
-        `/customer-admin/${id}`,
+    const res = await api.get(`/customer-admin/${id}`,
         {
-            params: {
-                period,
-            },
+            params: { period, },
         }
     );
-
     return res.data;
 };
 

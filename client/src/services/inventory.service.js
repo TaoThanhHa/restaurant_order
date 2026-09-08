@@ -1,9 +1,6 @@
 import api from "../api/axiosClient";
 
 const inventoryService = {
-    // ========================================
-    // INGREDIENTS
-    // ========================================
 
     getAllIngredients: async (branchId) => {
         const response = await api.get(
@@ -50,10 +47,6 @@ const inventoryService = {
         return response.data;
     },
 
-    // ========================================
-    // INVENTORY
-    // ========================================
-
     getStock: async (branchId) => {
         const response = await api.get(
             "/inventory/stock",
@@ -92,9 +85,6 @@ const inventoryService = {
         return response.data;
     },
 
-    // ========================================
-    // HISTORY
-    // ========================================
 
     getTransactions: async (
         branchId,

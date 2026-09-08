@@ -6,11 +6,7 @@ const getProfile = async () => {
 };
 
 const changePassword = async (data) => {
-    const res = await api.patch(
-        "/branches/change-password",
-        data
-    );
-
+    const res = await api.patch("/branches/change-password", data);
     return res.data;
 };
 

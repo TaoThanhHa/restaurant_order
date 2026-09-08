@@ -50,7 +50,10 @@ const getByFloor = async (req, res) => {
 
 const create = async (req, res) => {
   try {
-    const table = await tableService.create(req.body);
+    const table = await tableService.create(
+      req.body,
+      req.user
+    );
 
     return response.success(
       res,
@@ -67,7 +70,8 @@ const update = async (req, res) => {
   try {
     const table = await tableService.update(
       Number(req.params.id),
-      req.body
+      req.body,
+      req.user
     );
 
     return response.success(
@@ -83,7 +87,8 @@ const update = async (req, res) => {
 const remove = async (req, res) => {
   try {
     await tableService.remove(
-      Number(req.params.id)
+      Number(req.params.id),
+      req.user
     );
 
     return response.success(
@@ -116,20 +121,24 @@ const scanQr = async (req, res) => {
 };
 
 const open = async (req, res) => {
-    try {
-        const result = await tableService.open(
-            Number(req.params.id),
-            req.body
-        );
+  try {
+    const result = await tableService.open(
+      Number(req.params.id),
+      req.body
+    );
 
-        return response.success(
-            res,
-            "Mở bàn thành công.",
-            result
-        );
-    } catch (error) {
-        return response.error(res, error.message, 400);
-    }
+    return response.success(
+      res,
+      "Mở bàn thành công.",
+      result
+    );
+  } catch (error) {
+    return response.error(
+      res,
+      error.message,
+      400
+    );
+  }
 };
 
 module.exports = {
@@ -140,5 +149,5 @@ module.exports = {
   update,
   remove,
   scanQr,
-  open
+  open,
 };

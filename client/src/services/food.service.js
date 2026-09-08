@@ -1,8 +1,6 @@
 import api from "../api/axiosClient";
-
   
 // ADMIN
-  
 
 const getAll = () => {
     return api.get("/foods");
@@ -24,20 +22,13 @@ const remove = (id) => {
     return api.delete(`/foods/${id}`);
 };
 
-  
-// BRANCH / BRANCH
-  
-
+// BRANCH 
 const getByBranch = () => {
     return api.get("/foods/branch");
 };
 
 const getByQrCode = async (qrCode) => {
-
-    const res = await api.get(
-        `/foods/qr/${qrCode}`
-    );
-
+    const res = await api.get(`/foods/qr/${qrCode}`);
     return res.data;
 };
 

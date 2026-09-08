@@ -37,14 +37,26 @@ const getAll = async () => {
 
 };
 
-const getById = async (id) => {
+const getById = async (id, user) => {
+    const branchId = Number(id);
+
+    if (!branchId) {
+        throw new Error("Chi nhánh không hợp lệ.");
+    }
+
+    if (
+        user.role === "BRANCH" &&
+        Number(user.branchId) !== branchId
+    ) {
+        throw new Error(
+            "Bạn không có quyền truy cập chi nhánh này."
+        );
+    }
 
     const branch = await prisma.branch.findUnique({
-
         where: {
-            id,
+            id: branchId,
         },
-
         select: {
             id: true,
             name: true,
@@ -54,7 +66,6 @@ const getById = async (id) => {
             isActive: true,
             createdAt: true,
         },
-
     });
 
     if (!branch) {
@@ -62,7 +73,6 @@ const getById = async (id) => {
     }
 
     return branch;
-
 };
 
 const getProfile = async (userId) => {

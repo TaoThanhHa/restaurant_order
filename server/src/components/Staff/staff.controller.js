@@ -1,10 +1,6 @@
 const staffService = require("./staff.service");
 const response = require("../../utils/response");
 
-// ========================================
-// GET ALL STAFF
-// ========================================
-
 const getAll = async (req, res) => {
     try {
         const branchId = req.user?.branchId;
@@ -35,15 +31,10 @@ const getAll = async (req, res) => {
     }
 };
 
-
-// ========================================
-// GET STAFF BY ID
-// ========================================
-
 const getById = async (req, res) => {
     try {
         const branchId = req.user?.branchId;
-        const userId = req.params.id;
+        const userId = req.params.userId;
 
         if (!branchId) {
             return response.error(
@@ -73,11 +64,6 @@ const getById = async (req, res) => {
         );
     }
 };
-
-
-// ========================================
-// CREATE STAFF
-// ========================================
 
 const create = async (req, res) => {
     try {
@@ -113,15 +99,10 @@ const create = async (req, res) => {
     }
 };
 
-
-// ========================================
-// UPDATE STAFF
-// ========================================
-
 const update = async (req, res) => {
     try {
         const branchId = req.user?.branchId;
-        const userId = req.params.id;
+        const userId = req.params.userId;
 
         if (!branchId) {
             return response.error(
@@ -153,15 +134,10 @@ const update = async (req, res) => {
     }
 };
 
-
-// ========================================
-// TOGGLE STATUS
-// ========================================
-
 const toggleStatus = async (req, res) => {
     try {
         const branchId = req.user?.branchId;
-        const userId = req.params.id;
+        const userId = req.params.userId;
 
         if (!branchId) {
             return response.error(
@@ -194,8 +170,6 @@ const toggleStatus = async (req, res) => {
         );
     }
 };
-
-
 module.exports = {
     getAll,
     getById,

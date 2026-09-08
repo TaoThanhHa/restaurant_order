@@ -1,10 +1,6 @@
 const orderService = require("./order.service");
 const response = require("../../utils/response");
 
-  
-// CREATE ORDER
-  
-
 const create = async (req, res) => {
     try {
         const order = await orderService.create({
@@ -23,7 +19,6 @@ const create = async (req, res) => {
     }
 };
 
-  // CHECK ACTIVE ORDER BY TABLE
 const getActiveOrderByTable = async (req, res) => {
     try {
         const { tableId } = req.params;
@@ -362,6 +357,25 @@ const getPendingOrders = async (req, res) => {
     }
 };
 
+const getCompletedKitchenOrders = async (req, res) => {
+    try {
+        const data =await orderService.getCompletedKitchenOrders(req.user.branchId);
+            return res.json({
+                success: true,
+                data,
+            });
+        } catch (error) {
+            console.error(
+                "GET COMPLETED KITCHEN ORDERS ERROR:",
+                error
+            );
+            return res.status(400).json({
+                success: false,
+                message: error.message,
+            });
+        }
+    };
+
 module.exports = {
   create,
   getById,
@@ -377,4 +391,5 @@ module.exports = {
   getHistory,
   mergeOrders,
   getPendingOrders,
+  getCompletedKitchenOrders,
 };

@@ -1,127 +1,171 @@
 const customerAuthService = require("./customerAuth.service");
+
 const response = require("../../utils/response");
 
-// GUEST LOGIN
 const guest = async (req, res) => {
-    console.log(req.body);
 
     try {
-        const result = await customerAuthService.guest(req.body);
+
+        const result =
+            await customerAuthService.guest(
+                req.body
+            );
 
         return response.success(
             res,
-            "Đăng nhập khách thành công",
+            "Đăng nhập khách thành công.",
             result
         );
-    } catch (err) {
-        console.log(err);
+
+    } catch (error) {
+
+        console.error(
+            "Lỗi đăng nhập Guest:",
+            error
+        );
 
         return response.error(
             res,
-            err.message,
+            error.message ||
+                "Đăng nhập khách thất bại.",
             400
         );
+
     }
+
 };
 
-// REGISTER
 const register = async (req, res) => {
+
     try {
-        const result = await customerAuthService.register(req.body);
+
+        const {
+            name,
+            email,
+            phone,
+            password,
+            tableId,
+            deviceId,
+        } = req.body;
+
+
+        const result =
+            await customerAuthService.register({
+
+                name,
+                email,
+                phone,
+                password,
+                tableId,
+                deviceId,
+
+            });
+
 
         return response.success(
             res,
-            "Đăng ký thành công.",
+            "Đăng ký tài khoản thành công.",
             result,
             201
         );
+
     } catch (error) {
+
+        console.error(
+            "Lỗi đăng ký khách hàng:",
+            error
+        );
+
         return response.error(
             res,
-            error.message,
+            error.message ||
+                "Đăng ký thất bại.",
             400
         );
+
     }
+
 };
 
-// LOGIN
 const login = async (req, res) => {
+
     try {
-        const result = await customerAuthService.login(req.body);
+
+        const {
+            identifier,
+            password,
+            qrCode,
+            deviceId,
+        } = req.body;
+
+
+        const result =
+            await customerAuthService.login({
+
+                identifier,
+                password,
+                qrCode,
+                deviceId,
+
+            });
+
 
         return response.success(
             res,
             "Đăng nhập thành công.",
             result
         );
+
     } catch (error) {
+
+        console.error(
+            "Lỗi đăng nhập khách hàng:",
+            error
+        );
+
         return response.error(
             res,
-            error.message,
+            error.message ||
+                "Đăng nhập thất bại.",
             401
         );
+
     }
+
 };
 
-// FORGOT PASSWORD
-const forgotPassword = async (req, res) => {
-    try {
-        await customerAuthService.forgotPassword(
-            req.body.email
-        );
-
-        return response.success(
-            res,
-            "Nếu email tồn tại, mật khẩu mới đã được gửi."
-        );
-    } catch (error) {
-        return response.error(
-            res,
-            error.message,
-            400
-        );
-    }
-};
-
-// RESET PASSWORD
-const resetPassword = async (req, res) => {
-    try {
-        await customerAuthService.resetPassword(
-            req.body
-        );
-
-        return response.success(
-            res,
-            "Đổi mật khẩu thành công."
-        );
-    } catch (error) {
-        return response.error(
-            res,
-            error.message,
-            400
-        );
-    }
-};
-
-// PROFILE
 const profile = async (req, res) => {
+
     try {
+
         const customer =
             await customerAuthService.profile(
                 req.customer.id
             );
+
+
         return response.success(
             res,
             "Lấy thông tin thành công.",
             customer
         );
+
     } catch (error) {
+
+        console.error(
+            "Lỗi lấy profile khách hàng:",
+            error
+        );
+
         return response.error(
             res,
-            error.message,
+            error.message ||
+                "Không thể lấy thông tin khách hàng.",
             404
         );
+
     }
+
 };
 
 const getTable = async (req, res) => {
@@ -133,6 +177,7 @@ const getTable = async (req, res) => {
                 req.params.qrCode
             );
 
+
         return response.success(
             res,
             "Lấy thông tin bàn thành công.",
@@ -141,9 +186,15 @@ const getTable = async (req, res) => {
 
     } catch (error) {
 
+        console.error(
+            "Lỗi lấy thông tin bàn:",
+            error
+        );
+
         return response.error(
             res,
-            error.message,
+            error.message ||
+                "Không thể lấy thông tin bàn.",
             400
         );
 
@@ -151,12 +202,11 @@ const getTable = async (req, res) => {
 
 };
 
+
 module.exports = {
     guest,
     register,
     login,
-    forgotPassword,
-    resetPassword,
     profile,
     getTable,
-};
+}

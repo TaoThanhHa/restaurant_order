@@ -1,9 +1,5 @@
 import api from "../api/axiosClient";
 
-// ========================================
-// UPLOAD FOOD
-// ========================================
-
 const uploadFood = (file) => {
     const formData = new FormData();
 
@@ -20,10 +16,6 @@ const uploadFood = (file) => {
     );
 };
 
-// ========================================
-// UPLOAD RESTAURANT LOGO
-// ========================================
-
 const uploadRestaurantLogo = (file) => {
     const formData = new FormData();
 
@@ -39,10 +31,6 @@ const uploadRestaurantLogo = (file) => {
         }
     );
 };
-
-// ========================================
-// UPLOAD CUSTOMER AVATAR
-// ========================================
 
 const uploadCustomerAvatar = (file) => {
     const formData = new FormData();

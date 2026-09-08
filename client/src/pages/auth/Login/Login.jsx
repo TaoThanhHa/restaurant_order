@@ -37,15 +37,15 @@ export default function Login() {
                 break;
             
             case "CASHIER":
-                navigate("/branch/dashboard", { replace: true });
+                navigate("/branch/tables", { replace: true });
                 break;
 
             case "ORDER":
                 navigate("/branch/tables", { replace: true });
                 break;
 
-            case "WAREHOUSE":
-                navigate("/warehouse", { replace: true });
+            case "KITCHEN":
+                navigate("/kitchen", { replace: true });
                 break;
 
             default:
@@ -100,7 +100,7 @@ export default function Login() {
                 break;
             
             case "CASHIER":
-                navigate("/branch/dashboard", {
+                navigate("/branch/tables", {
                     replace: true,
                 });
                 break;
@@ -111,8 +111,8 @@ export default function Login() {
                 });
                 break;
 
-            case "WAREHOUSE":
-                navigate("/warehouse", {
+            case "KITCHEN":
+                navigate("/kitchen", {
                     replace: true,
                 });
                 break;
@@ -134,15 +134,12 @@ export default function Login() {
     return (
         <section className={`flex flex-col justify-center items-center ${styles.bg}`}>
             <div className="flex flex-col">
-                {/* <h1 className={styles.title}>
-                    Chào mừng bạn tới CAFÉ
-                </h1> */}
                 <div className={styles.loginCard}>
                     <h2 className={`${styles.loginTitle}`}>
                         Đăng nhập
                     </h2>
                     <form onSubmit={handleSubmit} className="space-y-8">
-                        <div className="flex items-center m-4">
+                        <div className="flex items-center mb-7">
                             <label className="w-20 shrink-0">
                                 Email
                             </label>
@@ -156,7 +153,7 @@ export default function Login() {
                                 placeholder="Nhập mail của bạn"
                             />
                         </div>
-                        <div className="flex items-center m-4">
+                        <div className="flex items-center mb-7">
                             <label className="w-20 shrink-0">
                                 Mật khẩu
                             </label>

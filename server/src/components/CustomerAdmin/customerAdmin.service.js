@@ -559,7 +559,6 @@ const getStatistics = async ({
         branches,
     };
 };
-// EXPORT
 
 module.exports = {
     getCustomers,

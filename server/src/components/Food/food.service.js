@@ -107,11 +107,8 @@ const create = async (data) => {
 };
 
 const update = async (id, data) => {
-
     const food = await prisma.food.findUnique({
-        where: {
-            id,
-        },
+        where: { id },
         include: {
             branchFoods: true,
         },
@@ -121,8 +118,7 @@ const update = async (id, data) => {
         throw new Error("Món ăn không tồn tại.");
     }
 
-    if (data.categoryId) {
-
+    if (data.categoryId !== undefined) {
         const category = await prisma.category.findUnique({
             where: {
                 id: Number(data.categoryId),
@@ -132,11 +128,9 @@ const update = async (id, data) => {
         if (!category) {
             throw new Error("Danh mục không tồn tại.");
         }
-
     }
 
     if (data.name) {
-
         const existed = await prisma.food.findFirst({
             where: {
                 name: data.name,
@@ -152,71 +146,105 @@ const update = async (id, data) => {
         if (existed) {
             throw new Error("Tên món đã tồn tại.");
         }
-
     }
 
-    return await prisma.$transaction(async (tx) => {
-        // UPDATE FOOD
-        const updatedFood = await tx.food.update({
-            where: {
-                id,
-            },
-
+    return await prisma.$transaction(async tx => {
+        await tx.food.update({
+            where: { id },
             data: {
                 name: data.name ?? food.name,
-                categoryId:data.categoryId ? Number(data.categoryId): food.categoryId,
-                price: data.price ? Number(data.price) : food.price,
-                description: data.description,
-                image: data.image,
+
+                category:
+                    data.categoryId !== undefined
+                        ? {
+                              connect: {
+                                  id: Number(data.categoryId),
+                              },
+                          }
+                        : undefined,
+
+                price:
+                    data.price !== undefined
+                        ? Number(data.price)
+                        : food.price,
+
+                description:
+                    data.description !== undefined
+                        ? data.description
+                        : food.description,
+
+                image:
+                    data.image !== undefined
+                        ? data.image
+                        : food.image,
             },
         });
 
-        // UPDATE BRANCH
-        if (data.branchIds) {
+        if (Array.isArray(data.branchFoods)) {
+            const branchFoods = data.branchFoods
+                .filter(item => item && item.branchId)
+                .map(item => ({
+                    branchId: Number(item.branchId),
+                    status: item.status || "AVAILABLE",
+                }));
 
-            const oldIds = food.branchFoods.map(
+            const newBranchIds = [
+                ...new Set(
+                    branchFoods.map(item => item.branchId)
+                ),
+            ];
+
+            const oldBranchIds = food.branchFoods.map(
                 item => item.branchId
             );
 
-            const newIds = data.branchIds.map(Number);
-
-            // Xóa chi nhánh bị bỏ
-            await tx.branchFood.deleteMany({
-                where: {
-                    foodId: id,
-                    branchId: {
-                        in: oldIds.filter(
-                            x => !newIds.includes(x)
-                        )
-                    }
-                }
-            });
-
-            // Thêm chi nhánh mới
-            const addIds = newIds.filter(
-                x => !oldIds.includes(x)
+            const removeIds = oldBranchIds.filter(
+                branchId => !newBranchIds.includes(branchId)
             );
 
-            if (addIds.length) {
-
-                await tx.branchFood.createMany({
-
-                    data: addIds.map(branchId => ({
-                        branchId,
+            if (removeIds.length > 0) {
+                await tx.branchFood.deleteMany({
+                    where: {
                         foodId: id,
-                        status: "AVAILABLE"
-                    }))
-
+                        branchId: {
+                            in: removeIds,
+                        },
+                    },
                 });
-
             }
 
+            for (const branchFood of branchFoods) {
+                await tx.branchFood.upsert({
+                    where: {
+                        branchId_foodId: {
+                            branchId: branchFood.branchId,
+                            foodId: id,
+                        },
+                    },
+                    update: {
+                        status: branchFood.status,
+                    },
+                    create: {
+                        foodId: id,
+                        branchId: branchFood.branchId,
+                        status: branchFood.status,
+                    },
+                });
+            }
         }
 
-        return updatedFood;
-
+        return await tx.food.findUnique({
+            where: { id },
+            include: {
+                category: true,
+                branchFoods: {
+                    include: {
+                        branch: true,
+                    },
+                },
+            },
+        });
     });
-
 };
 
 const remove = async (id) => {

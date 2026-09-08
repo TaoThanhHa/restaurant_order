@@ -424,12 +424,6 @@ const update = async (branchId, userId, data) => {
     });
 };
 
-
-
-// ========================================
-// TOGGLE STAFF STATUS
-// ========================================
-
 const toggleStatus = async (
     branchId,
     userId

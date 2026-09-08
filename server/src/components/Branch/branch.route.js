@@ -10,7 +10,7 @@ const controller = require("./branch.controller");
 router.get("/profile", auth, controller.getProfile);
 router.patch("/change-password", auth, controller.changePassword);
 router.get("/",auth,authorize("ADMIN"),controller.getAll);
-router.get("/:id",auth,authorize("ADMIN"),controller.getById);
+router.get("/:id",auth,authorize("ADMIN", "BRANCH"),controller.getById);
 router.post("/",auth,authorize("ADMIN"),controller.create);
 router.put("/:id",auth,authorize("ADMIN"),controller.update);
 router.delete("/:id",auth,authorize("ADMIN"),controller.remove);

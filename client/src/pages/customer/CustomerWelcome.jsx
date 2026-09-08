@@ -13,41 +13,12 @@ import restaurantService from "../../services/restaurant.service";
 import useCustomerAuth from "../../hooks/useCustomerAuth";
 
 import styles from "./Customer.module.css";
-
-
-
-// DEVICE ID
-
-
-function getDeviceId() {
-
-    let id = localStorage.getItem("deviceId");
-
-    if (!id) {
-
-        id = crypto.randomUUID();
-
-        localStorage.setItem(
-            "deviceId",
-            id
-        );
-
-    }
-
-    return id;
-}
-
-
-
-// CUSTOMER WELCOME
-
+import { getDeviceId } from "../../../utils/deviceId";
 
 export default function CustomerWelcome() {
 
     const navigate = useNavigate();
-
     const { qrCode } = useParams();
-
     const [table, setTable] = useState(null);
 
     const [restaurant, setRestaurant] = useState({
@@ -56,24 +27,12 @@ export default function CustomerWelcome() {
     });
 
     const [checkingAuth, setCheckingAuth] = useState(true);
-
     const [loadingGuest, setLoadingGuest] = useState(false);
-
     const { login } = useCustomerAuth();
-
-
-    
-    // SERVER URL
-    
 
     const SERVER_URL =
         import.meta.env.VITE_API_URL
             ?.replace(/\/api\/?$/, "") || "";
-
-
-    
-    // IMAGE URL
-    
 
     const getImageUrl = (url) => {
 
@@ -92,11 +51,6 @@ export default function CustomerWelcome() {
 
     };
 
-
-    
-    // LOAD RESTAURANT
-    
-
     useEffect(() => {
 
         const loadRestaurant = async () => {
@@ -110,11 +64,6 @@ export default function CustomerWelcome() {
                     "RESTAURANT RESPONSE:",
                     res
                 );
-
-
-                
-                // API CỦA BẠN TRẢ DATA Ở res.message
-                
 
                 const data = res?.message;
 
@@ -221,12 +170,6 @@ export default function CustomerWelcome() {
                         return;
 
                     }
-
-
-                    
-                    // ĐÃ ĐĂNG NHẬP
-                    // → VÀO HOME
-                    
 
                     navigate(
                         `/customer/home/${currentTable.qrCode}`,

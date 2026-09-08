@@ -191,21 +191,14 @@ const forgotPassword = async (email) => {
         );
     }
 };
-const resetPassword = async ({
-    email,
-    otp,
-    password
-}) => {
 
-    const record =
-        await prisma.passwordResetOtp.findFirst({
-
-            where: {
-                email,
-                otp
-            }
-
-        });
+const verifyOtp = async ({ email, otp }) => {
+    const record = await prisma.passwordResetOtp.findFirst({
+        where: {
+            email,
+            otp,
+        },
+    });
 
     if (!record) {
         throw new Error("OTP không đúng.");
@@ -215,34 +208,35 @@ const resetPassword = async ({
         throw new Error("OTP đã hết hạn.");
     }
 
-    const hash = await bcrypt.hash(password,10);
+    return true;
+};
+
+const resetPassword = async ({ email, otp, password }) => {
+    await verifyOtp({ email, otp });
+
+    const hash = await bcrypt.hash(password, 10);
 
     await prisma.user.update({
-
-        where:{
-            email
+        where: {
+            email,
         },
-
-        data:{
-            password:hash,
-            mustChangePassword:false
-        }
-
+        data: {
+            password: hash,
+            mustChangePassword: false,
+        },
     });
 
     await prisma.passwordResetOtp.deleteMany({
-
-        where:{
-            email
-        }
-
+        where: {
+            email,
+        },
     });
-
 };
 
 module.exports = {
-  login,
-  getProfile,
-  forgotPassword,
-  resetPassword,
+    login,
+    getProfile,
+    forgotPassword,
+    verifyOtp,
+    resetPassword,
 };

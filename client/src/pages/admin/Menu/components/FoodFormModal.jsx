@@ -67,8 +67,9 @@ export default function FoodFormModal({
                 price: Number(food.price) || "",
                 description: food.description || "",
                 image: food.image || "",
+                status: food.status || "AVAILABLE",
                 branchFoods:
-                    food.branchFoods?.map((item) => ({
+                    food.branchFoods?.map(item => ({
                         branchId: item.branchId,
                         status: item.status,
                     })) || [],
@@ -87,16 +88,16 @@ export default function FoodFormModal({
 
     if (!open) return null;
 
-    const handleChange = (e) => {
+    const handleChange = e => {
         const { name, value } = e.target;
 
-        setForm((prev) => ({
+        setForm(prev => ({
             ...prev,
             [name]: value,
         }));
     };
 
-    const handleImage = async (e) => {
+    const handleImage = async e => {
         const file = e.target.files?.[0];
 
         if (!file) return;
@@ -106,7 +107,7 @@ export default function FoodFormModal({
         try {
             const res = await uploadService.uploadFood(file);
 
-            setForm((prev) => ({
+            setForm(prev => ({
                 ...prev,
                 image: res.data.data,
             }));
@@ -124,17 +125,17 @@ export default function FoodFormModal({
         }
     };
 
-    const toggleBranch = (branchId) => {
-        setForm((prev) => {
+    const toggleBranch = branchId => {
+        setForm(prev => {
             const existed = prev.branchFoods.some(
-                (item) => item.branchId === branchId
+                item => item.branchId === branchId
             );
 
             return {
                 ...prev,
                 branchFoods: existed
                     ? prev.branchFoods.filter(
-                          (item) => item.branchId !== branchId
+                          item => item.branchId !== branchId
                       )
                     : [
                           ...prev.branchFoods,
@@ -148,9 +149,9 @@ export default function FoodFormModal({
     };
 
     const handleBranchStatusChange = (branchId, status) => {
-        setForm((prev) => ({
+        setForm(prev => ({
             ...prev,
-            branchFoods: prev.branchFoods.map((item) =>
+            branchFoods: prev.branchFoods.map(item =>
                 item.branchId === branchId
                     ? { ...item, status }
                     : item
@@ -186,7 +187,7 @@ export default function FoodFormModal({
             return;
         }
 
-        if (form.branchFoods.length === 0) {
+        if (mode === "create" && form.branchFoods.length === 0) {
             showNotification({
                 type: "warning",
                 title: "Thiếu chi nhánh",
@@ -198,9 +199,7 @@ export default function FoodFormModal({
         onSave({
             ...form,
             price: Number(form.price),
-            branchIds: form.branchFoods.map(
-                (item) => item.branchId
-            ),
+            branchFoods: form.branchFoods,
         });
     };
 
@@ -289,7 +288,7 @@ export default function FoodFormModal({
                                         -- Chọn danh mục --
                                     </option>
 
-                                    {categories.map((category) => (
+                                    {categories.map(category => (
                                         <option
                                             key={category.id}
                                             value={category.id}
@@ -334,10 +333,10 @@ export default function FoodFormModal({
                                 </label>
 
                                 <div className="space-y-4">
-                                    {branches.map((branch) => {
+                                    {branches.map(branch => {
                                         const item =
                                             form.branchFoods.find(
-                                                (branchFood) =>
+                                                branchFood =>
                                                     branchFood.branchId ===
                                                     branch.id
                                             );
@@ -360,19 +359,17 @@ export default function FoodFormModal({
                                                                 )
                                                             }
                                                         />
+
                                                         {branch.name}
                                                     </label>
 
                                                     {checked && (
                                                         <select
-                                                            value={
-                                                                item.status
-                                                            }
-                                                            onChange={(e) =>
+                                                            value={item.status}
+                                                            onChange={e =>
                                                                 handleBranchStatusChange(
                                                                     branch.id,
-                                                                    e.target
-                                                                        .value
+                                                                    e.target.value
                                                                 )
                                                             }
                                                             className="rounded border px-2 py-1"
@@ -380,6 +377,7 @@ export default function FoodFormModal({
                                                             <option value="AVAILABLE">
                                                                 Còn kinh doanh
                                                             </option>
+
                                                             <option value="INACTIVE">
                                                                 Ngừng kinh doanh
                                                             </option>

@@ -383,10 +383,6 @@ const confirmItems = async (orderId) => {
         throw new Error("Order ID không hợp lệ.");
     }
 
-    // =========================
-    // LẤY ORDER
-    // =========================
-
     const order = await prisma.order.findUnique({
         where: {
             id: id
@@ -428,14 +424,16 @@ const confirmItems = async (orderId) => {
     // =========================
     // XÁC NHẬN MÓN
     // =========================
-
+    const now = new Date();
     await prisma.orderItem.updateMany({
         where: {
             orderId: id,
             status: "PENDING"
         },
         data: {
-            status: "CONFIRMED"
+            status: "CONFIRMED",
+            kitchenStatus: "WAITING",
+            kitchenSentAt: now,
         }
     });
 
@@ -496,6 +494,15 @@ const confirmItems = async (orderId) => {
         );
         await notifyOrderCustomers(
             orderId
+        );
+
+        sseService.sendToBranch(
+            order.branchId,
+            "kitchen.updated",
+            {
+                type: "ORDER_CONFIRMED",
+                orderId: order.id,
+            }
         );
 
     return {
@@ -995,14 +1002,13 @@ const createTakeAway = async (branchId, data, userId) => {
     }
 
     return await prisma.$transaction(async (tx) => {
-
+        const now = new Date();
         let total = 0;
         const orderItems = [];
 
         // -----------------------------------------
         // TÍNH TIỀN
         // -----------------------------------------
-
         for (const item of items) {
 
             const food = await tx.food.findUnique({
@@ -1026,13 +1032,12 @@ const createTakeAway = async (branchId, data, userId) => {
                 price,
                 note: item.note || null,
                 status: "CONFIRMED",
+                kitchenStatus: "WAITING",
+                kitchenSentAt: now,
             });
         }
 
 
-        // -----------------------------------------
-        // TÌM KHÁCH HÀNG THEO SĐT
-        // -----------------------------------------
 
         let customer = null;
 
@@ -1048,23 +1053,17 @@ const createTakeAway = async (branchId, data, userId) => {
         }
 
 
-        // -----------------------------------------
-        // TẠO ORDER
-        // -----------------------------------------
-
         const order = await tx.order.create({
             data: {
                 orderCode: `TA-${Date.now()}`,
                 branchId,
                 orderType: "TAKE_AWAY",
-                status: "COMPLETED",
+                status: "PREPARING",
                 note,
                 totalAmount: total,
 
-                // Thu ngân tạo đơn
                 createdByUserId: Number(userId),
 
-                // Nếu tìm được khách thì lưu khách
                 ...(customer
                     ? {
                         createdByCustomerId: customer.id,
@@ -1088,12 +1087,6 @@ const createTakeAway = async (branchId, data, userId) => {
 
         });
 
-
-        // -----------------------------------------
-        // NẾU KHÁCH ĐÃ CÓ TÀI KHOẢN
-        // → GẮN ORDER VÀO KHÁCH
-        // -----------------------------------------
-
         if (customer) {
 
             await tx.orderMember.create({
@@ -1107,10 +1100,6 @@ const createTakeAway = async (branchId, data, userId) => {
 
         }
 
-
-        // -----------------------------------------
-        // TẠO PAYMENT
-        // -----------------------------------------
 
         await tx.payment.create({
 
@@ -1141,9 +1130,6 @@ const createTakeAway = async (branchId, data, userId) => {
         });
 
 
-        // -----------------------------------------
-        // TRẢ VỀ ORDER ĐẦY ĐỦ
-        // -----------------------------------------
 
         return await tx.order.findUnique({
 
@@ -1176,13 +1162,12 @@ const createTakeAway = async (branchId, data, userId) => {
 };
 
 const getTakeAway = async (branchId) => {
-
     return await prisma.order.findMany({
 
         where: {
             branchId,
             orderType: "TAKE_AWAY",
-
+            status: "PREPARING",
             payment: {
                 paymentStatus: "PAID",
             },
@@ -1223,10 +1208,8 @@ const getHistory = async (branchId) => {
         },
 
         include: {
-            // Người tạo đơn: nhân viên / thu ngân
             createdByUser: true,
 
-            // Khách hàng
             createdByCustomer: true,
 
             session: {
@@ -1497,9 +1480,6 @@ const getActiveOrderByTable = async (tableQrCode) => {
     };
 };
 
-// ========================================
-// STAFF LẤY ORDER ĐANG CHỜ XÁC NHẬN
-// ========================================
 const getPendingOrders = async (branchId) => {
 
     return await prisma.order.findMany({
@@ -1564,6 +1544,73 @@ const getPendingOrders = async (branchId) => {
 
 };
 
+const getCompletedKitchenOrders = async (branchId) => {
+    return await prisma.order.findMany({
+        where: {
+            branchId: Number(branchId),
+
+            status: "PREPARING",
+
+            orderType: {
+                in: ["DINE_IN", "TAKE_AWAY"],
+            },
+
+            orderItems: {
+                some: {
+                    kitchenStatus: "COMPLETED",
+                    status: {
+                        not: "CANCELLED",
+                    },
+                },
+            },
+        },
+
+        include: {
+            createdByUser: {
+                select: {
+                    id: true,
+                    username: true,
+                },
+            },
+
+            session: {
+                include: {
+                    table: {
+                        select: {
+                            id: true,
+                            tableNumber: true,
+                            qrCode: true,
+                        },
+                    },
+                },
+            },
+
+            orderItems: {
+                where: {
+                    kitchenStatus: "COMPLETED",
+                    status: {
+                        not: "CANCELLED",
+                    },
+                },
+
+                include: {
+                    food: {
+                        select: {
+                            id: true,
+                            name: true,
+                            price: true,
+                        },
+                    },
+                },
+            },
+        },
+
+        orderBy: {
+            createdAt: "asc",
+        },
+    });
+};
+
 module.exports = {
   create,
   updateTableStatus,
@@ -1586,4 +1633,5 @@ module.exports = {
   mergeOrders,
   getActiveOrderByTable,
   getPendingOrders,
+  getCompletedKitchenOrders,
 };

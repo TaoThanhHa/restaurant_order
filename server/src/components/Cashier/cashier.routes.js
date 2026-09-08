@@ -8,7 +8,7 @@ const auth = require("../../middlewares/auth.middleware");
 const authorize = require("../../middlewares/role.middleware");
 
 router.use(auth);
-router.use(authorize("BRANCH"));
+router.use(authorize("BRANCH", "CASHIER"));
 router.get("/statistics",auth,authorize("BRANCH", "CASHIER"),cashierController.getStatistics);
 router.get("/dashboard", cashierController.dashboard);
 router.get("/tables", cashierController.getTables);

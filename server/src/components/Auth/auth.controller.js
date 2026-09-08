@@ -60,6 +60,23 @@ const forgotPassword = async(req,res)=>{
 
 };
 
+const verifyOtp = async (req, res) => {
+    try {
+        await authService.verifyOtp(req.body);
+
+        return response.success(
+            res,
+            "Xác thực OTP thành công."
+        );
+    } catch (error) {
+        return response.error(
+            res,
+            error.message,
+            400
+        );
+    }
+};
+
 const resetPassword = async(req,res)=>{
 
     await authService.resetPassword(
@@ -77,5 +94,6 @@ module.exports = {
   login,
   profile,
   forgotPassword,
+  verifyOtp,
   resetPassword,
 };

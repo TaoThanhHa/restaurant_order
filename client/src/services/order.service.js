@@ -2,10 +2,6 @@ import api from "../api/axiosClient";
 
 const orderService = {
 
-    // =====================================================
-    // ORDER TẠI BÀN
-    // =====================================================
-
     create(data) {
         return api.post("/orders", data);
     },
@@ -67,17 +63,13 @@ const orderService = {
         );
     },
 
-    // =====================================================
-    // ĐƠN CHỜ XÁC NHẬN
-    // =====================================================
 
     getPendingOrders() {
         return api.get("/orders/pending");
     },
-
-    // =====================================================
-    // TAKE AWAY
-    // =====================================================
+    getCompletedKitchenOrders: () => {
+        return api.get("/orders/completed-kitchen");
+    },
 
     createTakeAway(data) {
         return api.post(
@@ -86,15 +78,13 @@ const orderService = {
         );
     },
 
-    getTakeAway() {
-        return api.get(
-            "/orders/take-away"
-        );
+    getTakeAway(branchId) {
+        return api.get(`/orders/take-away`, {
+            params: {
+                branchId,
+            },
+        });
     },
-
-    // =====================================================
-    // LỊCH SỬ
-    // =====================================================
 
     getHistory() {
         return api.get(

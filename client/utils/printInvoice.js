@@ -24,9 +24,7 @@ export const printInvoice = (order, paymentMethod) => {
         0
     );
 
-    const customerPhone =
-    order?.orderMembers?.[0]?.customer?.phone || null;
-
+    const customerPhone = order?.orderMembers?.[0]?.customer?.phone || null;
     const isTakeAway = order?.orderType === "TAKE_AWAY";
 
     const tableName = isTakeAway
@@ -38,10 +36,7 @@ export const printInvoice = (order, paymentMethod) => {
             "Không xác định"
         );
 
-    const paymentText =
-        paymentMethod === "CASH"
-            ? "Tiền mặt"
-            : "Chuyển khoản";
+    const paymentText = paymentMethod === "CASH" ? "Tiền mặt" : "Chuyển khoản";
 
     const createdAt = order?.createdAt
         ? new Date(order.createdAt).toLocaleString("vi-VN")
@@ -75,19 +70,13 @@ export const printInvoice = (order, paymentMethod) => {
 
     printWindow.document.write(`
         <!DOCTYPE html>
-
         <html lang="vi">
-
         <head>
-
             <meta charset="UTF-8">
-
             <title>
                 Hóa đơn ${order?.orderCode || order?.id}
             </title>
-
             <style>
-
                 * {
                     box-sizing: border-box;
                 }
@@ -100,11 +89,7 @@ export const printInvoice = (order, paymentMethod) => {
                 }
 
                 body {
-                    font-family:
-                        Arial,
-                        Helvetica,
-                        sans-serif;
-
+                    font-family: Arial, Helvetica, sans-serif;
                     color: #000;
                     font-size: 13px;
                 }
@@ -193,7 +178,6 @@ export const printInvoice = (order, paymentMethod) => {
                 }
 
                 @media print {
-
                     @page {
                         size: 80mm auto;
                         margin: 0;
@@ -209,19 +193,14 @@ export const printInvoice = (order, paymentMethod) => {
                     .invoice {
                         width: 80mm;
                     }
-
                 }
-
             </style>
-
         </head>
 
         <body>
 
             <div class="invoice">
-
                 <div class="center">
-
                     <div class="restaurant">
                         QUÁN ĂN
                     </div>
@@ -233,13 +212,11 @@ export const printInvoice = (order, paymentMethod) => {
                     <div class="code">
                         ${order?.orderCode || `#${order?.id}`}
                     </div>
-
                 </div>
 
                 <div class="line"></div>
 
                 <div class="info-row">
-
                     <span>
                         ${isTakeAway ? "Loại đơn" : "Bàn"}
                     </span>
@@ -247,7 +224,6 @@ export const printInvoice = (order, paymentMethod) => {
                     <span class="table">
                         ${tableName}
                     </span>
-
                 </div>
 
                 ${customerPhone ? `
@@ -258,27 +234,22 @@ export const printInvoice = (order, paymentMethod) => {
                 ` : ""}
 
                 <div class="info-row">
-
                     <span>Thời gian</span>
 
                     <span>
                         ${createdAt}
                     </span>
-
                 </div>
 
                 <div class="line"></div>
 
                 <div class="items">
-
                     ${itemsHtml}
-
                 </div>
 
                 <div class="line"></div>
 
                 <div class="total">
-
                     <span>
                         Tổng tiền
                     </span>
@@ -286,11 +257,9 @@ export const printInvoice = (order, paymentMethod) => {
                     <span>
                         ${total.toLocaleString()}đ
                     </span>
-
                 </div>
 
                 <div class="payment">
-
                     <span>
                         Thanh toán
                     </span>
@@ -298,39 +267,26 @@ export const printInvoice = (order, paymentMethod) => {
                     <strong>
                         ${paymentText}
                     </strong>
-
                 </div>
 
                 <div class="footer">
-
                     Cảm ơn quý khách!
                     <br>
                     Hẹn gặp lại quý khách.
-
                 </div>
-
             </div>
 
             <script>
-
                 window.onload = function () {
-
                     window.focus();
-
                     window.print();
-
                 };
 
                 window.onafterprint = function () {
-
                     window.close();
-
                 };
-
             </script>
-
         </body>
-
         </html>
     `);
 

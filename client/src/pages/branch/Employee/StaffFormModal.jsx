@@ -24,10 +24,6 @@ const ROLE_OPTIONS = [
         value: "KITCHEN",
         label: "Nhân viên bếp",
     },
-    {
-        value: "WAREHOUSE",
-        label: "Nhân viên kho",
-    },
 ];
 
 export default function StaffFormModal({
@@ -99,24 +95,13 @@ export default function StaffFormModal({
             return;
         }
 
-        const payload = {
-            username: form.username.trim(),
-            email: form.email.trim().toLowerCase(),
-            role: form.role,
-        };
+        const username = form.username.trim();
+        const role = form.role;
 
-        if (!payload.username) {
+        if (!username) {
             showNotification(
                 "warning",
                 "Vui lòng nhập tên tài khoản."
-            );
-            return;
-        }
-
-        if (!payload.email) {
-            showNotification(
-                "warning",
-                "Vui lòng nhập email."
             );
             return;
         }
@@ -126,9 +111,11 @@ export default function StaffFormModal({
 
             if (staff) {
                 await staffService.update(
-                    branchId,
                     staff.id,
-                    payload
+                    {
+                        username,
+                        role,
+                    }
                 );
 
                 await reload();
@@ -138,20 +125,35 @@ export default function StaffFormModal({
                     "success",
                     "Cập nhật nhân viên thành công."
                 );
-            } else {
-                await staffService.create(
-                    branchId,
-                    payload
-                );
 
-                await reload();
-                onClose();
-
-                showNotification(
-                    "success",
-                    "Tạo nhân viên thành công. Thông tin đăng nhập đã được gửi qua email."
-                );
+                return;
             }
+
+            const email =
+                form.email.trim().toLowerCase();
+
+            if (!email) {
+                showNotification(
+                    "warning",
+                    "Vui lòng nhập email."
+                );
+                return;
+            }
+
+            await staffService.create({
+                username,
+                email,
+                role,
+            });
+
+            await reload();
+            onClose();
+
+            showNotification(
+                "success",
+                "Tạo nhân viên thành công. Thông tin đăng nhập đã được gửi qua email."
+            );
+
         } catch (err) {
             console.error(
                 "STAFF SUBMIT ERROR:",
@@ -265,7 +267,7 @@ export default function StaffFormModal({
                                 name="email"
                                 value={form.email}
                                 onChange={handleChange}
-                                disabled={loading}
+                                disabled={loading || !!staff}
                                 placeholder="example@gmail.com"
                                 autoComplete="email"
                                 className="w-full rounded-lg border p-3 outline-none focus:border-[var(--color-primary)] focus:ring-1 focus:ring-[var(--color-primary)] disabled:bg-gray-100"

@@ -2,6 +2,7 @@ import { useState } from "react";
 import Button from "../../../components/Button/Button";
 import orderService from "../../../services/order.service";
 import { printInvoice } from "../../../../utils/printInvoice";
+import { printKitchenOrder } from "../../../../utils/printKitchenOrder";
 import NotiModal from "../../../components/NotiModal/NotiModal";
 
 export default function InvoicePanelTakeAway({
@@ -113,11 +114,10 @@ export default function InvoicePanelTakeAway({
                     })),
                 });
 
-            // Lấy order vừa tạo
             const order = res.data.data;
 
-            // In hóa đơn
             printInvoice(order, paymentMethod);
+            printKitchenOrder(order);
 
             setCart([]);
             setPhone("");

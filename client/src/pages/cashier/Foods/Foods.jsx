@@ -86,8 +86,6 @@ export default function Foods() {
                 Quản lý món ăn
             </h1>
 
-            {/* Category */}
-
             <div className="flex flex-wrap gap-3">
 
                 <button
@@ -132,22 +130,17 @@ export default function Foods() {
                         onChange={(e) => setKeyword(e.target.value)}
                         className="w-full py-2 pl-10 pr-3 !bg-white"
                     />
-
                 </div>
 
             {/* Foods */}
-
             <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-5">
-
                 {filterFoods.map(food => (
-
                     <FoodCard
                         key={food.foodId}
                         food={food}
                         mode="cashier"
                         onStatusChange={handleStatusChange}
                     />
-
                 ))}
 
             </div>

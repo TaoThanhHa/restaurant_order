@@ -27,5 +27,6 @@ router.use("/restaurant",require("../components/Restaurant/restaurant.routes"));
 router.use("/employee", require("../components/Staff/staff.routes"));
 router.use("/service-requests", require("../components/ServiceRequest/serviceRequest.routes"));
 router.use("/inventory", require("../components/Inventory/inventory.routes"));
+router.use("/kitchen", require("../components/Kitchenn/kitchen.route"));
 
 module.exports = router;

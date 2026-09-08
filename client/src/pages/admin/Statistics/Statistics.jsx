@@ -1,37 +1,33 @@
 import { useEffect, useMemo, useState } from "react";
-import { TrendingUp, Store, ShoppingBag, Utensils, Trophy, ArrowDown, } from "lucide-react";
+import {
+    ArrowDown,
+    ArrowUp,
+    ShoppingBag,
+    Store,
+    TrendingDown,
+    TrendingUp,
+    Trophy,
+} from "lucide-react";
 
 import adminService from "../../../services/adminStatistics.service";
 import NotiModal from "../../../components/NotiModal/NotiModal";
 
-export default function Statistics() {
+export default function Statistics({ branchOnly = false }) {
     const today = new Date();
-
-    // STATE
+    const todayString = today.toISOString().split("T")[0];
 
     const [statistics, setStatistics] = useState(null);
     const [branches, setBranches] = useState([]);
-
     const [period, setPeriod] = useState("week");
     const [branchId, setBranchId] = useState("");
-
-    const [selectedDate, setSelectedDate] = useState(
-        today.toISOString().split("T")[0]
-    );
-    const [selectedMonth, setSelectedMonth] = useState(
-        today.getMonth() + 1
-    );
-    const [selectedYear, setSelectedYear] = useState(
-        today.getFullYear()
-    );
+    const [selectedDay, setSelectedDay] = useState(todayString);
+    const [selectedDate, setSelectedDate] = useState(todayString);
+    const [selectedMonth, setSelectedMonth] = useState(today.getMonth() + 1);
+    const [selectedYear, setSelectedYear] = useState(today.getFullYear());
     const [selectedQuarter, setSelectedQuarter] = useState(
         Math.floor(today.getMonth() / 3) + 1
     );
-
     const [loading, setLoading] = useState(true);
-
-    // NOTIFICATION
-
     const [notification, setNotification] = useState({
         open: false,
         type: "success",
@@ -55,8 +51,6 @@ export default function Statistics() {
         }));
     };
 
-    // DATE HELPERS
-
     const formatDateInput = (date) => {
         const year = date.getFullYear();
         const month = String(date.getMonth() + 1).padStart(2, "0");
@@ -69,8 +63,12 @@ export default function Statistics() {
         return date.toLocaleDateString("vi-VN");
     };
 
+    const formatMoney = (value) => {
+        return `${Number(value || 0).toLocaleString("vi-VN")}đ`;
+    };
+
     const getMonday = (dateValue) => {
-        const date = new Date(`${dateValue}T00:00:00`);
+        const date = new Date(`${dateValue}T12:00:00`);
         const day = date.getDay();
         const diff = day === 0 ? -6 : 1 - day;
 
@@ -88,21 +86,24 @@ export default function Statistics() {
         return sunday;
     };
 
-    // FORMAT MONEY
-
-    const formatMoney = (value) => {
-        return `${Number(value || 0).toLocaleString("vi-VN")}đ`;
-    };
-
-    // LOAD BRANCHES
+    const years = useMemo(() => {
+        return Array.from(
+            { length: 6 },
+            (_, index) => today.getFullYear() - index
+        );
+    }, [today]);
 
     useEffect(() => {
+        if (branchOnly) return;
+
         const loadBranches = async () => {
             try {
                 const res = await adminService.getBranches();
 
+                console.log("BRANCHES RESPONSE:", res);
+
                 if (res?.success) {
-                    setBranches(res.data || []);
+                    setBranches(Array.isArray(res.data) ? res.data : []);
                     return;
                 }
 
@@ -128,9 +129,7 @@ export default function Statistics() {
         };
 
         loadBranches();
-    }, []);
-
-    // LOAD STATISTICS
+    }, [branchOnly]);
 
     useEffect(() => {
         const loadStatistics = async () => {
@@ -141,30 +140,35 @@ export default function Statistics() {
                     period,
                 };
 
-                if (branchId) {
+                if (!branchOnly && branchId) {
                     params.branchId = branchId;
                 }
 
-                // WEEK
+                if (period === "day") {
+                    params.date = selectedDay;
+                }
+
                 if (period === "week") {
                     params.weekStart = formatDateInput(
                         getMonday(selectedDate)
                     );
                 }
 
-                // MONTH
                 if (period === "month") {
                     params.year = selectedYear;
                     params.month = selectedMonth;
                 }
 
-                // QUARTER
                 if (period === "quarter") {
                     params.year = selectedYear;
                     params.quarter = selectedQuarter;
                 }
 
+                console.log("STATISTICS PARAMS:", params);
+
                 const res = await adminService.getStatistics(params);
+
+                console.log("STATISTICS RESPONSE:", res);
 
                 if (res?.success) {
                     setStatistics(res.data || null);
@@ -176,7 +180,8 @@ export default function Statistics() {
                 showNotification(
                     "warning",
                     "Không có dữ liệu",
-                    res?.message || "Không có dữ liệu thống kê cho khoảng thời gian này."
+                    res?.message ||
+                        "Không có dữ liệu thống kê cho khoảng thời gian này."
                 );
             } catch (error) {
                 console.error("Lỗi lấy thống kê:", error);
@@ -198,69 +203,117 @@ export default function Statistics() {
     }, [
         period,
         branchId,
+        selectedDay,
         selectedDate,
         selectedMonth,
         selectedYear,
         selectedQuarter,
+        branchOnly,
     ]);
 
-    // STATISTICS DATA
-
     const summary = statistics?.summary || {};
+    const timeline = statistics?.timeline || [];
+    const customerTimeline = statistics?.customerTimeline || [];
+    const orderTypeTimeline = statistics?.orderTypeTimeline || [];
     const bestSelling = statistics?.bestSelling || [];
     const leastSelling = statistics?.leastSelling || [];
     const branchRevenue = statistics?.branchRevenue || [];
+    const foodTrend = statistics?.foodTrend || {};
+    const increasedFoods = foodTrend.increased || [];
+    const decreasedFoods = foodTrend.decreased || [];
+    const unsoldFoods = statistics?.unsoldFoods || [];
 
-    // MAX VALUES
+    const showFoodAnalysis =
+        period === "week" || period === "month";
 
     const maxTimeline = useMemo(() => {
         return Math.max(
-            ...(statistics?.timeline || []).map((item) =>
-                Number(item.total || 0)
-            ),
+            ...timeline.map((item) => Number(item.total || 0)),
             1
         );
-    }, [statistics]);
+    }, [timeline]);
 
     const maxCustomer = useMemo(() => {
         return Math.max(
-            ...(statistics?.customerTimeline || []).flatMap((item) => [
+            ...customerTimeline.flatMap((item) => [
                 Number(item.member || 0),
                 Number(item.guest || 0),
             ]),
             1
         );
-    }, [statistics]);
+    }, [customerTimeline]);
 
     const maxOrderType = useMemo(() => {
         return Math.max(
-            ...(statistics?.orderTypeTimeline || []).flatMap((item) => [
+            ...orderTypeTimeline.flatMap((item) => [
                 Number(item.dineIn || 0),
                 Number(item.takeAway || 0),
             ]),
             1
         );
-    }, [statistics]);
+    }, [orderTypeTimeline]);
 
     const maxBranch = useMemo(() => {
         return Math.max(
-            ...(statistics?.branchRevenue || []).map((item) =>
+            ...branchRevenue.map((item) =>
                 Number(item.revenue || 0)
             ),
             1
         );
-    }, [statistics]);
+    }, [branchRevenue]);
 
-    // YEAR LIST
+    const createMoneyAxis = (max) => {
+        if (!max || max <= 0) {
+            return [0];
+        }
 
-    const years = useMemo(() => {
-        return Array.from(
-            { length: 6 },
-            (_, index) => today.getFullYear() - index
+        const step = max / 4;
+
+        return [
+            max,
+            step * 3,
+            step * 2,
+            step,
+            0,
+        ];
+    };
+
+    const revenueAxis = useMemo(
+        () => createMoneyAxis(maxTimeline),
+        [maxTimeline]
+    );
+
+    const customerAxis = useMemo(
+        () => createMoneyAxis(maxCustomer),
+        [maxCustomer]
+    );
+
+    const orderTypeAxis = useMemo(
+        () => createMoneyAxis(maxOrderType),
+        [maxOrderType]
+    );
+
+    const EmptyData = ({
+        message = "Chưa có dữ liệu.",
+    }) => {
+        return (
+            <p className="py-10 text-center text-sm text-gray-400">
+                {message}
+            </p>
         );
-    }, []);
+    };
 
-    // LOADING
+    const Notification = () => {
+        return (
+            <NotiModal
+                open={notification.open}
+                type={notification.type}
+                title={notification.title}
+                message={notification.message}
+                onClose={closeNotification}
+            />
+        );
+    };
 
     if (loading) {
         return (
@@ -271,18 +324,10 @@ export default function Statistics() {
                     </div>
                 </div>
 
-                <NotiModal
-                    open={notification.open}
-                    type={notification.type}
-                    title={notification.title}
-                    message={notification.message}
-                    onClose={closeNotification}
-                />
+                <Notification />
             </>
         );
     }
-
-    // EMPTY
 
     if (!statistics) {
         return (
@@ -293,26 +338,14 @@ export default function Statistics() {
                     </div>
                 </div>
 
-                <NotiModal
-                    open={notification.open}
-                    type={notification.type}
-                    title={notification.title}
-                    message={notification.message}
-                    onClose={closeNotification}
-                />
+                <Notification />
             </>
         );
     }
 
-    // RENDER
-
     return (
         <>
             <div className="space-y-6 p-3">
-                {/* ========================================
-                    HEADER
-                ======================================== */}
-
                 <div>
                     <h1 className="text-3xl font-bold text-[var(--color-text)]">
                         Thống kê doanh thu
@@ -323,39 +356,35 @@ export default function Statistics() {
                     </p>
                 </div>
 
-                {/* ========================================
-                    FILTER
-                ======================================== */}
-
                 <div className="flex flex-wrap items-end gap-4 rounded-2xl bg-white p-5 shadow">
-                    {/* CHI NHÁNH */}
+                    {!branchOnly && (
+                        <div>
+                            <label className="mb-2 block text-sm font-medium text-[var(--color-text)]">
+                                Chi nhánh
+                            </label>
 
-                    <div>
-                        <label className="mb-2 block text-sm font-medium text-[var(--color-text)]">
-                            Chi nhánh
-                        </label>
-
-                        <select
-                            value={branchId}
-                            onChange={(e) => setBranchId(e.target.value)}
-                            className="rounded-lg border border-gray-300 px-4 py-2 outline-none focus:border-[var(--color-border)]"
-                        >
-                            <option value="">
-                                Tất cả chi nhánh
-                            </option>
-
-                            {branches.map((branch) => (
-                                <option
-                                    key={branch.id}
-                                    value={branch.id}
-                                >
-                                    {branch.name}
+                            <select
+                                value={branchId}
+                                onChange={(e) =>
+                                    setBranchId(e.target.value)
+                                }
+                                className="rounded-lg border border-gray-300 px-4 py-2 outline-none focus:border-[var(--color-border)]"
+                            >
+                                <option value="">
+                                    Tất cả chi nhánh
                                 </option>
-                            ))}
-                        </select>
-                    </div>
 
-                    {/* PERIOD */}
+                                {branches.map((branch) => (
+                                    <option
+                                        key={branch.id}
+                                        value={branch.id}
+                                    >
+                                        {branch.name}
+                                    </option>
+                                ))}
+                            </select>
+                        </div>
+                    )}
 
                     <div>
                         <label className="mb-2 block text-sm font-medium text-[var(--color-text)]">
@@ -364,16 +393,34 @@ export default function Statistics() {
 
                         <select
                             value={period}
-                            onChange={(e) => setPeriod(e.target.value)}
-                            className="rounded-lg border border-gray-300 px-4 py-2 outline-none focus:border-[#7c5736]"
+                            onChange={(e) =>
+                                setPeriod(e.target.value)
+                            }
+                            className="rounded-lg border border-gray-300 px-4 py-2 outline-none focus:border-[var(--color-border)]"
                         >
+                            <option value="day">Ngày</option>
                             <option value="week">Tuần</option>
                             <option value="month">Tháng</option>
                             <option value="quarter">Quý</option>
                         </select>
                     </div>
 
-                    {/* WEEK */}
+                    {period === "day" && (
+                        <div>
+                            <label className="mb-2 block text-sm font-medium text-[var(--color-text)]">
+                                Chọn ngày
+                            </label>
+
+                            <input
+                                type="date"
+                                value={selectedDay}
+                                onChange={(e) =>
+                                    setSelectedDay(e.target.value)
+                                }
+                                className="rounded-lg border border-gray-300 px-4 py-2 outline-none focus:border-[var(--color-border)]"
+                            />
+                        </div>
+                    )}
 
                     {period === "week" && (
                         <div className="flex items-end">
@@ -386,14 +433,16 @@ export default function Statistics() {
                                     type="date"
                                     value={selectedDate}
                                     onChange={(e) =>
-                                        setSelectedDate(e.target.value)
+                                        setSelectedDate(
+                                            e.target.value
+                                        )
                                     }
-                                    className="rounded-lg border border-gray-300 px-4 py-2 outline-none focus:border-[#7c5736]"
+                                    className="rounded-lg border border-gray-300 px-4 py-2 outline-none focus:border-[var(--color-border)]"
                                 />
                             </div>
 
                             <p className="pb-2 pl-4 text-sm text-gray-500">
-                                Tuần:{" "}
+                                Tuần{" "}
                                 {formatDateDisplay(
                                     getMonday(selectedDate)
                                 )}{" "}
@@ -404,8 +453,6 @@ export default function Statistics() {
                             </p>
                         </div>
                     )}
-
-                    {/* MONTH */}
 
                     {period === "month" && (
                         <>
@@ -421,7 +468,7 @@ export default function Statistics() {
                                             Number(e.target.value)
                                         )
                                     }
-                                    className="rounded-lg border border-gray-300 px-4 py-2 outline-none focus:border-[#7c5736]"
+                                    className="rounded-lg border border-gray-300 px-4 py-2 outline-none focus:border-[var(--color-border)]"
                                 >
                                     {Array.from(
                                         { length: 12 },
@@ -449,7 +496,7 @@ export default function Statistics() {
                                             Number(e.target.value)
                                         )
                                     }
-                                    className="rounded-lg border border-gray-300 px-4 py-2 outline-none focus:border-[#7c5736]"
+                                    className="rounded-lg border border-gray-300 px-4 py-2 outline-none focus:border-[var(--color-border)]"
                                 >
                                     {years.map((year) => (
                                         <option
@@ -463,8 +510,6 @@ export default function Statistics() {
                             </div>
                         </>
                     )}
-
-                    {/* QUARTER */}
 
                     {period === "quarter" && (
                         <>
@@ -480,12 +525,20 @@ export default function Statistics() {
                                             Number(e.target.value)
                                         )
                                     }
-                                    className="rounded-lg border border-gray-300 px-4 py-2 outline-none focus:border-[#7c5736]"
+                                    className="rounded-lg border border-gray-300 px-4 py-2 outline-none focus:border-[var(--color-border)]"
                                 >
-                                    <option value={1}>Quý 1</option>
-                                    <option value={2}>Quý 2</option>
-                                    <option value={3}>Quý 3</option>
-                                    <option value={4}>Quý 4</option>
+                                    <option value={1}>
+                                        Quý 1
+                                    </option>
+                                    <option value={2}>
+                                        Quý 2
+                                    </option>
+                                    <option value={3}>
+                                        Quý 3
+                                    </option>
+                                    <option value={4}>
+                                        Quý 4
+                                    </option>
                                 </select>
                             </div>
 
@@ -501,7 +554,7 @@ export default function Statistics() {
                                             Number(e.target.value)
                                         )
                                     }
-                                    className="rounded-lg border border-gray-300 px-4 py-2 outline-none focus:border-[#7c5736]"
+                                    className="rounded-lg border border-gray-300 px-4 py-2 outline-none focus:border-[var(--color-border)]"
                                 >
                                     {years.map((year) => (
                                         <option
@@ -517,13 +570,7 @@ export default function Statistics() {
                     )}
                 </div>
 
-                {/* ========================================
-                    SUMMARY
-                ======================================== */}
-
-                <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-5">
-                    {/* TOTAL */}
-
+                <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
                     <div className="rounded-2xl bg-white p-5 shadow">
                         <div className="flex items-center justify-between">
                             <p className="text-sm text-gray-500">
@@ -537,49 +584,11 @@ export default function Statistics() {
                         </div>
 
                         <p className="mt-3 text-2xl font-bold text-[var(--color-text)]">
-                            {formatMoney(summary.totalRevenue)}
+                            {formatMoney(
+                                summary.totalRevenue
+                            )}
                         </p>
                     </div>
-
-                    {/* DINE IN */}
-
-                    <div className="rounded-2xl bg-white p-5 shadow">
-                        <div className="flex items-center justify-between">
-                            <p className="text-sm text-gray-500">
-                                Tại chỗ
-                            </p>
-
-                            <Utensils
-                                size={22}
-                                className="text-blue-500"
-                            />
-                        </div>
-
-                        <p className="mt-3 text-2xl font-bold text-blue-500">
-                            {formatMoney(summary.totalDineIn)}
-                        </p>
-                    </div>
-
-                    {/* TAKE AWAY */}
-
-                    <div className="rounded-2xl bg-white p-5 shadow">
-                        <div className="flex items-center justify-between">
-                            <p className="text-sm text-gray-500">
-                                Mang về
-                            </p>
-
-                            <ShoppingBag
-                                size={22}
-                                className="text-emerald-500"
-                            />
-                        </div>
-
-                        <p className="mt-3 text-2xl font-bold text-emerald-500">
-                            {formatMoney(summary.totalTakeAway)}
-                        </p>
-                    </div>
-
-                    {/* ORDER */}
 
                     <div className="rounded-2xl bg-white p-5 shadow">
                         <div className="flex items-center justify-between">
@@ -598,8 +607,6 @@ export default function Statistics() {
                         </p>
                     </div>
 
-                    {/* AVERAGE */}
-
                     <div className="rounded-2xl bg-white p-5 shadow">
                         <div className="flex items-center justify-between">
                             <p className="text-sm text-gray-500">
@@ -613,18 +620,14 @@ export default function Statistics() {
                         </div>
 
                         <p className="mt-3 text-2xl font-bold text-purple-500">
-                            {formatMoney(summary.averageOrder)}
+                            {formatMoney(
+                                summary.averageOrder
+                            )}
                         </p>
                     </div>
                 </div>
 
-                {/* ========================================
-                    CUSTOMER / ORDER TYPE
-                ======================================== */}
-
                 <div className="grid grid-cols-1 gap-6 xl:grid-cols-2">
-                    {/* CUSTOMER */}
-
                     <div className="rounded-2xl bg-white p-6 shadow">
                         <div className="mb-5">
                             <h2 className="text-xl font-bold text-[var(--color-text)]">
@@ -648,73 +651,112 @@ export default function Statistics() {
                             </div>
                         </div>
 
-                        <div className="flex h-72 items-end gap-3 overflow-x-auto border-b border-l border-gray-200 px-3">
-                            {(statistics.customerTimeline || []).map(
-                                (item) => {
-                                    const memberHeight =
-                                        (Number(item.member || 0) /
-                                            maxCustomer) *
-                                        100;
+                        {customerTimeline.length > 0 ? (
+                            <div className="flex">
+                                <div className="flex h-72 w-24 shrink-0 flex-col justify-between border-r border-gray-200 pr-3 text-right text-xs text-gray-400">
+                                    {customerAxis.map(
+                                        (value, index) => (
+                                            <span
+                                                key={index}
+                                                className="whitespace-nowrap"
+                                            >
+                                                {formatMoney(
+                                                    value
+                                                )}
+                                            </span>
+                                        )
+                                    )}
+                                </div>
 
-                                    const guestHeight =
-                                        (Number(item.guest || 0) /
-                                            maxCustomer) *
-                                        100;
+                                <div className="flex h-72 min-w-0 flex-1 items-end gap-3 overflow-x-auto border-b border-gray-200 px-3">
+                                    {customerTimeline.map(
+                                        (item) => {
+                                            const member =
+                                                Number(
+                                                    item.member ||
+                                                        0
+                                                );
 
-                                    return (
-                                        <div
-                                            key={item.key}
-                                            className="flex h-full min-w-[55px] flex-1 flex-col justify-end"
-                                        >
-                                            <div className="flex h-full items-end justify-center gap-1">
-                                                {/* MEMBER */}
+                                            const guest =
+                                                Number(
+                                                    item.guest ||
+                                                        0
+                                                );
 
+                                            const memberHeight =
+                                                (member /
+                                                    maxCustomer) *
+                                                100;
+
+                                            const guestHeight =
+                                                (guest /
+                                                    maxCustomer) *
+                                                100;
+
+                                            return (
                                                 <div
-                                                    className="group relative w-2/5 rounded-t bg-[#7c5736]"
-                                                    style={{
-                                                        height:
-                                                            item.member > 0
-                                                                ? `${memberHeight}%`
-                                                                : "0",
-                                                    }}
+                                                    key={
+                                                        item.key
+                                                    }
+                                                    className="flex h-full min-w-[55px] flex-1 flex-col justify-end"
                                                 >
-                                                    <div className="pointer-events-none absolute -top-8 left-1/2 hidden -translate-x-1/2 whitespace-nowrap rounded bg-gray-800 px-2 py-1 text-xs text-white group-hover:block">
-                                                        {formatMoney(
-                                                            item.member
-                                                        )}
+                                                    <div className="flex h-full items-end justify-center gap-1">
+                                                        <div
+                                                            className="group relative w-2/5 rounded-t bg-[#7c5736]"
+                                                            style={{
+                                                                height:
+                                                                    member >
+                                                                    0
+                                                                        ? `${memberHeight}%`
+                                                                        : "0",
+                                                            }}
+                                                        >
+                                                            {member >
+                                                                0 && (
+                                                                <div className="pointer-events-none absolute bottom-full left-1/2 z-20 mb-[-38px] hidden -translate-x-1/2 whitespace-nowrap rounded-lg bg-gray-800 px-3 py-2 text-xs font-medium text-white shadow-lg group-hover:block">
+                                                                    {formatMoney(
+                                                                        member
+                                                                    )}
+                                                                </div>
+                                                            )}
+                                                        </div>
+
+                                                        <div
+                                                            className="group relative w-2/5 rounded-t bg-gray-300"
+                                                            style={{
+                                                                height:
+                                                                    guest >
+                                                                    0
+                                                                        ? `${guestHeight}%`
+                                                                        : "0",
+                                                            }}
+                                                        >
+                                                            {guest >
+                                                                0 && (
+                                                                <div className="pointer-events-none absolute bottom-full left-1/2 z-20 mb-[-38px] hidden -translate-x-1/2 whitespace-nowrap rounded-lg bg-gray-800 px-3 py-2 text-xs font-medium text-white shadow-lg group-hover:block">
+                                                                    {formatMoney(
+                                                                        guest
+                                                                    )}
+                                                                </div>
+                                                            )}
+                                                        </div>
+                                                    </div>
+
+                                                    <div className="mt-2 text-center text-xs text-gray-500">
+                                                        {
+                                                            item.label
+                                                        }
                                                     </div>
                                                 </div>
-
-                                                {/* GUEST */}
-
-                                                <div
-                                                    className="group relative w-2/5 rounded-t bg-gray-300"
-                                                    style={{
-                                                        height:
-                                                            item.guest > 0
-                                                                ? `${guestHeight}%`
-                                                                : "0",
-                                                    }}
-                                                >
-                                                    <div className="pointer-events-none absolute -top-8 left-1/2 hidden -translate-x-1/2 whitespace-nowrap rounded bg-gray-800 px-2 py-1 text-xs text-white group-hover:block">
-                                                        {formatMoney(
-                                                            item.guest
-                                                        )}
-                                                    </div>
-                                                </div>
-                                            </div>
-
-                                            <div className="mt-2 text-center text-xs text-gray-500">
-                                                {item.label}
-                                            </div>
-                                        </div>
-                                    );
-                                }
-                            )}
-                        </div>
+                                            );
+                                        }
+                                    )}
+                                </div>
+                            </div>
+                        ) : (
+                            <EmptyData />
+                        )}
                     </div>
-
-                    {/* ORDER TYPE */}
 
                     <div className="rounded-2xl bg-white p-6 shadow">
                         <div className="mb-5">
@@ -739,132 +781,193 @@ export default function Statistics() {
                             </div>
                         </div>
 
-                        <div className="flex h-72 items-end gap-3 overflow-x-auto border-b border-l border-gray-200 px-3">
-                            {(statistics.orderTypeTimeline || []).map(
-                                (item) => {
-                                    const dineInHeight =
-                                        (Number(item.dineIn || 0) /
-                                            maxOrderType) *
-                                        100;
-
-                                    const takeAwayHeight =
-                                        (Number(item.takeAway || 0) /
-                                            maxOrderType) *
-                                        100;
-
-                                    return (
-                                        <div
-                                            key={item.key}
-                                            className="flex h-full min-w-[55px] flex-1 flex-col justify-end"
-                                        >
-                                            <div className="flex h-full items-end justify-center gap-1">
-                                                {/* DINE IN */}
-
-                                                <div
-                                                    className="group relative w-2/5 rounded-t bg-blue-500"
-                                                    style={{
-                                                        height:
-                                                            item.dineIn > 0
-                                                                ? `${dineInHeight}%`
-                                                                : "0",
-                                                    }}
-                                                >
-                                                    <div className="pointer-events-none absolute -top-8 left-1/2 hidden -translate-x-1/2 whitespace-nowrap rounded bg-gray-800 px-2 py-1 text-xs text-white group-hover:block">
-                                                        {formatMoney(
-                                                            item.dineIn
-                                                        )}
-                                                    </div>
-                                                </div>
-
-                                                {/* TAKE AWAY */}
-
-                                                <div
-                                                    className="group relative w-2/5 rounded-t bg-emerald-500"
-                                                    style={{
-                                                        height:
-                                                            item.takeAway > 0
-                                                                ? `${takeAwayHeight}%`
-                                                                : "0",
-                                                    }}
-                                                >
-                                                    <div className="pointer-events-none absolute -top-8 left-1/2 hidden -translate-x-1/2 whitespace-nowrap rounded bg-gray-800 px-2 py-1 text-xs text-white group-hover:block">
-                                                        {formatMoney(
-                                                            item.takeAway
-                                                        )}
-                                                    </div>
-                                                </div>
-                                            </div>
-
-                                            <div className="mt-2 text-center text-xs text-gray-500">
-                                                {item.label}
-                                            </div>
-                                        </div>
-                                    );
-                                }
-                            )}
-                        </div>
-                    </div>
-                </div>
-
-                {/* ========================================
-                    REVENUE TIMELINE
-                ======================================== */}
-
-                <div className="rounded-2xl bg-white p-6 shadow">
-                    <h2 className="text-xl font-bold text-[var(--color-text)]">
-                        Doanh thu theo thời gian
-                    </h2>
-
-                    <p className="mt-1 text-sm text-gray-500">
-                        Theo khoảng thời gian đã chọn
-                    </p>
-
-                    <div className="mt-8 flex h-72 items-end gap-3 overflow-x-auto border-b border-l border-gray-200 px-3">
-                        {(statistics.timeline || []).map((item) => {
-                            const height =
-                                (Number(item.total || 0) /
-                                    maxTimeline) *
-                                100;
-
-                            return (
-                                <div
-                                    key={item.key}
-                                    className="flex h-full min-w-[60px] flex-1 flex-col justify-end"
-                                >
-                                    <div className="group relative flex h-full items-end justify-center">
-                                        <div
-                                            className="relative w-10 rounded-t bg-[#7c5736] transition-all hover:opacity-80"
-                                            style={{
-                                                height:
-                                                    item.total > 0
-                                                        ? `${height}%`
-                                                        : "0",
-                                            }}
-                                        >
-                                            <div className="pointer-events-none absolute -top-8 left-1/2 hidden -translate-x-1/2 whitespace-nowrap rounded bg-gray-800 px-2 py-1 text-xs text-white group-hover:block">
+                        {orderTypeTimeline.length > 0 ? (
+                            <div className="flex">
+                                <div className="flex h-72 w-24 shrink-0 flex-col justify-between border-r border-gray-200 pr-3 text-right text-xs text-gray-400">
+                                    {orderTypeAxis.map(
+                                        (value, index) => (
+                                            <span
+                                                key={index}
+                                                className="whitespace-nowrap"
+                                            >
                                                 {formatMoney(
-                                                    item.total
+                                                    value
                                                 )}
-                                            </div>
-                                        </div>
-                                    </div>
-
-                                    <div className="mt-2 text-center text-xs text-gray-500">
-                                        {item.label}
-                                    </div>
+                                            </span>
+                                        )
+                                    )}
                                 </div>
-                            );
-                        })}
+
+                                <div className="flex h-72 min-w-0 flex-1 items-end gap-3 overflow-x-auto border-b border-gray-200 px-3">
+                                    {orderTypeTimeline.map(
+                                        (item) => {
+                                            const dineIn =
+                                                Number(
+                                                    item.dineIn ||
+                                                        0
+                                                );
+
+                                            const takeAway =
+                                                Number(
+                                                    item.takeAway ||
+                                                        0
+                                                );
+
+                                            const dineInHeight =
+                                                (dineIn /
+                                                    maxOrderType) *
+                                                100;
+
+                                            const takeAwayHeight =
+                                                (takeAway /
+                                                    maxOrderType) *
+                                                100;
+
+                                            return (
+                                                <div
+                                                    key={
+                                                        item.key
+                                                    }
+                                                    className="flex h-full min-w-[55px] flex-1 flex-col justify-end"
+                                                >
+                                                    <div className="flex h-full items-end justify-center gap-1">
+                                                        <div
+                                                            className="group relative w-2/5 rounded-t bg-blue-500"
+                                                            style={{
+                                                                height:
+                                                                    dineIn >
+                                                                    0
+                                                                        ? `${dineInHeight}%`
+                                                                        : "0",
+                                                            }}
+                                                        >
+                                                            {dineIn >
+                                                                0 && (
+                                                                <div className="pointer-events-none absolute bottom-full left-1/2 z-20 mb-[-38px] hidden -translate-x-1/2 whitespace-nowrap rounded-lg bg-gray-800 px-3 py-2 text-xs font-medium text-white shadow-lg group-hover:block">
+                                                                    {formatMoney(
+                                                                        dineIn
+                                                                    )}
+                                                                </div>
+                                                            )}
+                                                        </div>
+
+                                                        <div
+                                                            className="group relative w-2/5 rounded-t bg-emerald-500"
+                                                            style={{
+                                                                height:
+                                                                    takeAway >
+                                                                    0
+                                                                        ? `${takeAwayHeight}%`
+                                                                        : "0",
+                                                            }}
+                                                        >
+                                                            {takeAway >
+                                                                0 && (
+                                                                <div className="pointer-events-none absolute bottom-full left-1/2 z-20 mb-[-38px] hidden -translate-x-1/2 whitespace-nowrap rounded-lg bg-gray-800 px-3 py-2 text-xs font-medium text-white shadow-lg group-hover:block">
+                                                                    {formatMoney(
+                                                                        takeAway
+                                                                    )}
+                                                                </div>
+                                                            )}
+                                                        </div>
+                                                    </div>
+
+                                                    <div className="mt-2 text-center text-xs text-gray-500">
+                                                        {
+                                                            item.label
+                                                        }
+                                                    </div>
+                                                </div>
+                                            );
+                                        }
+                                    )}
+                                </div>
+                            </div>
+                        ) : (
+                            <EmptyData />
+                        )}
                     </div>
                 </div>
 
-                {/* ========================================
-                    BEST / LEAST SELLING
-                ======================================== */}
+                {period !== "day" && (
+                    <div className="rounded-2xl bg-white p-6 shadow">
+                        <div className="mb-5">
+                            <h2 className="text-xl font-bold text-[var(--color-text)]">
+                                Doanh thu theo thời gian
+                            </h2>
+
+                            <p className="mt-1 text-sm text-gray-500">
+                                Theo khoảng thời gian đã chọn
+                            </p>
+                        </div>
+
+                        {timeline.length > 0 ? (
+                            <div className="flex">
+                                <div className="flex h-72 w-24 shrink-0 flex-col justify-between border-r border-gray-200 pr-3 text-right text-xs text-gray-400">
+                                    {revenueAxis.map(
+                                        (value, index) => (
+                                            <span
+                                                key={index}
+                                                className="whitespace-nowrap"
+                                            >
+                                                {formatMoney(value)}
+                                            </span>
+                                        )
+                                    )}
+                                </div>
+
+                                <div className="flex h-72 min-w-0 flex-1 items-end gap-3 overflow-x-auto border-b border-gray-200 px-4">
+                                    {timeline.map(
+                                        (item) => {
+                                            const total = Number( item.total || 0 );
+                                            const height = (total / maxTimeline) * 100;
+                                            return (
+                                                <div
+                                                    key={
+                                                        item.key
+                                                    }
+                                                    className="flex h-full min-w-[60px] flex-1 flex-col justify-end"
+                                                >
+                                                    <div className="group relative flex h-full items-end justify-center">
+                                                        <div
+                                                            className="relative w-10 rounded-t bg-[#7c5736] transition-all duration-200 hover:opacity-80"
+                                                            style={{
+                                                                height:
+                                                                    total >
+                                                                    0
+                                                                        ? `${height}%`
+                                                                        : "0",
+                                                            }}
+                                                        >
+                                                            {total >
+                                                                0 && (
+                                                                <div className="pointer-events-none absolute bottom-full left-1/2 z-20 mb-[-38px] hidden -translate-x-1/2 whitespace-nowrap rounded-lg bg-gray-800 px-3 py-2 text-xs font-medium text-white shadow-lg group-hover:block">
+                                                                    {formatMoney(
+                                                                        total
+                                                                    )}
+                                                                </div>
+                                                            )}
+                                                        </div>
+                                                    </div>
+
+                                                    <div className="mt-2 text-center text-xs text-gray-500">
+                                                        {
+                                                            item.label
+                                                        }
+                                                    </div>
+                                                </div>
+                                            );
+                                        }
+                                    )}
+                                </div>
+                            </div>
+                        ) : (
+                            <EmptyData />
+                        )}
+                    </div>
+                )}
 
                 <div className="grid grid-cols-1 gap-6 xl:grid-cols-2">
-                    {/* BEST */}
-
                     <div className="rounded-2xl bg-white p-6 shadow">
                         <div className="mb-5 flex items-center gap-2">
                             <Trophy
@@ -872,50 +975,53 @@ export default function Statistics() {
                                 className="text-yellow-500"
                             />
 
-                            <h2 className="text-xl font-bold text-[var(--color-text)]">
-                                Món bán chạy nhất
-                            </h2>
+                            <div>
+                                <h2 className="text-xl font-bold text-[var(--color-text)]">
+                                    Món bán chạy nhất
+                                </h2>
+
+                                <p className="mt-1 text-sm text-gray-500">
+                                    Top món có số lượng bán cao nhất
+                                </p>
+                            </div>
                         </div>
 
                         {bestSelling.length > 0 ? (
                             <div className="space-y-3">
-                                {bestSelling.map((food, index) => (
-                                    <div
-                                        key={food.id}
-                                        className="flex items-center justify-between rounded-xl bg-gray-50 p-4"
-                                    >
-                                        <div className="flex items-center gap-3">
-                                            <span className="flex h-8 w-8 items-center justify-center rounded-full bg-[#7c5736] text-sm font-bold text-white">
-                                                {index + 1}
-                                            </span>
+                                {bestSelling.map(
+                                    (food, index) => (
+                                        <div
+                                            key={food.id}
+                                            className="flex items-center justify-between rounded-xl bg-gray-50 p-4"
+                                        >
+                                            <div className="flex min-w-0 items-center gap-3">
+                                                <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#7c5736] text-sm font-bold text-white">
+                                                    {index + 1}
+                                                </span>
 
-                                            <span className="font-medium">
-                                                {food.name}
-                                            </span>
+                                                <span className="truncate font-medium">
+                                                    {food.name}
+                                                </span>
+                                            </div>
+
+                                            <div className="ml-4 shrink-0 text-right">
+                                                <p className="font-bold text-[var(--color-text)]">
+                                                    { food.quantity }{" "}
+                                                    món
+                                                </p>
+
+                                                <p className="text-xs text-gray-500">
+                                                    {formatMoney( food.revenue )}
+                                                </p>
+                                            </div>
                                         </div>
-
-                                        <div className="text-right">
-                                            <p className="font-bold text-[var(--color-text)]">
-                                                {food.quantity} món
-                                            </p>
-
-                                            <p className="text-xs text-gray-500">
-                                                {formatMoney(
-                                                    food.revenue
-                                                )}
-                                            </p>
-                                        </div>
-                                    </div>
-                                ))}
+                                    )
+                                )}
                             </div>
                         ) : (
-                            <p className="py-10 text-center text-sm text-gray-400">
-                                Chưa có dữ liệu món ăn.
-                            </p>
+                            <EmptyData message="Chưa có dữ liệu món ăn." />
                         )}
                     </div>
-
-                    {/* LEAST */}
 
                     <div className="rounded-2xl bg-white p-6 shadow">
                         <div className="mb-5 flex items-center gap-2">
@@ -924,115 +1030,410 @@ export default function Statistics() {
                                 className="text-red-500"
                             />
 
-                            <h2 className="text-xl font-bold text-[var(--color-text)]">
-                                Món bán ít nhất
-                            </h2>
+                            <div>
+                                <h2 className="text-xl font-bold text-[var(--color-text)]">
+                                    Món bán ít nhất
+                                </h2>
+
+                                <p className="mt-1 text-sm text-gray-500">
+                                    Top món có số lượng bán thấp nhất
+                                </p>
+                            </div>
                         </div>
 
                         {leastSelling.length > 0 ? (
                             <div className="space-y-3">
-                                {leastSelling.map((food, index) => (
-                                    <div
-                                        key={food.id}
-                                        className="flex items-center justify-between rounded-xl bg-gray-50 p-4"
-                                    >
-                                        <div className="flex items-center gap-3">
-                                            <span className="flex h-8 w-8 items-center justify-center rounded-full bg-gray-300 text-sm font-bold text-gray-700">
-                                                {index + 1}
-                                            </span>
+                                {leastSelling.map(
+                                    (food, index) => (
+                                        <div
+                                            key={food.id}
+                                            className="flex items-center justify-between rounded-xl bg-gray-50 p-4"
+                                        >
+                                            <div className="flex min-w-0 items-center gap-3">
+                                                <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-gray-300 text-sm font-bold text-gray-700">
+                                                    {index +
+                                                        1}
+                                                </span>
 
-                                            <span className="font-medium">
-                                                {food.name}
-                                            </span>
+                                                <span className="truncate font-medium">
+                                                    {food.name}
+                                                </span>
+                                            </div>
+
+                                            <div className="ml-4 shrink-0 text-right">
+                                                <p className="font-bold text-gray-700">
+                                                    {
+                                                        food.quantity
+                                                    }{" "}
+                                                    món
+                                                </p>
+
+                                                <p className="text-xs text-gray-500">
+                                                    {formatMoney(
+                                                        food.revenue
+                                                    )}
+                                                </p>
+                                            </div>
                                         </div>
-
-                                        <div className="text-right">
-                                            <p className="font-bold text-gray-700">
-                                                {food.quantity} món
-                                            </p>
-
-                                            <p className="text-xs text-gray-500">
-                                                {formatMoney(
-                                                    food.revenue
-                                                )}
-                                            </p>
-                                        </div>
-                                    </div>
-                                ))}
+                                    )
+                                )}
                             </div>
                         ) : (
-                            <p className="py-10 text-center text-sm text-gray-400">
-                                Chưa có dữ liệu món ăn.
-                            </p>
+                            <EmptyData message="Chưa có dữ liệu món ăn." />
                         )}
                     </div>
                 </div>
 
-                {/* ========================================
-                    BRANCH REVENUE
-                ======================================== */}
-
-                {!branchId && branchRevenue.length > 0 && (
-                    <div className="rounded-2xl bg-white p-6 shadow">
-                        <div className="mb-5 flex items-center gap-2">
-                            <Store
-                                size={22}
-                                className="text-[var(--color-text)]"
-                            />
-
-                            <h2 className="text-xl font-bold text-[var(--color-text)]">
-                                Doanh thu theo chi nhánh
-                            </h2>
-                        </div>
-
-                        <div className="space-y-4">
-                            {branchRevenue.map((branch) => {
-                                const width =
-                                    (Number(branch.revenue || 0) /
-                                        maxBranch) *
-                                    100;
-
-                                return (
-                                    <div key={branch.id}>
-                                        <div className="mb-1 flex justify-between text-sm">
-                                            <span className="font-medium">
-                                                {branch.name}
-                                            </span>
-
-                                            <span className="font-bold text-[var(--color-text)]">
-                                                {formatMoney(
-                                                    branch.revenue
-                                                )}
-                                            </span>
-                                        </div>
-
-                                        <div className="h-3 overflow-hidden rounded-full bg-gray-100">
-                                            <div
-                                                className="h-full rounded-full bg-[#7c5736] transition-all"
-                                                style={{
-                                                    width: `${width}%`,
-                                                }}
-                                            />
-                                        </div>
+                {showFoodAnalysis && (
+                    <>
+                        <div className="grid grid-cols-1 gap-6 xl:grid-cols-2">
+                            <div className="rounded-2xl bg-white p-6 shadow">
+                                <div className="mb-5 flex items-center gap-3">
+                                    <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-green-100">
+                                        <TrendingUp
+                                            size={22}
+                                            className="text-green-600"
+                                        />
                                     </div>
-                                );
-                            })}
+
+                                    <div>
+                                        <h2 className="text-xl font-bold text-[var(--color-text)]">
+                                            Món tăng mạnh
+                                        </h2>
+
+                                        <p className="mt-1 text-sm text-gray-500">
+                                            So với kỳ trước
+                                        </p>
+                                    </div>
+                                </div>
+
+                                {increasedFoods.length >
+                                0 ? (
+                                    <div className="space-y-3">
+                                        {increasedFoods.map(
+                                            (food) => (
+                                                <div
+                                                    key={
+                                                        food.id
+                                                    }
+                                                    className="rounded-xl border border-green-100 bg-green-50 p-4"
+                                                >
+                                                    <div className="flex items-center justify-between gap-4">
+                                                        <div className="min-w-0">
+                                                            <p className="truncate font-semibold text-[var(--color-text)]">
+                                                                {
+                                                                    food.name
+                                                                }
+                                                            </p>
+
+                                                            <p className="mt-1 text-xs text-gray-500">
+                                                                Kỳ trước:{" "}
+                                                                <span className="font-medium">
+                                                                    {
+                                                                        food.previousQuantity
+                                                                    }
+                                                                </span>{" "}
+                                                                món
+                                                            </p>
+                                                        </div>
+
+                                                        <div className="shrink-0 text-right">
+                                                            <div className="flex items-center justify-end gap-1 text-green-600">
+                                                                <ArrowUp size={16} />
+
+                                                                <span className="font-bold">
+                                                                    +
+                                                                    {
+                                                                        food.percentage
+                                                                    }
+                                                                    %
+                                                                </span>
+                                                            </div>
+
+                                                            <p className="mt-1 text-xs text-gray-500">
+                                                                {
+                                                                    food.currentQuantity
+                                                                }{" "}
+                                                                món
+                                                            </p>
+
+                                                            <p className="text-xs font-medium text-green-600">
+                                                                +
+                                                                {
+                                                                    food.difference
+                                                                }{" "}
+                                                                món
+                                                            </p>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            )
+                                        )}
+                                    </div>
+                                ) : (
+                                    <EmptyData message="Không có món tăng mạnh." />
+                                )}
+                            </div>
+
+                            <div className="rounded-2xl bg-white p-6 shadow">
+                                <div className="mb-5 flex items-center gap-3">
+                                    <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-red-100">
+                                        <TrendingDown
+                                            size={22}
+                                            className="text-red-600"
+                                        />
+                                    </div>
+
+                                    <div>
+                                        <h2 className="text-xl font-bold text-[var(--color-text)]">
+                                            Món giảm mạnh
+                                        </h2>
+
+                                        <p className="mt-1 text-sm text-gray-500">
+                                            So với kỳ trước
+                                        </p>
+                                    </div>
+                                </div>
+
+                                {decreasedFoods.length >
+                                0 ? (
+                                    <div className="space-y-3">
+                                        {decreasedFoods.map(
+                                            (food) => (
+                                                <div
+                                                    key={
+                                                        food.id
+                                                    }
+                                                    className="rounded-xl border border-red-100 bg-red-50 p-4"
+                                                >
+                                                    <div className="flex items-center justify-between gap-4">
+                                                        <div className="min-w-0">
+                                                            <p className="truncate font-semibold text-[var(--color-text)]">
+                                                                {
+                                                                    food.name
+                                                                }
+                                                            </p>
+
+                                                            <p className="mt-1 text-xs text-gray-500">
+                                                                Kỳ trước:{" "}
+                                                                <span className="font-medium">
+                                                                    {
+                                                                        food.previousQuantity
+                                                                    }
+                                                                </span>{" "}
+                                                                món
+                                                            </p>
+                                                        </div>
+
+                                                        <div className="shrink-0 text-right">
+                                                            <div className="flex items-center justify-end gap-1 text-red-600">
+                                                                <ArrowDown size={16} />
+
+                                                                <span className="font-bold">
+                                                                    {
+                                                                        food.percentage
+                                                                    }
+                                                                    %
+                                                                </span>
+                                                            </div>
+
+                                                            <p className="mt-1 text-xs text-gray-500">
+                                                                {
+                                                                    food.currentQuantity
+                                                                }{" "}
+                                                                món
+                                                            </p>
+
+                                                            <p className="text-xs font-medium text-red-600">
+                                                                {
+                                                                    food.difference
+                                                                }{" "}
+                                                                món
+                                                            </p>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            )
+                                        )}
+                                    </div>
+                                ) : (
+                                    <EmptyData message="Không có món giảm mạnh." />
+                                )}
+                            </div>
                         </div>
+
+                        <div className="rounded-2xl bg-white p-6 shadow">
+                            <div className="mb-5 flex items-center gap-3">
+                                <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-orange-100">
+                                    <ShoppingBag
+                                        size={22}
+                                        className="text-orange-600"
+                                    />
+                                </div>
+
+                                <div>
+                                    <h2 className="text-xl font-bold text-[var(--color-text)]">
+                                        Món chưa bán được
+                                    </h2>
+
+                                    <p className="mt-1 text-sm text-gray-500">
+                                        Các món chưa phát sinh số
+                                        lượng bán trong kỳ
+                                    </p>
+                                </div>
+                            </div>
+
+                            {unsoldFoods.length > 0 ? (
+                                <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3">
+                                    {unsoldFoods.map(
+                                        (food) => (
+                                            <div
+                                                key={
+                                                    food.id
+                                                }
+                                                className="flex items-center justify-between rounded-xl border border-orange-100 bg-orange-50 p-4"
+                                            >
+                                                <div className="min-w-0">
+                                                    <p className="truncate font-semibold text-[var(--color-text)]">
+                                                        {
+                                                            food.name
+                                                        }
+                                                    </p>
+
+                                                    {food
+                                                        .category
+                                                        ?.name && (
+                                                        <p className="mt-1 text-xs text-gray-500">
+                                                            {
+                                                                food
+                                                                    .category
+                                                                    .name
+                                                            }
+                                                        </p>
+                                                    )}
+                                                </div>
+
+                                                <span className="ml-4 shrink-0 rounded-full bg-orange-100 px-3 py-1 text-xs font-semibold text-orange-600">
+                                                    0 món
+                                                </span>
+                                            </div>
+                                        )
+                                    )}
+                                </div>
+                            ) : (
+                                <EmptyData message="Tất cả món đều đã có lượt bán trong kỳ." />
+                            )}
+                        </div>
+                    </>
+                )}
+
+                {!branchOnly && !branchId && (
+                    <div className="rounded-2xl bg-white p-6 shadow">
+                        <div className="mb-6 flex items-center gap-3">
+                            <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-[var(--color-secondary)]">
+                                <Store
+                                    size={22}
+                                    className="text-[var(--color-text)]"
+                                />
+                            </div>
+
+                            <div>
+                                <h2 className="text-xl font-bold text-[var(--color-text)]">
+                                    Doanh thu theo chi nhánh
+                                </h2>
+
+                                <p className="mt-1 text-sm text-gray-500">
+                                    So sánh doanh thu giữa các chi
+                                    nhánh
+                                </p>
+                            </div>
+                        </div>
+
+                        {branchRevenue.length > 0 ? (
+                            <div className="space-y-4">
+                                {branchRevenue.map(
+                                    (branch, index) => {
+                                        const revenue =
+                                            Number(
+                                                branch.revenue ||
+                                                    0
+                                            );
+
+                                        const width =
+                                            maxBranch > 0
+                                                ? (revenue /
+                                                      maxBranch) *
+                                                  100
+                                                : 0;
+
+                                        return (
+                                            <div
+                                                key={
+                                                    branch.id
+                                                }
+                                                className="group rounded-2xl border border-gray-100 bg-gray-50 p-4 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md"
+                                            >
+                                                <div className="flex items-center justify-between gap-4">
+                                                    <div className="flex min-w-0 items-center gap-3">
+                                                        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white text-sm font-bold text-[var(--color-text)] shadow-sm">
+                                                            #
+                                                            {index +
+                                                                1}
+                                                        </div>
+
+                                                        <div className="min-w-0">
+                                                            <p className="truncate font-semibold text-[var(--color-text)]">
+                                                                {
+                                                                    branch.name
+                                                                }
+                                                            </p>
+
+                                                            <p className="mt-0.5 text-xs text-gray-500">
+                                                                {width.toFixed(
+                                                                    1
+                                                                )}
+                                                                % so
+                                                                với chi
+                                                                nhánh cao
+                                                                nhất
+                                                            </p>
+                                                        </div>
+                                                    </div>
+
+                                                    <div className="shrink-0 text-right">
+                                                        <p className="text-base font-bold text-[var(--color-text)]">
+                                                            {formatMoney(
+                                                                revenue
+                                                            )}
+                                                        </p>
+
+                                                        <p className="mt-0.5 text-xs text-gray-400">
+                                                            Doanh thu
+                                                        </p>
+                                                    </div>
+                                                </div>
+
+                                                <div className="mt-4 h-3 overflow-hidden rounded-full bg-white">
+                                                    <div
+                                                        className="h-full rounded-full bg-[#7c5736] transition-all duration-500 group-hover:opacity-90"
+                                                        style={{
+                                                            width: `${width}%`,
+                                                        }}
+                                                    />
+                                                </div>
+                                            </div>
+                                        );
+                                    }
+                                )}
+                            </div>
+                        ) : (
+                            <EmptyData message="Chưa có dữ liệu doanh thu chi nhánh." />
+                        )}
                     </div>
                 )}
             </div>
 
-            {/* ========================================
-                NOTIFICATION MODAL
-            ======================================== */}
-
-            <NotiModal
-                open={notification.open}
-                type={notification.type}
-                title={notification.title}
-                message={notification.message}
-                onClose={closeNotification}
-            />
+            <Notification />
         </>
     );
 }

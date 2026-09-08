@@ -26,29 +26,28 @@ const getAll = async (req, res) => {
 };
 
 const getById = async (req, res) => {
-
     try {
-
-        const data = await branchService.getById(
-            Number(req.params.id)
+        const branch = await branchService.getById(
+            Number(req.params.id),
+            req.user
         );
 
         return response.success(
             res,
-            "Lấy chi nhánh thành công.",
-            data
+            "Lấy thông tin chi nhánh thành công.",
+            branch
         );
-
-    } catch (err) {
+    } catch (error) {
+        const statusCode = error.message.includes("quyền")
+            ? 403
+            : 404;
 
         return response.error(
             res,
-            err.message,
-            404
+            error.message,
+            statusCode
         );
-
     }
-
 };
 
 const getProfile = async (req, res) => {

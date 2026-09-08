@@ -11,18 +11,17 @@ const getProfile = async () => {
 };
 
 const forgotPassword = async (email) => {
-    const response = await axiosClient.post(
-        "/auth/forgot-password",
-        { email }
-    );
+    const response = await axiosClient.post( "/auth/forgot-password", { email });
+    return response.data;
+};
+
+const verifyOtp = async (data) => {
+    const response = await axiosClient.post( "/auth/verify-otp", data);
     return response.data;
 };
 
 const resetPassword = async (data) => {
-    const response = await axiosClient.post(
-        "/auth/reset-password",
-        data
-    );
+    const response = await axiosClient.post( "/auth/reset-password", data);
     return response.data;
 };
 
@@ -35,6 +34,7 @@ export default {
     login,
     getProfile,
     forgotPassword,
+    verifyOtp,
     resetPassword,
     logout,
 };

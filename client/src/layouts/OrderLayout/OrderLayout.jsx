@@ -2,6 +2,7 @@ import { LogOut, User } from "lucide-react";
 import { Outlet, useNavigate, Link } from "react-router-dom";
 
 import useAuth from "../../hooks/useAuth";
+import Button from "../../components/Button/Button";
 
 export default function OrderLayout() {
 
@@ -45,14 +46,14 @@ export default function OrderLayout() {
 
                     </div>
 
-                    <button
+                    <Button
                         type="button"
                         onClick={handleLogout}
-                        className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm text-red-600 hover:bg-red-50"
+                        className="bg-red-700 mt-2"
                     >
                         <LogOut size={18} />
                         Đăng xuất
-                    </button>
+                    </Button>
 
                 </div>
 

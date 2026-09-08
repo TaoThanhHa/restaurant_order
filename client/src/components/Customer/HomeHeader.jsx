@@ -100,7 +100,7 @@ export default function HomeHeader({
                 {/*RESTAURANT + TABLE */}
                 <div>
                     <Link
-                        to={'/customer/home/${table?.qrCode || ""}'}
+                        to={`/customer/home/${table?.qrCode || ""}`}
                         className="flex items-center gap-3 text-white"
                     >
                         <div className="flex h-10 w-10 items-center justify-center overflow-hidden rounded-lg bg-white/20">

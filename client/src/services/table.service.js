@@ -16,11 +16,7 @@ const handlePayment = async () => {
 };
 
 const open = async (tableId, data) => {
-    const res = await axiosClient.post(
-        `/tables/${tableId}/open`,
-        data
-    );
-
+    const res = await axiosClient.post(`/tables/${tableId}/open`, data);
     return res.data;
 };
 
