@@ -77,5 +77,5 @@ Một số chức năng có thể tiếp tục mở rộng trong tương lai:
 -	Thanh toán trực tuyến đa dạng.
 -	Ứng dụng mobile cho nhân viên.
 -	Hỗ trợ triển khai hệ thống trên môi trường production.
-
-
+## Sinh viên thực hiện
+22010252
