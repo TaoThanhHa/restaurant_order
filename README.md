@@ -1,10 +1,10 @@
-#Xây dựng hệ thống quản lý và đặt món bằng mã QR trên nền tảng web
+# Xây dựng hệ thống quản lý và đặt món bằng mã QR trên nền tảng web
 
 Hệ thống được xây dựng nhằm hỗ trợ nhà hàng quản lý hoạt động kinh doanh, chi nhánh, nhân viên, món ăn, bàn, đơn hàng, hóa đơn và khách hàng trên một nền tảng tập trung.
 
 Hệ thống hỗ trợ mô hình nhà hàng nhiều chi nhánh, đồng thời cho phép khách hàng đặt món trực tiếp thông qua mã QR tại bàn hoặc nhân viên tạo đơn tại quầy/bàn.
 
-##Mục tiêu của hệ thống
+## Mục tiêu của hệ thống
 + Số hóa quy trình gọi món và quản lý đơn hàng.
 + Hỗ trợ khách hàng tự đặt món bằng QR Code.
 + Hỗ trợ nhân viên tạo và xử lý đơn tại bàn.
