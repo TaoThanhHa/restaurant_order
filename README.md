@@ -40,7 +40,7 @@ Quản lý hoạt động của một chi nhánh theo phạm vi được phân q
 -	Theo dõi và thống kê doanh thu của chi nhánh.
 ### Nhân viên
 Nhân viên được chia thành các vị trí với chức năng riêng:
-***Thu ngân***
+#### Thu ngân
 -	Xác nhận và xử lý đơn hàng tại bàn và đơn mang về.
 -	Quản lý trạng thái món ăn: cập nhật món hết hàng khi nguyên liệu không còn.
 -	Quản lý và xử lý hóa đơn, thanh toán.
@@ -48,11 +48,11 @@ Nhân viên được chia thành các vị trí với chức năng riêng:
 #### Order
 -	Hỗ trợ đặt món hộ khách hàng tại bàn.
 -	Tạo và gửi đơn hàng đến hệ thống để thu ngân xử lý.
-***Bếp***
+#### Bếp
 -	Tiếp nhận và xử lý các món ăn trong đơn hàng.
 -	Cập nhật trạng thái món ăn trong quá trình chế biến.
 -	Hoàn thành món ăn và chuyển trạng thái để nhân viên phục vụ.
-#### Khách hàng
+### Khách hàng
 Khách hàng có thể sử dụng hệ thống để đặt món, theo dõi đơn hàng và quản lý thông tin cá nhân.
 -	Quét mã QR để truy cập hệ thống tại bàn.
 -	Xem menu và lựa chọn món ăn.
