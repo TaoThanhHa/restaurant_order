@@ -52,7 +52,7 @@ Nhân viên được chia thành các vị trí với chức năng riêng:
 -	Tiếp nhận và xử lý các món ăn trong đơn hàng.
 -	Cập nhật trạng thái món ăn trong quá trình chế biến.
 -	Hoàn thành món ăn và chuyển trạng thái để nhân viên phục vụ.
-### Khách hàng
+#### Khách hàng
 Khách hàng có thể sử dụng hệ thống để đặt món, theo dõi đơn hàng và quản lý thông tin cá nhân.
 -	Quét mã QR để truy cập hệ thống tại bàn.
 -	Xem menu và lựa chọn món ăn.
