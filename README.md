@@ -66,5 +66,16 @@ Các đối tượng sử dụng hệ thống có thể thực hiện các chứ
 -	Đăng ký tài khoản.
 -	Quên mật khẩu.
 -	Đổi mật khẩu.
+## Định hướng phát triển
+Một số chức năng có thể tiếp tục mở rộng trong tương lai:
+-	Đặt bàn trước.
+-	Khuyến mãi và mã giảm giá.
+-	Tích điểm khách hàng.
+-	Thông báo realtime nâng cao.
+-	Quản lý nguyên vật liệu và kho.
+-	Báo cáo doanh thu nâng cao.
+-	Thanh toán trực tuyến đa dạng.
+-	Ứng dụng mobile cho nhân viên.
+-	Hỗ trợ triển khai hệ thống trên môi trường production.
 
 
