@@ -1,22 +1,20 @@
 const express = require("express");
-
 const router = express.Router();
 
-const cashierController = require("./cashier.controller");
-
+const controller = require("./cashier.controller");
 const auth = require("../../middlewares/auth.middleware");
 const authorize = require("../../middlewares/role.middleware");
 
 router.use(auth);
 router.use(authorize("BRANCH", "CASHIER"));
-router.get("/statistics",auth,authorize("BRANCH", "CASHIER"),cashierController.getStatistics);
-router.get("/dashboard", cashierController.dashboard);
-router.get("/tables", cashierController.getTables);
-router.get("/orders/pending", cashierController.getPendingOrders);
-router.get("/orders/serving", cashierController.getServingOrders);
-router.patch("/items/:id/status", auth, authorize("BRANCH", "CASHIER"), cashierController.updateOrderItemStatus);
-router.get("/orders/open", auth, authorize("BRANCH" , "CASHIER"), cashierController.getOpenOrders);
-router.get("/orders/:id", auth, authorize("BRANCH",  "CASHIER"), cashierController.getOrderDetail);
-router.post("/orders/:id/payment", auth, authorize("BRANCH", "CASHIER"), cashierController.payment);
+router.get("/statistics",auth,authorize("BRANCH", "CASHIER"),controller.getStatistics);
+router.get("/dashboard", controller.dashboard);
+router.get("/tables", controller.getTables);
+router.get("/orders/pending", controller.getPendingOrders);
+router.get("/orders/serving", controller.getServingOrders);
+router.patch("/items/:id/status", auth, authorize("BRANCH", "CASHIER"), controller.updateOrderItemStatus);
+router.get("/orders/open", auth, authorize("BRANCH" , "CASHIER"), controller.getOpenOrders);
+router.get("/orders/:id", auth, authorize("BRANCH",  "CASHIER"), controller.getOrderDetail);
+router.post("/orders/:id/payment", auth, authorize("BRANCH", "CASHIER"), controller.payment);
 
 module.exports = router;

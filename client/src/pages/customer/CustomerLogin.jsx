@@ -1,14 +1,7 @@
-import {
-    Lock,
-    Mail,
-    ArrowLeft,
-} from "lucide-react";
+import { Lock, Mail, ArrowLeft, } from "lucide-react";
 
 import { useState } from "react";
-import {
-    useNavigate,
-    useParams,
-} from "react-router-dom";
+import { useNavigate, useParams, } from "react-router-dom";
 
 import styles from "./Customer.module.css";
 
@@ -22,423 +15,176 @@ import { getDeviceId } from "../../../utils/deviceId";
 export default function CustomerLogin() {
 
     const navigate = useNavigate();
-
     const { qrCode } = useParams();
 
-
     const [form, setForm] = useState({
-
         identifier: "",
         password: "",
-
     });
 
-
-    const [loading, setLoading] =
-        useState(false);
-
-
-    // ======================================================
-    // CHANGE
-    // ======================================================
+    const [loading, setLoading] = useState(false);
 
     const handleChange = (field) => (e) => {
-
         setForm(prev => ({
-
             ...prev,
-
             [field]: e.target.value,
-
         }));
-
     };
 
-
-    // ======================================================
-    // SUBMIT
-    // ======================================================
-
     const handleSubmit = async (e) => {
-
         e.preventDefault();
-
-
-        // --------------------------------------------------
-        // QR
-        // --------------------------------------------------
-
         if (!qrCode) {
-
             alert(
                 "Không xác định được bàn."
             );
-
             return;
-
         }
 
-
-        // --------------------------------------------------
-        // IDENTIFIER
-        // --------------------------------------------------
-
         if (!form.identifier.trim()) {
-
             alert(
                 "Vui lòng nhập email hoặc số điện thoại."
             );
-
             return;
-
         }
 
-
-        // --------------------------------------------------
-        // PASSWORD
-        // --------------------------------------------------
-
         if (!form.password) {
-
             alert(
                 "Vui lòng nhập mật khẩu."
             );
-
             return;
-
         }
 
-
         try {
-
             setLoading(true);
-
-
-            // ==================================================
-            // LOGIN
-            // ==================================================
-
-            const res =
-                await customerAuthService.login({
-
-                    identifier:
-                        form.identifier.trim(),
-
-                    password:
-                        form.password,
-
-                    // QUAN TRỌNG:
-                    // Backend đang nhận qrCode
+            const res = await customerAuthService.login({
+                    identifier: form.identifier.trim(),
+                    password: form.password,
                     qrCode,
-
-                    // QUAN TRỌNG:
-                    // Dùng deviceId hiện tại để
-                    // chuyển Guest → Customer
-                    deviceId:
-                        getDeviceId(),
-
+                    deviceId: getDeviceId(),
                 });
-
-
-            const data =
-                res.data;
-
-
-            // ==================================================
-            // TOKEN
-            // ==================================================
-
+            const data = res.data;
             if (!data?.token) {
-
                 throw new Error(
                     "Đăng nhập thành công nhưng không nhận được token."
                 );
-
             }
-
 
             localStorage.setItem(
                 "customerToken",
                 data.token
             );
 
-
-            // ==================================================
-            // TABLE
-            // ==================================================
-
             if (data.table) {
-
                 localStorage.setItem(
                     "customerTable",
                     JSON.stringify(
                         data.table
                     )
                 );
-
             }
 
-
-            // ==================================================
-            // HOME
-            // ==================================================
-
             navigate(
-                `/customer/home/${
-                    data.table?.qrCode ||
-                    qrCode
-                }`,
-                {
-                    replace: true,
-                }
+                `/customer/home/${ data.table?.qrCode || qrCode}`,
+                {replace: true,}
             );
 
-
         } catch (err) {
-
             console.error(
                 "Đăng nhập thất bại:",
                 err
             );
-
 
             alert(
                 err.response?.data?.message ||
                 err.message ||
                 "Đăng nhập thất bại."
             );
-
-
         } finally {
-
             setLoading(false);
-
         }
-
     };
 
-
-    // ======================================================
-    // RENDER
-    // ======================================================
-
     return (
-
-        <div
-            className={`
-                flex
-                min-h-screen
-                items-center
-                justify-center
-                px-4
-                ${styles.section}
-            `}
-        >
-
-            <div
-                className="
-                    w-full
-                    max-w-sm
-                    rounded-3xl
-                    bg-white/90
-                    p-8
-                    shadow-2xl
-                    backdrop-blur
-                "
-            >
-
-                {/* BACK */}
-
+        <div className={`flex min-h-screen items-center justify-center px-4 ${styles.section}`}>
+            <div className=" w-full max-w-sm rounded-3xl bg-white/90 p-8 shadow-2xl backdrop-blur">
                 <button
                     type="button"
-                    onClick={() =>
-                        navigate(
-                            `/customer/${qrCode}`
-                        )
-                    }
-                    className="
-                        flex
-                        items-center
-                        gap-2
-                        text-gray-600
-                        hover:text-[#4f7d4f]
-                    "
+                    onClick={() => navigate(`/customer/${qrCode}`)}
+                    className=" flex items-center gap-2 text-gray-600 hover:text-[#4f7d4f] "
                 >
-
                     <ArrowLeft size={18} />
-
                     Quay lại
-
                 </button>
 
-
-                {/* TITLE */}
-
-                <h1
-                    className="
-                        mt-6
-                        text-center
-                        text-3xl
-                        font-bold
-                    "
-                >
-
+                <h1 className=" mt-6 text-center text-3xl font-bold" >
                     Đăng nhập
-
                 </h1>
 
-
-                <p
-                    className="
-                        mt-2
-                        text-center
-                        text-gray-500
-                    "
-                >
-
+                <p className=" mt-2 text-center text-gray-500">
                     Đăng nhập để lưu lịch sử đơn hàng
-
                 </p>
-
-
-                {/* FORM */}
 
                 <form
                     onSubmit={handleSubmit}
                     className="mt-8"
                 >
-
                     <div className="space-y-5">
-
                         <Input
-                            icon={
-                                <Mail size={18} />
-                            }
-                            placeholder="
-                                Email hoặc số điện thoại
-                            "
-                            value={
-                                form.identifier
-                            }
-                            onChange={
-                                handleChange(
-                                    "identifier"
-                                )
-                            }
+                            icon={<Mail size={18} />}
+                            placeholder="Email hoặc số điện thoại"
+                            value={form.identifier}
+                            onChange={handleChange("identifier")}
                         />
-
 
                         <Input
                             type="password"
-                            icon={
-                                <Lock size={18} />
-                            }
+                            icon={<Lock size={18} />}
                             placeholder="Mật khẩu"
-                            value={
-                                form.password
-                            }
-                            onChange={
-                                handleChange(
-                                    "password"
-                                )
+                            value={ form.password}
+                            onChange={handleChange("password" )
                             }
                         />
-
                     </div>
 
-
-                    {/* FORGOT */}
-
-                    <div
-                        className="
-                            mt-3
-                            text-right
-                        "
-                    >
-
+                    <div className="mt-3 text-right">
                         <button
                             type="button"
-                            onClick={() =>
-                                navigate(
-                                    `/customer/forgot/${qrCode}`
-                                )
-                            }
-                            className="
-                                text-sm
-                                text-[#4f7d4f]
-                                hover:underline
-                            "
+                            onClick={() => navigate(`/customer/forgot/${qrCode}`)}
+                            className=" text-sm text-[#4f7d4f] hover:underline"
                         >
-
                             Quên mật khẩu?
-
                         </button>
-
                     </div>
 
-
-                    {/* LOGIN */}
-
                     <div className="mt-8">
-
                         <Button
                             type="submit"
                             disabled={loading}
                             className="w-full"
                         >
-
                             {loading
                                 ? "Đang đăng nhập..."
                                 : "Đăng nhập"
                             }
-
                         </Button>
-
                     </div>
-
                 </form>
 
-
                 {/* REGISTER */}
-
-                <div
-                    className="
-                        mt-8
-                        text-center
-                    "
-                >
-
+                <div className="mt-8 text-center">
                     <span className="text-gray-500">
-
                         Chưa có tài khoản?
-
                     </span>
-
 
                     <button
                         type="button"
-                        onClick={() =>
-                            navigate(
-                                `/customer/register/${qrCode}`
-                            )
-                        }
-                        className="
-                            ml-2
-                            font-semibold
-                            text-[var(--color-primary)]
-                        "
+                        onClick={() => navigate(`/customer/register/${qrCode}`)}
+                        className="ml-2 font-semibold text-[var(--color-primary)]"
                     >
-
                         Đăng ký
-
                     </button>
-
                 </div>
-
             </div>
-
         </div>
-
     );
-
 }

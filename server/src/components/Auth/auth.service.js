@@ -5,42 +5,23 @@ const mail = require("../../config/mail");
 const { generateToken } = require("../../utils/jwt");
 
 const login = async (email, password) => {
-
     const user = await prisma.user.findUnique({
-
         where: {
             email,
         },
-
         include: {
-
             role: true,
-
             branch: true,
-
         },
-
     });
-
-      
-    // USER KHÔNG TỒN TẠI
-      
 
     if (!user) {
         throw new Error("Tên đăng nhập hoặc mật khẩu không đúng.");
     }
 
-      
-    // USER BỊ KHÓA
-      
-
     if (!user.isActive) {
         throw new Error("Tài khoản đã bị khóa.");
     }
-
-      
-    // BRANCH BỊ KHÓA
-      
 
     if (
         user.branch &&
@@ -48,10 +29,6 @@ const login = async (email, password) => {
     ) {
         throw new Error("Chi nhánh đã bị khóa.");
     }
-
-      
-    // PASSWORD
-      
 
     const isMatch = await bcrypt.compare(
         password,
@@ -62,72 +39,46 @@ const login = async (email, password) => {
         throw new Error("Tên đăng nhập hoặc mật khẩu không đúng.");
     }
 
-      
-    // TOKEN
-      
-
     const token = generateToken(user);
+    return {
+        token,
+        mustChangePassword: user.mustChangePassword,
+        user: {
+            id: user.id,
+            username: user.username,
+            email: user.email,
+            role: user.role.name,
+            branchId: user.branchId,
+            branch: user.branch,
+        },
+    };
+};
+
+const getProfile = async (userId) => {
+    const user = await prisma.user.findUnique({
+        where: {
+        id: userId,
+        },
+        include: {
+        role: true,
+        branch: true,
+        },
+    });
+
+    if (!user) {
+        throw new Error("Người dùng không tồn tại.");
+    }
 
     return {
-
-        token,
-
-        mustChangePassword:
-            user.mustChangePassword,
-
-        user: {
-
-            id: user.id,
-
-            username: user.username,
-
-            email: user.email,
-
-            role: user.role.name,
-
-            branchId: user.branchId,
-
-            branch: user.branch,
-
-        },
-
+        id: user.id,
+        username: user.username,
+        email: user.email,
+        role: user.role.name,
+        branchId: user.branchId,
+        branch: user.branch,
+        mustChangePassword: user.mustChangePassword,
+        createdAt: user.createdAt,
     };
-
-};
-const getProfile = async (userId) => {
-  const user = await prisma.user.findUnique({
-    where: {
-      id: userId,
-    },
-    include: {
-      role: true,
-      branch: true,
-    },
-  });
-
-  if (!user) {
-    throw new Error("Người dùng không tồn tại.");
-  }
-
-  return {
-
-    id: user.id,
-
-    username: user.username,
-
-    email: user.email,
-
-    role: user.role.name,
-
-    branchId: user.branchId,
-
-    branch: user.branch,
-
-    mustChangePassword: user.mustChangePassword,
-
-    createdAt: user.createdAt,
-
-};
 };
 
 const forgotPassword = async (email) => {

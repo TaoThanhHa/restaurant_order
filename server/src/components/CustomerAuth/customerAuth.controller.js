@@ -202,6 +202,90 @@ const getTable = async (req, res) => {
 
 };
 
+const forgotPassword = async (req, res) => {
+    try {
+
+        const result =
+            await customerAuthService.forgotPassword(
+                req.body.email
+            );
+
+        return res.status(200).json({
+            success: true,
+            message: result.message,
+        });
+
+    } catch (error) {
+
+        return res.status(400).json({
+            success: false,
+            message:
+                error.message ||
+                "Không thể gửi OTP.",
+        });
+    }
+};
+
+
+// ======================================================
+// VERIFY OTP
+// ======================================================
+
+const verifyOtp = async (req, res) => {
+    try {
+
+        const result =
+            await customerAuthService.verifyOtp({
+                email: req.body.email,
+                otp: req.body.otp,
+            });
+
+        return res.status(200).json({
+            success: true,
+            message: result.message,
+        });
+
+    } catch (error) {
+
+        return res.status(400).json({
+            success: false,
+            message:
+                error.message ||
+                "OTP không hợp lệ.",
+        });
+    }
+};
+
+
+// ======================================================
+// RESET PASSWORD
+// ======================================================
+
+const resetPassword = async (req, res) => {
+    try {
+
+        const result =
+            await customerAuthService.resetPassword({
+                email: req.body.email,
+                otp: req.body.otp,
+                password: req.body.password,
+            });
+
+        return res.status(200).json({
+            success: true,
+            message: result.message,
+        });
+
+    } catch (error) {
+
+        return res.status(400).json({
+            success: false,
+            message:
+                error.message ||
+                "Không thể đổi mật khẩu.",
+        });
+    }
+};
 
 module.exports = {
     guest,
@@ -209,4 +293,7 @@ module.exports = {
     login,
     profile,
     getTable,
+    forgotPassword,
+    verifyOtp,
+    resetPassword,
 }

@@ -1,10 +1,8 @@
 const express = require("express");
-
 const router = express.Router();
 
 const auth = require("../../middlewares/auth.middleware");
 const authorize = require("../../middlewares/role.middleware");
-
 const controller = require("./admin.controller");
 
 router.get("/profile",auth,authorize("ADMIN"),controller.getProfile);

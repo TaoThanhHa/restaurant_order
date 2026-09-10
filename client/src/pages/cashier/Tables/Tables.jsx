@@ -40,14 +40,29 @@ export default function Tables() {
         if (!floorId) return;
 
         try {
-            if (showLoading) setLoading(true);
+            if (showLoading) {
+                setLoading(true);
+            }
 
             const res = await tableService.getByFloor(floorId);
-            setTables(res?.data || []);
+
+            const data = (res?.data || []).map((table) => ({
+                ...table,
+                status: table.status,
+            }));
+
+            console.log("TABLES:", data);
+
+            setTables(data);
         } catch (error) {
-            console.error("LOAD TABLES ERROR:", error.response?.data || error);
+            console.error(
+                "LOAD TABLES ERROR:",
+                error.response?.data || error
+            );
         } finally {
-            if (showLoading) setLoading(false);
+            if (showLoading) {
+                setLoading(false);
+            }
         }
     }, [floorId]);
 
@@ -61,9 +76,7 @@ export default function Tables() {
         const token = localStorage.getItem("token");
         if (!token) return;
 
-        const eventSource = new EventSource(
-            `${import.meta.env.VITE_API_URL}/events/branch?token=${token}`
-        );
+        const eventSource = new EventSource(`${import.meta.env.VITE_API_URL}/events/branch?token=${token}`);
 
         eventSource.addEventListener("order.updated", () => loadTables(false));
         eventSource.onerror = error => console.error("SSE BRANCH ERROR:", error);

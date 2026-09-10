@@ -1,16 +1,15 @@
 const express = require("express");
-
 const router = express.Router();
-const floorController = require("./floor.controller");
 
+const controller = require("./floor.controller");
 const auth = require("../../middlewares/auth.middleware");
 const authorize = require("../../middlewares/role.middleware");
 
-router.get("/", auth, floorController.getAll);
-router.get("/branch/:branchId", auth, floorController.getByBranch);
-router.get("/:id", auth, floorController.getById);
-router.post("/", auth, authorize("ADMIN"), floorController.create);
-router.put("/:id", auth, authorize("ADMIN"), floorController.update);
-router.delete("/:id", auth, authorize("ADMIN"), floorController.remove);
+router.get("/", auth, controller.getAll);
+router.get("/branch/:branchId", auth, controller.getByBranch);
+router.get("/:id", auth, controller.getById);
+router.post("/", auth, authorize("ADMIN"), controller.create);
+router.put("/:id", auth, authorize("ADMIN"), controller.update);
+router.delete("/:id", auth, authorize("ADMIN"), controller.remove);
 
 module.exports = router;

@@ -1,473 +1,176 @@
 const bcrypt = require("bcrypt");
 const prisma = require("../../config/prisma");
-
-const {
-    generateCustomerToken,
-} = require("../../utils/jwtCustomer");
-
+const mail = require("../../config/mail");
+const { generateCustomerToken } = require("../../utils/jwtCustomer");
 const { v4: uuidv4 } = require("uuid");
 
-
-// ======================================================
-// HELPER: LẤY THÔNG TIN BÀN
-// ======================================================
-
 const getTableInfo = async (tx, tableId) => {
-
     if (!tableId) {
         throw new Error("Thiếu mã QR của bàn.");
     }
 
     const table = await tx.table.findUnique({
-
-        where: {
-            qrCode: tableId,
-        },
-
+        where: { qrCode: tableId },
         include: {
-
             floor: {
-                include: {
-                    branch: true,
-                },
+                include: { branch: true },
             },
-
         },
-
     });
-
 
     if (!table) {
         throw new Error("Bàn không tồn tại.");
     }
 
-
     if (table.status === "DISABLED") {
-        throw new Error(
-            "Bàn đang ngừng sử dụng."
-        );
+        throw new Error("Bàn đang ngừng sử dụng.");
     }
 
-
-    // GIỮ NGUYÊN FORMAT CŨ
-    // FE đang dùng các thông tin này
     return {
-
         id: table.id,
-
         qrCode: table.qrCode,
-
-        tableNumber:
-            table.tableNumber,
-
-        floorName:
-            table.floor.name,
-
-        branchName:
-            table.floor.branch.name,
-
+        tableNumber: table.tableNumber,
+        floorName: table.floor.name,
+        branchName: table.floor.branch.name,
     };
 };
-
-
-// ======================================================
-// GET TABLE
-// ======================================================
 
 const getTable = async (qrCode) => {
-
-    const table =
-        await prisma.table.findUnique({
-
-            where: {
-                qrCode,
+    const table = await prisma.table.findUnique({
+        where: { qrCode },
+        include: {
+            floor: {
+                include: { branch: true },
             },
-
-            include: {
-
-                floor: {
-                    include: {
-                        branch: true,
-                    },
-                },
-
-            },
-
-        });
-
+        },
+    });
 
     if (!table) {
-        throw new Error(
-            "Bàn không tồn tại."
-        );
+        throw new Error("Bàn không tồn tại.");
     }
-
 
     if (table.status === "DISABLED") {
-        throw new Error(
-            "Bàn đang ngừng sử dụng."
-        );
+        throw new Error("Bàn đang ngừng sử dụng.");
     }
 
-
-    // GIỮ NGUYÊN FORMAT CŨ
     return {
-
         id: table.id,
-
         qrCode: table.qrCode,
-
-        tableNumber:
-            table.tableNumber,
-
-        floorName:
-            table.floor.name,
-
-        branchName:
-            table.floor.branch.name,
-
+        tableNumber: table.tableNumber,
+        floorName: table.floor.name,
+        branchName: table.floor.branch.name,
     };
 };
 
-
-// ======================================================
-// HELPER: TÌM GUEST ĐANG HOẠT ĐỘNG
-// ======================================================
-
-const findActiveGuest = async (
-    tx,
-    deviceId
-) => {
-
+const findActiveGuest = async (tx, deviceId) => {
     if (!deviceId) {
         return null;
     }
 
-
-    let guest =
-        await tx.customer.findFirst({
-
-            where: {
-
-                deviceId,
-
-                isGuest: true,
-
-                isActive: true,
-
-            },
-
-        });
-
+    const guest = await tx.customer.findFirst({
+        where: {
+            deviceId,
+            isGuest: true,
+            isActive: true,
+        },
+    });
 
     if (!guest) {
         return null;
     }
 
-
-    // ==================================================
-    // GUEST HẾT HẠN
-    // ==================================================
-
-    if (
-        guest.expiredAt &&
-        guest.expiredAt < new Date()
-    ) {
-
+    if (guest.expiredAt && guest.expiredAt < new Date()) {
         await tx.customer.update({
-
-            where: {
-                id: guest.id,
-            },
-
+            where: { id: guest.id },
             data: {
-
                 isActive: false,
-
                 guestToken: null,
-
             },
-
         });
-
 
         return null;
     }
 
-
     return guest;
 };
 
-
-// ======================================================
-// HELPER: CHUYỂN DỮ LIỆU GUEST
-// ======================================================
-
-const transferGuestData = async (
-    tx,
-    guestCustomer,
-    customer
-) => {
-
-    // ==================================================
-    // 1. CHUYỂN ORDER MEMBER
-    // ==================================================
-
+const transferGuestData = async (tx, guestCustomer, customer) => {
     await tx.orderMember.updateMany({
-
-        where: {
-            customerId:
-                guestCustomer.id,
-        },
-
-        data: {
-            customerId:
-                customer.id,
-        },
-
+        where: { customerId: guestCustomer.id },
+        data: { customerId: customer.id },
     });
-
-
-    // ==================================================
-    // 2. CHUYỂN ORDER DO GUEST TẠO
-    // ==================================================
 
     await tx.order.updateMany({
-
-        where: {
-            createdByCustomerId:
-                guestCustomer.id,
-        },
-
-        data: {
-            createdByCustomerId:
-                customer.id,
-        },
-
+        where: { createdByCustomerId: guestCustomer.id },
+        data: { createdByCustomerId: customer.id },
     });
-
-
-    // ==================================================
-    // 3. CHUYỂN SERVICE REQUEST
-    // ==================================================
 
     await tx.serviceRequest.updateMany({
-
-        where: {
-            customerId:
-                guestCustomer.id,
-        },
-
-        data: {
-            customerId:
-                customer.id,
-        },
-
+        where: { customerId: guestCustomer.id },
+        data: { customerId: customer.id },
     });
-
-
-    // ==================================================
-    // 4. VÔ HIỆU GUEST
-    // ==================================================
 
     await tx.customer.update({
-
-        where: {
-            id: guestCustomer.id,
-        },
-
+        where: { id: guestCustomer.id },
         data: {
-
             isActive: false,
-
             guestToken: null,
-
             currentOrderId: null,
-
         },
-
     });
 };
 
-
-// ======================================================
-// GUEST LOGIN
-// ======================================================
-// ======================================================
-// GUEST LOGIN
-// ======================================================
-
-const guest = async ({
-    deviceId,
-    tableId,
-}) => {
-
+const guest = async ({ deviceId, tableId }) => {
     if (!deviceId) {
-        throw new Error(
-            "Thiếu deviceId."
-        );
+        throw new Error("Thiếu deviceId.");
     }
 
+    return prisma.$transaction(async (tx) => {
+        const table = await getTableInfo(tx, tableId);
 
-    return await prisma.$transaction(
-        async (tx) => {
+        let customer = await tx.customer.findFirst({
+            where: {
+                deviceId,
+                isGuest: true,
+            },
+        });
 
-            // ==================================================
-            // 1. KIỂM TRA BÀN
-            // ==================================================
+        if (customer) {
+            customer = await tx.customer.update({
+                where: { id: customer.id },
+                data: {
+                    isActive: true,
+                    guestToken: uuidv4(),
+                    expiredAt: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000),
+                    tableId: table.id,
+                },
+            });
+        } else {
+            customer = await tx.customer.create({
+                data: {
+                    deviceId,
+                    guestToken: uuidv4(),
+                    isGuest: true,
+                    isActive: true,
+                    expiredAt: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000),
+                    tableId: table.id,
+                },
+            });
 
-            const table =
-                await getTableInfo(
-                    tx,
-                    tableId
-                );
-
-
-            // ==================================================
-            // 2. TÌM GUEST THEO DEVICE
-            // ==================================================
-
-            let customer =
-                await tx.customer.findFirst({
-
-                    where: {
-
-                        deviceId,
-
-                        isGuest: true,
-
-                    },
-
-                });
-
-
-            // ==================================================
-            // 3. NẾU ĐÃ CÓ GUEST
-            //    → DÙNG LẠI GUEST CŨ
-            // ==================================================
-
-            if (customer) {
-
-                customer =
-                    await tx.customer.update({
-
-                        where: {
-                            id: customer.id,
-                        },
-
-                        data: {
-
-                            // Kích hoạt lại guest
-                            isActive: true,
-
-                            // Tạo token mới
-                            guestToken:
-                                uuidv4(),
-
-                            // Gia hạn thêm 3 ngày
-                            expiredAt:
-                                new Date(
-                                    Date.now() +
-                                    3 *
-                                    24 *
-                                    60 *
-                                    60 *
-                                    1000
-                                ),
-
-                            // Cập nhật bàn hiện tại
-                            tableId:
-                                table.id,
-
-                        },
-
-                    });
-
-            }
-
-            // ==================================================
-            // 4. CHƯA CÓ GUEST
-            //    → TẠO GUEST MỚI
-            // ==================================================
-
-            else {
-
-                customer =
-                    await tx.customer.create({
-
-                        data: {
-
-                            deviceId,
-
-                            guestToken:
-                                uuidv4(),
-
-                            isGuest:
-                                true,
-
-                            isActive:
-                                true,
-
-                            expiredAt:
-                                new Date(
-                                    Date.now() +
-                                    3 *
-                                    24 *
-                                    60 *
-                                    60 *
-                                    1000
-                                ),
-
-                            tableId:
-                                table.id,
-
-                        },
-
-                    });
-
-
-                // ==================================================
-                // CART
-                // ==================================================
-
-                await tx.cart.create({
-
-                    data: {
-
-                        customerId:
-                            customer.id,
-
-                    },
-
-                });
-
-            }
-
-
-            // ==================================================
-            // 5. TOKEN
-            // ==================================================
-
-            const token =
-                generateCustomerToken(
-                    customer
-                );
-
-
-            // ==================================================
-            // 6. RETURN
-            // ==================================================
-
-            return {
-                token,
-                customer,
-                table,
-            };
-
+            await tx.cart.create({
+                data: { customerId: customer.id },
+            });
         }
-    );
-};
 
+        const token = generateCustomerToken(customer);
+
+        return {
+            token,
+            customer,
+            table,
+        };
+    });
+};
 
 const register = async ({
     name,
@@ -477,251 +180,77 @@ const register = async ({
     tableId,
     deviceId,
 }) => {
-
     if (!name?.trim()) {
-        throw new Error(
-            "Vui lòng nhập họ và tên."
-        );
+        throw new Error("Vui lòng nhập họ và tên.");
     }
-
 
     if (!email && !phone) {
-        throw new Error(
-            "Vui lòng nhập email hoặc số điện thoại."
-        );
+        throw new Error("Vui lòng nhập email hoặc số điện thoại.");
     }
-
 
     if (!password) {
-        throw new Error(
-            "Vui lòng nhập mật khẩu."
-        );
+        throw new Error("Vui lòng nhập mật khẩu.");
     }
-
 
     if (password.length < 6) {
-        throw new Error(
-            "Mật khẩu phải có ít nhất 6 ký tự."
-        );
+        throw new Error("Mật khẩu phải có ít nhất 6 ký tự.");
     }
 
-
-    return await prisma.$transaction(
-        async (tx) => {
-
-            // ==================================================
-            // 1. KIỂM TRA EMAIL / PHONE
-            // ==================================================
-
-            const existed =
-                await tx.customer.findFirst({
-
-                    where: {
-
-                        OR: [
-
-                            email
-                                ? {
-                                    email:
-                                        email
-                                            .trim()
-                                            .toLowerCase(),
-                                }
-                                : undefined,
-
-                            phone
-                                ? {
-                                    phone:
-                                        phone.trim(),
-                                }
-                                : undefined,
-
-                        ].filter(Boolean),
-
-                    },
-
-                });
-
-
-            if (existed) {
-                throw new Error(
-                    "Email hoặc số điện thoại đã tồn tại."
-                );
-            }
-
-
-            // ==================================================
-            // 2. LẤY BÀN
-            // ==================================================
-
-            const table =
-                await getTableInfo(
-                    tx,
-                    tableId
-                );
-
-
-            // ==================================================
-            // 3. TÌM GUEST
-            // ==================================================
-
-            const guestCustomer =
-                await findActiveGuest(
-                    tx,
-                    deviceId
-                );
-
-
-            // ==================================================
-            // 4. HASH PASSWORD
-            // ==================================================
-
-            const hash =
-                await bcrypt.hash(
-                    password,
-                    10
-                );
-
-
-            // ==================================================
-            // 5. TẠO CUSTOMER
-            // ==================================================
-
-            const customer =
-                await tx.customer.create({
-
-                    data: {
-
-                        name:
-                            name.trim(),
-
-                        email:
-                            email
-                                ?.trim()
-                                .toLowerCase() ||
-                            null,
-
-                        phone:
-                            phone?.trim() ||
-                            null,
-
-                        password:
-                            hash,
-
-                        isGuest:
-                            false,
-
-                        isActive:
-                            true,
-
-                        // --------------------------------------
-                        // GIỮ SESSION CỦA GUEST
-                        // --------------------------------------
-
-                        sessionId:
-                            guestCustomer?.sessionId ||
-                            null,
-
-                        // --------------------------------------
-                        // GIỮ BÀN CỦA GUEST
-                        // --------------------------------------
-
-                        tableId:
-                            guestCustomer?.tableId ||
-                            table.id,
-
-                        // --------------------------------------
-                        // GIỮ ORDER HIỆN TẠI
-                        // --------------------------------------
-
-                        currentOrderId:
-                            guestCustomer?.currentOrderId ||
-                            null,
-
-                    },
-
-                });
-
-
-            // ==================================================
-            // 6. TẠO CART
-            // ==================================================
-
-            await tx.cart.create({
-
-                data: {
-
-                    customerId:
-                        customer.id,
-
-                },
-
-            });
-
-
-            // ==================================================
-            // 7. CHUYỂN ORDER GUEST → CUSTOMER
-            // ==================================================
-
-            if (guestCustomer) {
-
-                await transferGuestData(
-                    tx,
-                    guestCustomer,
-                    customer
-                );
-
-            }
-
-
-            // ==================================================
-            // 8. LẤY CUSTOMER MỚI NHẤT
-            // ==================================================
-
-            const updatedCustomer =
-                await tx.customer.findUnique({
-
-                    where: {
-                        id: customer.id,
-                    },
-
-                });
-
-
-            // ==================================================
-            // 9. TOKEN
-            // ==================================================
-
-            const token =
-                generateCustomerToken(
-                    updatedCustomer
-                );
-
-
-            // ==================================================
-            // 10. RETURN
-            // ==================================================
-
-            return {
-
-                token,
-
-                customer:
-                    updatedCustomer,
-
-                // GIỮ NGUYÊN TABLE
-                table,
-
-            };
-
+    return prisma.$transaction(async (tx) => {
+        const existed = await tx.customer.findFirst({
+            where: {
+                OR: [
+                    email
+                        ? { email: email.trim().toLowerCase() }
+                        : undefined,
+                    phone ? { phone: phone.trim() } : undefined,
+                ].filter(Boolean),
+            },
+        });
+
+        if (existed) {
+            throw new Error("Email hoặc số điện thoại đã tồn tại.");
         }
-    );
+
+        const table = await getTableInfo(tx, tableId);
+        const guestCustomer = await findActiveGuest(tx, deviceId);
+        const hash = await bcrypt.hash(password, 10);
+
+        const customer = await tx.customer.create({
+            data: {
+                name: name.trim(),
+                email: email?.trim().toLowerCase() || null,
+                phone: phone?.trim() || null,
+                password: hash,
+                isGuest: false,
+                isActive: true,
+                sessionId: guestCustomer?.sessionId || null,
+                tableId: guestCustomer?.tableId || table.id,
+                currentOrderId: guestCustomer?.currentOrderId || null,
+            },
+        });
+
+        await tx.cart.create({
+            data: { customerId: customer.id },
+        });
+
+        if (guestCustomer) {
+            await transferGuestData(tx, guestCustomer, customer);
+        }
+
+        const updatedCustomer = await tx.customer.findUnique({
+            where: { id: customer.id },
+        });
+
+        const token = generateCustomerToken(updatedCustomer);
+
+        return {
+            token,
+            customer: updatedCustomer,
+            table,
+        };
+    });
 };
-
-
-// ======================================================
-// LOGIN
-// ======================================================
 
 const login = async ({
     identifier,
@@ -729,322 +258,270 @@ const login = async ({
     qrCode,
     deviceId,
 }) => {
-
     if (!identifier?.trim()) {
-        throw new Error(
-            "Vui lòng nhập email hoặc số điện thoại."
-        );
+        throw new Error("Vui lòng nhập email hoặc số điện thoại.");
     }
-
 
     if (!password) {
-        throw new Error(
-            "Vui lòng nhập mật khẩu."
-        );
+        throw new Error("Vui lòng nhập mật khẩu.");
     }
 
+    const value = identifier.trim();
 
-    const value =
-        identifier.trim();
-
-
-    return await prisma.$transaction(
-        async (tx) => {
-
-            // ==================================================
-            // 1. TÌM CUSTOMER
-            // ==================================================
-
-            const customer =
-                await tx.customer.findFirst({
-
-                    where: {
-
-                        OR: [
-
-                            {
-                                email:
-                                    value
-                                        .toLowerCase(),
-                            },
-
-                            {
-                                phone:
-                                    value,
-                            },
-
-                        ],
-
-                    },
-
-                });
-
-
-            if (!customer) {
-                throw new Error(
-                    "Email hoặc mật khẩu không đúng."
-                );
-            }
-
-
-            // ==================================================
-            // 2. KIỂM TRA TÀI KHOẢN
-            // ==================================================
-
-            if (!customer.isActive) {
-                throw new Error(
-                    "Tài khoản đã bị khóa."
-                );
-            }
-
-
-            if (!customer.password) {
-                throw new Error(
-                    "Tài khoản chưa có mật khẩu."
-                );
-            }
-
-
-            // ==================================================
-            // 3. KIỂM TRA PASSWORD
-            // ==================================================
-
-            const ok =
-                await bcrypt.compare(
-                    password,
-                    customer.password
-                );
-
-
-            if (!ok) {
-                throw new Error(
-                    "Email hoặc mật khẩu không đúng."
-                );
-            }
-
-
-            // ==================================================
-            // 4. TÌM GUEST TRÊN THIẾT BỊ HIỆN TẠI
-            // ==================================================
-
-            const guestCustomer =
-                await findActiveGuest(
-                    tx,
-                    deviceId
-                );
-
-
-            // ==================================================
-            // 5. CHUYỂN GUEST → CUSTOMER
-            // ==================================================
-
-            if (
-
-                guestCustomer &&
-
-                guestCustomer.id !== customer.id
-
-            ) {
-
-                // ----------------------------------------------
-                // Giữ session / bàn / order của Guest
-                // ----------------------------------------------
-
-                await tx.customer.update({
-
-                    where: {
-                        id: customer.id,
-                    },
-
-                    data: {
-
-                        sessionId:
-                            customer.sessionId ||
-                            guestCustomer.sessionId ||
-                            null,
-
-                        tableId:
-                            customer.tableId ||
-                            guestCustomer.tableId ||
-                            null,
-
-                        currentOrderId:
-                            customer.currentOrderId ||
-                            guestCustomer.currentOrderId ||
-                            null,
-
-                    },
-
-                });
-
-
-                // ----------------------------------------------
-                // Chuyển toàn bộ liên kết Guest
-                // ----------------------------------------------
-
-                await transferGuestData(
-                    tx,
-                    guestCustomer,
-                    customer
-                );
-
-            }
-
-
-            // ==================================================
-            // 6. LẤY BÀN
-            // ==================================================
-
-            let table = null;
-
-
-            if (qrCode) {
-
-                // DÙNG LẠI getTableInfo()
-                // KHÔNG thay đổi format table
-
-                table =
-                    await getTableInfo(
-                        tx,
-                        qrCode
-                    );
-
-            }
-
-
-            // ==================================================
-            // 7. LẤY CUSTOMER MỚI NHẤT
-            // ==================================================
-
-            const updatedCustomer =
-                await tx.customer.findUnique({
-
-                    where: {
-                        id: customer.id,
-                    },
-
-                });
-
-
-            // ==================================================
-            // 8. TOKEN
-            // ==================================================
-
-            const token =
-                generateCustomerToken(
-                    updatedCustomer
-                );
-
-
-            // ==================================================
-            // 9. RETURN
-            // ==================================================
-
-            return {
-
-                token,
-
-                customer:
-                    updatedCustomer,
-
-                // GIỮ NGUYÊN TABLE
-                table,
-
-            };
-
-        }
-    );
-};
-
-
-// ======================================================
-// PROFILE
-// ======================================================
-
-const profile = async (customerId) => {
-
-    const customer =
-        await prisma.customer.findUnique({
-
+    return prisma.$transaction(async (tx) => {
+        const customer = await tx.customer.findFirst({
             where: {
-                id: customerId,
+                OR: [
+                    { email: value.toLowerCase() },
+                    { phone: value },
+                ],
             },
-
-            include: {
-
-                cart: true,
-
-                session: {
-
-                    include: {
-
-                        table: {
-
-                            include: {
-
-                                floor: {
-
-                                    include: {
-                                        branch: true,
-                                    },
-
-                                },
-
-                            },
-
-                        },
-
-                    },
-
-                },
-
-                orderMembers: {
-
-                    include: {
-
-                        order: {
-
-                            include: {
-
-                                orderItems: {
-
-                                    include: {
-                                        food: true,
-                                    },
-
-                                },
-
-                            },
-
-                        },
-
-                    },
-
-                },
-
-            },
-
         });
 
+        if (!customer) {
+            throw new Error("Email hoặc mật khẩu không đúng.");
+        }
+
+        if (!customer.isActive) {
+            throw new Error("Tài khoản đã bị khóa.");
+        }
+
+        if (!customer.password) {
+            throw new Error("Tài khoản chưa có mật khẩu.");
+        }
+
+        const ok = await bcrypt.compare(password, customer.password);
+
+        if (!ok) {
+            throw new Error("Email hoặc mật khẩu không đúng.");
+        }
+
+        const guestCustomer = await findActiveGuest(tx, deviceId);
+
+        if (guestCustomer && guestCustomer.id !== customer.id) {
+            await tx.customer.update({
+                where: { id: customer.id },
+                data: {
+                    sessionId:
+                        customer.sessionId ||
+                        guestCustomer.sessionId ||
+                        null,
+                    tableId:
+                        customer.tableId ||
+                        guestCustomer.tableId ||
+                        null,
+                    currentOrderId:
+                        customer.currentOrderId ||
+                        guestCustomer.currentOrderId ||
+                        null,
+                },
+            });
+
+            await transferGuestData(tx, guestCustomer, customer);
+        }
+
+        let table = null;
+
+        if (qrCode) {
+            table = await getTableInfo(tx, qrCode);
+        }
+
+        const updatedCustomer = await tx.customer.findUnique({
+            where: { id: customer.id },
+        });
+
+        const token = generateCustomerToken(updatedCustomer);
+
+        return {
+            token,
+            customer: updatedCustomer,
+            table,
+        };
+    });
+};
+
+const profile = async (customerId) => {
+    const customer = await prisma.customer.findUnique({
+        where: { id: customerId },
+        include: {
+            cart: true,
+            session: {
+                include: {
+                    table: {
+                        include: {
+                            floor: {
+                                include: { branch: true },
+                            },
+                        },
+                    },
+                },
+            },
+            orderMembers: {
+                include: {
+                    order: {
+                        include: {
+                            orderItems: {
+                                include: { food: true },
+                            },
+                        },
+                    },
+                },
+            },
+        },
+    });
 
     if (!customer) {
-        throw new Error(
-            "Khách hàng không tồn tại."
-        );
+        throw new Error("Khách hàng không tồn tại.");
     }
-
 
     if (!customer.isActive) {
-        throw new Error(
-            "Phiên khách đã hết hạn."
-        );
+        throw new Error("Phiên khách đã hết hạn.");
     }
-
 
     return customer;
 };
 
+const forgotPassword = async (email) => {
+    if (!email?.trim()) {
+        throw new Error("Vui lòng nhập email.");
+    }
 
+    const normalizedEmail = email.trim().toLowerCase();
+
+    const customer = await prisma.customer.findUnique({
+        where: { email: normalizedEmail },
+    });
+
+    if (!customer) {
+        throw new Error("Email không tồn tại trong hệ thống.");
+    }
+
+    if (customer.isGuest) {
+        throw new Error(
+            "Tài khoản khách chưa đăng ký không thể sử dụng chức năng này."
+        );
+    }
+
+    if (!customer.isActive) {
+        throw new Error("Tài khoản đã bị khóa.");
+    }
+
+    const otp = Math.floor(100000 + Math.random() * 900000).toString();
+    const expiresAt = new Date(Date.now() + 5 * 60 * 1000);
+
+    await prisma.customer.update({
+        where: { id: customer.id },
+        data: {
+            emailOtp: otp,
+            emailOtpExpiresAt: expiresAt,
+        },
+    });
+
+    try {
+        await mail.sendMail({
+            from: `"${process.env.MAIL_FROM}" <${process.env.MAIL_USER}>`,
+            to: normalizedEmail,
+            subject: "Mã OTP đặt lại mật khẩu",
+            html: `
+                <div style="font-family: Arial, sans-serif; padding: 20px;">
+                    <h2>Đặt lại mật khẩu</h2>
+                    <p>Xin chào <b>${customer.name || "Khách hàng"}</b>,</p>
+                    <p>Mã OTP để đặt lại mật khẩu của bạn là:</p>
+                    <h1 style="letter-spacing: 8px; font-size: 32px;">${otp}</h1>
+                    <p>OTP có hiệu lực trong <b>5 phút</b>.</p>
+                    <p>Nếu bạn không yêu cầu đặt lại mật khẩu, vui lòng bỏ qua email này.</p>
+                    <hr />
+                    <small>Đây là email tự động, vui lòng không trả lời.</small>
+                </div>
+            `,
+        });
+    } catch (err) {
+        console.error("SEND CUSTOMER OTP ERROR:", err);
+        throw new Error("Không thể gửi email.");
+    }
+
+    return {
+        message: "Mã OTP đã được gửi đến email của bạn.",
+    };
+};
+
+const verifyOtp = async ({ email, otp }) => {
+    if (!email?.trim()) {
+        throw new Error("Vui lòng nhập email.");
+    }
+
+    if (!otp?.trim()) {
+        throw new Error("Vui lòng nhập mã OTP.");
+    }
+
+    const normalizedEmail = email.trim().toLowerCase();
+
+    const customer = await prisma.customer.findUnique({
+        where: { email: normalizedEmail },
+    });
+
+    if (!customer) {
+        throw new Error("Email không tồn tại trong hệ thống.");
+    }
+
+    if (!customer.emailOtp) {
+        throw new Error("Bạn chưa yêu cầu mã OTP.");
+    }
+
+    if (
+        !customer.emailOtpExpiresAt ||
+        customer.emailOtpExpiresAt < new Date()
+    ) {
+        throw new Error("OTP đã hết hạn. Vui lòng yêu cầu mã mới.");
+    }
+
+    if (customer.emailOtp !== otp.trim()) {
+        throw new Error("OTP không đúng.");
+    }
+
+    return {
+        message: "Xác thực OTP thành công.",
+    };
+};
+
+const resetPassword = async ({ email, otp, password }) => {
+    if (!email?.trim()) {
+        throw new Error("Vui lòng nhập email.");
+    }
+
+    if (!otp?.trim()) {
+        throw new Error("Vui lòng nhập mã OTP.");
+    }
+
+    if (!password) {
+        throw new Error("Vui lòng nhập mật khẩu mới.");
+    }
+
+    if (password.length < 6) {
+        throw new Error("Mật khẩu phải có ít nhất 6 ký tự.");
+    }
+
+    await verifyOtp({
+        email: email.trim().toLowerCase(),
+        otp: otp.trim(),
+    });
+
+    const normalizedEmail = email.trim().toLowerCase();
+    const hash = await bcrypt.hash(password, 10);
+
+    await prisma.customer.update({
+        where: { email: normalizedEmail },
+        data: {
+            password: hash,
+            emailOtp: null,
+            emailOtpExpiresAt: null,
+        },
+    });
+
+    return {
+        message: "Đổi mật khẩu thành công.",
+    };
+};
 
 module.exports = {
     guest,
@@ -1052,4 +529,7 @@ module.exports = {
     login,
     profile,
     getTable,
+    forgotPassword,
+    verifyOtp,
+    resetPassword,
 };

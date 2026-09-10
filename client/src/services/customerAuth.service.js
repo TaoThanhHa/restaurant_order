@@ -1,10 +1,5 @@
 import axiosClient from "../api/axiosClient";
 
-
-// ======================================================
-// GET TABLE
-// ======================================================
-
 const getTable = async (qrCode) => {
 
     const res = await axiosClient.get(
@@ -13,11 +8,6 @@ const getTable = async (qrCode) => {
 
     return res.data;
 };
-
-
-// ======================================================
-// GUEST LOGIN
-// ======================================================
 
 const guest = async (data) => {
 
@@ -30,10 +20,6 @@ const guest = async (data) => {
 };
 
 
-// ======================================================
-// REGISTER
-// ======================================================
-
 const register = async (data) => {
 
     const res = await axiosClient.post(
@@ -43,11 +29,6 @@ const register = async (data) => {
 
     return res.data;
 };
-
-
-// ======================================================
-// LOGIN
-// ======================================================
 
 const login = async (data) => {
 
@@ -59,10 +40,39 @@ const login = async (data) => {
     return res.data;
 };
 
+const forgotPassword = async (email) => {
 
-// ======================================================
-// PROFILE
-// ======================================================
+    const res = await axiosClient.post(
+        "/customer/forgot-password",
+        {
+            email,
+        }
+    );
+
+    return res.data;
+};
+
+
+const verifyOtp = async (data) => {
+
+    const res = await axiosClient.post(
+        "/customer/verify-otp",
+        data
+    );
+
+    return res.data;
+};
+
+
+const resetPassword = async (data) => {
+
+    const res = await axiosClient.post(
+        "/customer/reset-password",
+        data
+    );
+
+    return res.data;
+};
 
 const profile = async () => {
 
@@ -73,21 +83,13 @@ const profile = async () => {
     return res.data;
 };
 
-
-// ======================================================
-// EXPORT
-// ======================================================
-
 export default {
-
     getTable,
-
     guest,
-
     register,
-
     login,
-
+    forgotPassword,
+    verifyOtp,
+    resetPassword,
     profile,
-
 };

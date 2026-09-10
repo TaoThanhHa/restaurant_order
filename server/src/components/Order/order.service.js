@@ -183,21 +183,25 @@ await notifyOrderCustomers(order.id);
   return await getById(order.id);
 };
 
-
-  
-// UPDATE TABLE STATUS
 const updateTableStatus = async (tableId) => {
+    if (!tableId) {
+        return;
+    }
 
     const session = await prisma.diningSession.findFirst({
         where: {
-            tableId,
+            tableId: Number(tableId),
             status: "ACTIVE",
         },
         include: {
             orders: {
                 where: {
                     status: {
-                        in: ["PENDING", "CONFIRMED", "PREPARING",],
+                        in: [
+                            "PENDING",
+                            "CONFIRMED",
+                            "PREPARING",
+                        ],
                     },
                 },
             },
@@ -211,7 +215,7 @@ const updateTableStatus = async (tableId) => {
 
     await prisma.table.update({
         where: {
-            id: tableId,
+            id: Number(tableId),
         },
         data: {
             status,
@@ -576,54 +580,107 @@ return updatedItem;
 };
 
   
-// REMOVE ITEM
 const removeItem = async (itemId) => {
+    const item = await prisma.orderItem.findUnique({
+        where: {
+            id: Number(itemId),
+        },
+        include: {
+            order: {
+                include: {
+                    orderItems: true,
+                    session: {
+                        select: {
+                            tableId: true,
+                        },
+                    },
+                },
+            },
+        },
+    });
 
-  const item = await prisma.orderItem.findUnique({
-    where: {
-      id: Number(itemId),
-    },
-    include: {
-      order: true,
-    },
-  });
+    if (!item) {
+        throw new Error("Món không tồn tại.");
+    }
 
-  if (!item) {
-    throw new Error("Món không tồn tại.");
-  }
+    const order = item.order;
 
-  if (
-    item.order.status === "COMPLETED" ||
-    item.order.status === "CANCELLED"
-  ) {
-    throw new Error("Đơn hàng đã đóng.");
-  }
+    if (
+        order.status === "COMPLETED" ||
+        order.status === "CANCELLED"
+    ) {
+        throw new Error("Đơn hàng đã đóng.");
+    }
 
-  if (item.status !== "PENDING") {
-    throw new Error(
-      "Chỉ được hủy món khi đang chờ xác nhận."
+    if (item.status === "CANCELLED") {
+        throw new Error("Món này đã được hủy.");
+    }
+
+    if (item.status === "SERVED") {
+        throw new Error(
+            "Món đã được phục vụ, không thể hủy."
+        );
+    }
+
+    await prisma.orderItem.update({
+        where: {
+            id: Number(itemId),
+        },
+        data: {
+            status: "CANCELLED",
+        },
+    });
+
+    const remainingItems = order.orderItems.filter(
+        x =>
+            x.id !== Number(itemId) &&
+            x.status !== "CANCELLED"
     );
-  }
 
-  await prisma.orderItem.update({
-    where: {
-      id: Number(itemId),
-    },
-    data: {
-      status: "CANCELLED",
-    },
-  });
+    // ========================================
+    // KHÔNG CÒN MÓN
+    // → HỦY ORDER
+    // → CẬP NHẬT TRẠNG THÁI BÀN
+    // ========================================
 
-  return true;
+    if (remainingItems.length === 0) {
+        await prisma.order.update({
+            where: {
+                id: order.id,
+            },
+            data: {
+                status: "CANCELLED",
+            },
+        });
+
+        if (order.session?.tableId) {
+            await updateTableStatus(
+                order.session.tableId
+            );
+        }
+    }
+
+    await notifyOrderCustomers(
+        order.id,
+        "order.updated"
+    );
+
+    return true;
 };
 
-  
-// UPDATE STATUS
 const updateStatus = async (orderId, status) => {
+    const id = Number(orderId);
 
     const order = await prisma.order.findUnique({
         where: {
-            id: orderId,
+            id,
+        },
+        include: {
+            session: {
+                select: {
+                    tableId: true,
+                },
+            },
         },
     });
 
@@ -645,11 +702,10 @@ const updateStatus = async (orderId, status) => {
     }
 
     switch (status) {
-
         case "PREPARING":
             await prisma.orderItem.updateMany({
                 where: {
-                    orderId,
+                    orderId: id,
                     status: "CONFIRMED",
                 },
                 data: {
@@ -661,7 +717,7 @@ const updateStatus = async (orderId, status) => {
         case "SERVED":
             await prisma.orderItem.updateMany({
                 where: {
-                    orderId,
+                    orderId: id,
                     status: "PREPARING",
                 },
                 data: {
@@ -673,7 +729,10 @@ const updateStatus = async (orderId, status) => {
         case "CANCELLED":
             await prisma.orderItem.updateMany({
                 where: {
-                    orderId,
+                    orderId: id,
+                    status: {
+                        not: "SERVED",
+                    },
                 },
                 data: {
                     status: "CANCELLED",
@@ -682,28 +741,34 @@ const updateStatus = async (orderId, status) => {
             break;
     }
 
-const updatedOrder =
-    await prisma.order.update({
+    const updatedOrder = await prisma.order.update({
         where: {
-            id: orderId,
+            id,
         },
         data: {
             status,
         },
     });
 
+    // ========================================
+    // HỦY / HOÀN THÀNH ORDER
+    // → KIỂM TRA LẠI TRẠNG THÁI BÀN
+    // ========================================
 
-await notifyOrderCustomers(
-    orderId
-);
+    if (
+        order.session?.tableId &&
+        ["CANCELLED", "COMPLETED"].includes(status)
+    ) {
+        await updateTableStatus(
+            order.session.tableId
+        );
+    }
 
+    await notifyOrderCustomers(id);
 
-return updatedOrder;
+    return updatedOrder;
 };
 
-  
-// PAYMENT
-// PAYMENT
 const payment = async (orderId, data) => {
 
     const id = Number(orderId);
@@ -1360,7 +1425,6 @@ const mergeOrders = async ({
             );
         }
 
-        // Chuyển toàn bộ món từ đơn nguồn sang đơn chính
         await tx.orderItem.updateMany({
             where: {
                 orderId: {
@@ -1372,7 +1436,6 @@ const mergeOrders = async ({
             }
         });
 
-        // Hủy các đơn đã được gộp
         await tx.order.updateMany({
             where: {
                 id: {
@@ -1384,22 +1447,19 @@ const mergeOrders = async ({
             }
         });
 
-        // Trả về đơn sau khi gộp
         return tx.order.findUnique({
-    where: {
-        id: targetOrderId
-    },
-    include: {
-        orderItems: {
+            where: {
+                id: targetOrderId
+            },
             include: {
-                food: true
+                orderItems: {
+                    include: {
+                        food: true
+                    }
+                }
             }
-        }
-    }
-});
-
+        });
     });
-
 };
 
 const getActiveOrderByTable = async (tableQrCode) => {

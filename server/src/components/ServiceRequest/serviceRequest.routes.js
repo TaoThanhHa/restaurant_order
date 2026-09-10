@@ -1,9 +1,7 @@
 const express = require("express");
-
 const router = express.Router();
 
 const controller =require("./serviceRequest.controller");
-
 const auth =require("../../middlewares/auth.middleware");
 const customerAuth =require("../../middlewares/customerAuth.middleware");
 const authorize =require("../../middlewares/role.middleware");

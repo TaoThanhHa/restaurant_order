@@ -1,10 +1,11 @@
 const express = require("express");
 const router = express.Router();
-const customerAdminController = require("./customerAdmin.controller");
+
+const controller = require("./customerAdmin.controller");
 const auth = require("../../middlewares/auth.middleware");
 
-router.get( "/statistics", auth, customerAdminController.getStatistics);
-router.get( "/", auth, customerAdminController.getCustomers);
-router.get( "/:id", auth, customerAdminController.getCustomerById);
+router.get( "/statistics", auth, controller.getStatistics);
+router.get( "/", auth, controller.getCustomers);
+router.get( "/:id", auth, controller.getCustomerById);
 
 module.exports = router;

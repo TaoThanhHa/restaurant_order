@@ -29,6 +29,7 @@ import CustomerWelcome from "../pages/customer/CustomerWelcome";
 import CustomerGuest from "../pages/customer/CustomerGuest";
 import CustomerLogin from "../pages/customer/CustomerLogin";
 import CustomerRegister from "../pages/customer/CustomerRegister";
+import CustomerForgotPassword from "../pages/customer/CustomerForgotPassword";
 import Home from "../pages/customer/Home/Home";
 import Order from "../pages/customer/Order/Order";
 import Account from "../pages/customer/Account/Account";
@@ -113,6 +114,7 @@ export default function AppRoutes() {
             <Route path="/customer/order/:qrCode" element={<Order />} />
             <Route path="/customer/account/:qrCode" element={<Account />} />
             <Route path="/customer/history/:qrCode" element={<CustomerOrderHistory />} />
+            <Route path="/customer/forgot/:qrCode" element={<CustomerForgotPassword />} />
 
             {/* Warehouse */}
             <Route

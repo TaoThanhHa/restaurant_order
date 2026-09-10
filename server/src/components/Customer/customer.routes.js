@@ -1,15 +1,13 @@
 const express = require("express");
-
 const router = express.Router();
 
-const customerController = require("./customer.controller");
-
+const controller = require("./customer.controller");
 const auth = require("../../middlewares/customerAuth.middleware");
 
-router.put("/profile", auth, customerController.updateProfile);
-router.put("/phone", auth, customerController.updatePhone);
-router.put("/password", auth, customerController.changePassword);
-router.post("/email/send-otp", auth, customerController.sendChangeEmailOtp);
-router.post("/email/verify-otp", auth, customerController.verifyChangeEmailOtp);
+router.put("/profile", auth, controller.updateProfile);
+router.put("/phone", auth, controller.updatePhone);
+router.put("/password", auth, controller.changePassword);
+router.post("/email/send-otp", auth, controller.sendChangeEmailOtp);
+router.post("/email/verify-otp", auth, controller.verifyChangeEmailOtp);
 
 module.exports = router;
