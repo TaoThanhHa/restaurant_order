@@ -1,110 +1,60 @@
 import api from "../api/axiosClient";
 
-const inventoryService = {
-
-    getAllIngredients: async (branchId) => {
-        const response = await api.get(
-            "/inventory/ingredients",
-            {
-                params: { branchId },
-            }
-        );
-
-        return response.data;
-    },
-
-    getIngredientById: async (id) => {
-        const response = await api.get(
-            `/inventory/ingredients/${id}`
-        );
-
-        return response.data;
-    },
-
-    createIngredient: async (data) => {
-        const response = await api.post(
-            "/inventory/ingredients",
-            data
-        );
-
-        return response.data;
-    },
-
-    updateIngredient: async (id, data) => {
-        const response = await api.put(
-            `/inventory/ingredients/${id}`,
-            data
-        );
-
-        return response.data;
-    },
-
-    toggleIngredientStatus: async (id) => {
-        const response = await api.patch(
-            `/inventory/ingredients/${id}/toggle-status`
-        );
-
-        return response.data;
-    },
-
-    getStock: async (branchId) => {
-        const response = await api.get(
-            "/inventory/stock",
-            {
-                params: { branchId },
-            }
-        );
-
-        return response.data;
-    },
-
-    importInventory: async (data) => {
-        const response = await api.post(
-            "/inventory/import",
-            data
-        );
-
-        return response.data;
-    },
-
-    exportInventory: async (data) => {
-        const response = await api.post(
-            "/inventory/export",
-            data
-        );
-
-        return response.data;
-    },
-
-    adjustInventory: async (data) => {
-        const response = await api.post(
-            "/inventory/adjust",
-            data
-        );
-
-        return response.data;
-    },
-
-
-    getTransactions: async (
-        branchId,
-        ingredientId = null
-    ) => {
-        const params = {
-            branchId,
-        };
-
-        if (ingredientId) {
-            params.ingredientId = ingredientId;
-        }
-
-        const response = await api.get(
-            "/inventory/transactions",
-            { params }
-        );
-
-        return response.data;
-    },
+const getIngredientById = async (id) => {
+    const res = await api.get(`/inventory/ingredients/${id}`);
+    return res.data;
 };
 
-export default inventoryService;
+const createIngredient = async (data) => {
+    const res = await api.post("/inventory/ingredients", data);
+    return res.data;
+};
+
+const updateIngredient = async (id, data) => {
+    const res = await api.put(`/inventory/ingredients/${id}`, data);
+    return res.data;
+};
+
+const toggleIngredientStatus = async (id) => {
+    const res = await api.patch(`/inventory/ingredients/${id}/toggle-status`);
+    return res.data;
+};
+
+const getStock = async (branchId) => {
+    const res = await api.get("/inventory/stock", { params: { branchId },});
+    return res.data;
+};
+
+const importInventory = async (data) => {
+    const res = await api.post("/inventory/import", data);
+    return res.data;
+};
+
+const exportInventory = async (data) => {
+    const res = await api.post("/inventory/export", data);
+    return res.data;
+};
+
+const adjustInventory = async (data) => {
+    const res = await api.post("/inventory/adjust", data);
+    return res.data;
+};
+
+const getTransactions = async (branchId, ingredientId = null) => {
+    const params = { branchId,};
+    if (ingredientId) { params.ingredientId = ingredientId;}
+    const res = await api.get("/inventory/transactions", { params,});
+    return res.data;
+};
+
+export default {
+    getIngredientById,
+    createIngredient,
+    updateIngredient,
+    toggleIngredientStatus,
+    getStock,
+    importInventory,
+    exportInventory,
+    adjustInventory,
+    getTransactions,
+};

@@ -1,28 +1,19 @@
-import axiosClient from "../api/axiosClient";
+import api from "../api/axiosClient";
 
 const getTable = async (qrCode) => {
-
-    const res = await axiosClient.get(
-        `/customer/table/${qrCode}`
-    );
-
+    const res = await api.get(`/customer/table/${qrCode}`);
     return res.data;
 };
 
 const guest = async (data) => {
-
-    const res = await axiosClient.post(
-        "/customer/guest",
-        data
-    );
-
+    const res = await api.post("/customer/guest", data);
     return res.data;
 };
 
 
 const register = async (data) => {
 
-    const res = await axiosClient.post(
+    const res = await api.post(
         "/customer/register",
         data
     );
@@ -32,7 +23,7 @@ const register = async (data) => {
 
 const login = async (data) => {
 
-    const res = await axiosClient.post(
+    const res = await api.post(
         "/customer/login",
         data
     );
@@ -42,7 +33,7 @@ const login = async (data) => {
 
 const forgotPassword = async (email) => {
 
-    const res = await axiosClient.post(
+    const res = await api.post(
         "/customer/forgot-password",
         {
             email,
@@ -55,7 +46,7 @@ const forgotPassword = async (email) => {
 
 const verifyOtp = async (data) => {
 
-    const res = await axiosClient.post(
+    const res = await api.post(
         "/customer/verify-otp",
         data
     );
@@ -66,7 +57,7 @@ const verifyOtp = async (data) => {
 
 const resetPassword = async (data) => {
 
-    const res = await axiosClient.post(
+    const res = await api.post(
         "/customer/reset-password",
         data
     );
@@ -76,7 +67,7 @@ const resetPassword = async (data) => {
 
 const profile = async () => {
 
-    const res = await axiosClient.get(
+    const res = await api.get(
         "/customer/profile"
     );
 

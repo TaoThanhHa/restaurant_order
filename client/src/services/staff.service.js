@@ -1,36 +1,34 @@
 import api from "../api/axiosClient";
 
-const staffService = {
-
-    getAll: () =>
-        api.get("/employee"),
-
-
-    getById: (userId) =>
-        api.get(
-            `/employee/${userId}`
-        ),
-
-
-    create: (data) =>
-        api.post(
-            "/employee",
-            data
-        ),
-
-
-    update: (userId, data) =>
-        api.put(
-            `/employee/${userId}`,
-            data
-        ),
-
-
-    toggleStatus: (userId) =>
-        api.patch(
-            `/employee/${userId}/toggle-status`
-        ),
-
+const getAll = async () => {
+    const res = await api.get("/employee");
+    return res.data;
 };
 
-export default staffService;
+const getById = async (userId) => {
+    const res = await api.get(`/employee/${userId}`);
+    return res.data;
+};
+
+const create = async (data) => {
+    const res = await api.post("/employee", data);
+    return res.data;
+};
+
+const update = async (userId, data) => {
+    const res = await api.put(`/employee/${userId}`, data);
+    return res.data;
+};
+
+const toggleStatus = async (userId) => {
+    const res = await api.patch(`/employee/${userId}/toggle-status`);
+    return res.data;
+};
+
+export default {
+    getAll,
+    getById,
+    create,
+    update,
+    toggleStatus,
+};

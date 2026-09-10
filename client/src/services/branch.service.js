@@ -1,7 +1,7 @@
 import api from "../api/axiosClient";
 
 const getAll = async () => {
-    const res = await api.get("/branches");
+    const res = await api.get(`/branches`);
     return res.data;
 };
 

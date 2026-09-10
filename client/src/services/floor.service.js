@@ -1,32 +1,32 @@
-import axiosClient from "../api/axiosClient";
+import api from "../api/axiosClient";
 
 const getAll = async () => {
-    const res = await axiosClient.get("/floors");
+    const res = await api.get("/floors");
     return res.data;
 };
 
 const getByBranch = async (branchId) => {
-    const res = await axiosClient.get(`/floors/branch/${branchId}`);
+    const res = await api.get(`/floors/branch/${branchId}`);
     return res.data;
 };
 
 const getById = async (id) => {
-    const res = await axiosClient.get(`/floors/${id}`);
+    const res = await api.get(`/floors/${id}`);
     return res.data;
 };
 
 const create = async (data) => {
-    const res = await axiosClient.post("/floors", data);
+    const res = await api.post("/floors", data);
     return res.data;
 };
 
 const update = async (id, data) => {
-    const res = await axiosClient.put(`/floors/${id}`, data);
+    const res = await api.put(`/floors/${id}`, data);
     return res.data;
 };
 
 const remove = async (id) => {
-    const res = await axiosClient.delete(`/floors/${id}`);
+    const res = await api.delete(`/floors/${id}`);
     return res.data;
 };
 

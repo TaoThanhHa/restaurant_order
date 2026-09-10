@@ -1,6 +1,4 @@
 import api from "../api/axiosClient";
-  
-// ADMIN
 
 const getAll = () => {
     return api.get("/foods");
@@ -22,7 +20,6 @@ const remove = (id) => {
     return api.delete(`/foods/${id}`);
 };
 
-// BRANCH 
 const getByBranch = () => {
     return api.get("/foods/branch");
 };

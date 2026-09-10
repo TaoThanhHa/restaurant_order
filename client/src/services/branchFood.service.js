@@ -1,14 +1,14 @@
 import api from "../api/axiosClient";
 
-const branchFoodService = {
-    getAll() {
-        return api.get("/branch-foods");
-    },
-
-    updateStatus(foodId, status) {
-        return api.patch(`/branch-foods/${foodId}/status`, {status,});
-    },
-
+const getAll = async() =>{
+    return api.get(`/branch-foods`);
 };
 
-export default branchFoodService;
+const updateStatus = async(foodId, status) =>{
+    return api.patch(`/branch-foods/${foodId}/status`, {status, });
+};
+ 
+export default {
+    getAll,
+    updateStatus,
+}

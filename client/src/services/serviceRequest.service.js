@@ -1,9 +1,6 @@
 import api from "../api/axiosClient";
 
-const create = async ({
-    qrCode,
-    message,
-}) => {
+const create = async ({qrCode, message, }) => {
     const res =await api.post("/service-requests", {qrCode, message,});
     return res.data;
 };
