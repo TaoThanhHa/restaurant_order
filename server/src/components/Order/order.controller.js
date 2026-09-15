@@ -1,16 +1,231 @@
 const orderService = require("./order.service");
 const response = require("../../utils/response");
 
+const getActiveOrderByTable = async (req, res) => {
+    try {
+        const { tableId } = req.params;
+
+        const data = await orderService.getActiveOrderByTable(tableId);
+
+        return response.success(
+            res,
+            "Kiểm tra đơn đang hoạt động thành công.",
+            data
+        );
+    } catch (error) {
+        console.error("GET ACTIVE ORDER ERROR:", error);
+        return response.error(res, error.message, 400);
+    }
+};
+
+const getById = async (req, res) => {
+    try {
+        const orderId = Number(req.params.id);
+
+        if (!Number.isInteger(orderId)) {
+            return response.error(res, "Order ID không hợp lệ.", 400);
+        }
+
+        const data = await orderService.getById(
+            orderId,
+            req.user
+        );
+
+        return response.success(
+            res,
+            "Lấy chi tiết đơn hàng thành công.",
+            data
+        );
+    } catch (error) {
+        console.error("GET ORDER ERROR:", error);
+        return response.error(res, error.message, 404);
+    }
+};
+
+const addItem = async (req, res) => {
+    try {
+        const item = await orderService.addItem(
+            Number(req.params.orderId),
+            req.body,
+            req.user
+        );
+
+        return response.success(
+            res,
+            "Thêm món thành công.",
+            item
+        );
+    } catch (error) {
+        return response.error(res, error.message, 400);
+    }
+};
+
+
+
+
+const removeItem = async (req, res) => {
+    try {
+        const data = await orderService.removeItem(
+            req.params.itemId,
+            req.user
+        );
+
+        return response.success(
+            res,
+            "Xóa món thành công.",
+            data
+        );
+    } catch (error) {
+        return response.error(res, error.message, 400);
+    }
+};
+
 const create = async (req, res) => {
     try {
-        const order = await orderService.create({
-            ...req.body,
-            userId: req.user.id,
-        });
+        const order = await orderService.create(
+            req.body,
+            req.user
+        );
 
         return response.success(
             res,
             "Tạo đơn hàng thành công.",
+            order
+        );
+    } catch (error) {
+        return response.error(
+            res,
+            error.message
+        );
+    }
+};
+
+const confirmItems = async (req, res) => {
+    try {
+        const data =
+            await orderService.confirmItems(
+                req.params.id,
+                req.user
+            );
+
+        return response.success(
+            res,
+            "Xác nhận món thành công.",
+            data
+        );
+    } catch (error) {
+        return response.error(
+            res,
+            error.message
+        );
+    }
+};
+
+const updateItem = async (req, res) => {
+    try {
+        const item =
+            await orderService.updateItem(
+                Number(req.params.itemId),
+                req.body,
+                req.user
+            );
+
+        return response.success(
+            res,
+            "Cập nhật món thành công.",
+            item
+        );
+    } catch (error) {
+        return response.error(
+            res,
+            error.message
+        );
+    }
+};
+
+const updateStatus = async (req, res) => {
+    try {
+        const order =
+            await orderService.updateStatus(
+                Number(req.params.id),
+                req.body.status,
+                req.user
+            );
+
+        return response.success(
+            res,
+            req.body.status === "CANCELLED"
+                ? "Hủy đơn hàng thành công."
+                : "Cập nhật trạng thái đơn hàng thành công.",
+            order
+        );
+    } catch (error) {
+        return response.error(
+            res,
+            error.message
+        );
+    }
+};
+
+const payment = async (req, res) => {
+    try {
+        const result =
+            await orderService.payment(
+                Number(req.params.id),
+                req.body,
+                req.user
+            );
+
+        return response.success(
+            res,
+            "Thanh toán thành công.",
+            result
+        );
+    } catch (error) {
+        return response.error(
+            res,
+            error.message
+        );
+    }
+};
+
+const mergeOrders = async (req, res) => {
+    try {
+        const {
+            targetOrderId,
+            sourceOrderIds,
+        } = req.body;
+
+        const data =
+            await orderService.mergeOrders({
+                targetOrderId,
+                sourceOrderIds,
+                user: req.user,
+            });
+
+        return response.success(
+            res,
+            "Gộp đơn thành công.",
+            data
+        );
+    } catch (error) {
+        return response.error(
+            res,
+            error.message
+        );
+    }
+};
+
+const createTakeAway = async (req, res) => {
+    try {
+        const order = await orderService.createTakeAway(
+            req.body,
+            req.user
+        );
+
+        return response.success(
+            res,
+            "Tạo order mang về thành công.",
             order,
             201
         );
@@ -19,262 +234,25 @@ const create = async (req, res) => {
     }
 };
 
-const getActiveOrderByTable = async (req, res) => {
+const getTakeAway = async (req, res) => {
     try {
-        const { tableId } = req.params;
-
-        const data = await orderService.getActiveOrderByTable(
-            tableId
+        const orders = await orderService.getTakeAway(
+            req.user,
+            req.query.branchId
         );
 
-        return response.success(
-            res,
-            "Kiểm tra đơn đang hoạt động thành công.",
-            data
-        );
-
+        res.json(orders);
     } catch (error) {
-        console.error("GET ACTIVE ORDER ERROR:", error);
-
-        return response.error(
-            res,
-            error.message,
-            400
-        );
+        res.status(400).json({
+            message: error.message,
+        });
     }
 };
-
-// GET ORDER DETAIL
-const getById = async (req, res) => {
-    try {
-        const orderId = Number(req.params.id);
-
-        if (!Number.isInteger(orderId)) {
-            return response.error(
-                res,
-                "Order ID không hợp lệ.",
-                400
-            );
-        }
-
-        const data = await orderService.getById(orderId);
-
-        return response.success(
-            res,
-            "Lấy chi tiết đơn hàng thành công.",
-            data
-        );
-
-    } catch (error) {
-        console.error("GET ORDER ERROR:", error);
-
-        return response.error(
-            res,
-            error.message,
-            404
-        );
-    }
-};
-  
-// ADD ITEM
-  
-
-const addItem = async (req, res) => {
-  try {
-    const item = await orderService.addItem(
-      Number(req.params.orderId),
-      req.body
-    );
-
-    return response.success(
-      res,
-      "Thêm món thành công.",
-      item
-    );
-  } catch (error) {
-    return response.error(res, error.message, 400);
-  }
-};
-
-const confirmItems = async (req, res) => {
-
-    try {
-
-        const data = await orderService.confirmItems(
-            req.params.id
-        );
-
-        return response.success(
-            res,
-            data,
-            "Xác nhận món thành công."
-        );
-
-    } catch (error) {
-
-        return response.error(
-            res,
-            error.message,
-            400
-        );
-
-    }
-
-};
-
-  
-// UPDATE ITEM
-  
-
-const updateItem = async (req, res) => {
-  try {
-    const item = await orderService.updateItem(
-      Number(req.params.itemId),
-      req.body
-    );
-
-    return response.success(
-      res,
-      "Cập nhật món thành công.",
-      item
-    );
-  } catch (error) {
-    return response.error(res, error.message, 400);
-  }
-};
-
-  
-// REMOVE ITEM
-const removeItem = async (req, res) => {
-
-    try {
-
-        const { itemId } = req.params;
-
-        const data = await orderService.removeItem(
-            itemId
-        );
-
-        return response.success(
-            res,
-            data,
-            "Xóa món thành công."
-        );
-
-    } catch (error) {
-
-        return response.error(
-            res,
-            error.message,
-            400
-        );
-
-    }
-};
-
-// UPDATE STATUS
-  
-
-const updateStatus = async (req, res) => {
-  try {
-    const order = await orderService.updateStatus(
-      Number(req.params.id),
-      req.body.status
-    );
-
-    return response.success(
-      res,
-      "Cập nhật trạng thái thành công.",
-      order
-    );
-  } catch (error) {
-    return response.error(res, error.message, 400);
-  }
-};
-
-  
-// PAYMENT
-  
-
-const payment = async (req, res) => {
-  try {
-    const result = await orderService.payment(
-      Number(req.params.id),
-      req.body
-    );
-
-    return response.success(
-      res,
-      "Thanh toán thành công.",
-      result
-    );
-  } catch (error) {
-    return response.error(res, error.message, 400);
-  }
-};
-
-  
-// CREATE TAKE AWAY ORDER
-  
-
-const createTakeAway = async (req, res) => {
-    try {
-        const order = await orderService.createTakeAway(
-            req.user.branchId,
-            req.body,
-            req.user.id
-        );
-        return response.success(
-            res,
-            "Tạo order mang về thành công.",
-            order,
-            201
-        );
-    } catch (error) {
-        return response.error(
-            res,
-            error.message,
-            400
-        );
-    }
-};
-
-const getTakeAway = async(req,res)=>{
-
-    try{
-
-        const data = await orderService.getTakeAway(
-            req.user.branchId
-        );
-
-        return response.success(
-            res,
-            "Lấy danh sách thành công.",
-            data
-        );
-
-    }catch(err){
-
-        return response.error(
-            res,
-            err.message,
-            400
-        );
-
-    }
-
-};
-
-  
-// ORDER HISTORY
-  
 
 const getHistory = async (req, res) => {
-
     try {
-
         const data = await orderService.getHistory(
-            req.user.branchId
+            req.user
         );
 
         return response.success(
@@ -282,114 +260,78 @@ const getHistory = async (req, res) => {
             "Lấy lịch sử đơn hàng thành công.",
             data
         );
-
-    } catch (err) {
-
-        return response.error(
-            res,
-            err.message,
-            400
-        );
-
-    }
-
-};
-
-const mergeOrders = async (req, res) => {
-
-    try {
-
-        const {
-            targetOrderId,
-            sourceOrderIds
-        } = req.body;
-
-        const data = await orderService.mergeOrders({
-            targetOrderId,
-            sourceOrderIds
-        });
-
-        return response.success(
-            res,
-            data,
-            "Gộp đơn thành công"
-        );
-
     } catch (error) {
+        console.error(
+            "GET HISTORY ERROR:",
+            error
+        );
 
         return response.error(
             res,
             error.message,
             400
         );
-
     }
-
 };
 
 const getPendingOrders = async (req, res) => {
     try {
-
-        const data =
-            await orderService.getPendingOrders(
-                req.user.branchId
-            );
+        const data = await orderService.getPendingOrders(
+            req.user
+        );
 
         return res.json({
             success: true,
-            data
+            data,
         });
-
     } catch (error) {
-
-        console.error(
-            "GET PENDING ORDERS ERROR:",
-            error
-        );
+        console.error("GET PENDING ORDERS ERROR:", error);
 
         return res.status(500).json({
             success: false,
-            message:
-                error.message ||
-                "Không thể lấy đơn chờ."
+            message: error.message || "Không thể lấy đơn chờ.",
         });
-
     }
 };
 
 const getCompletedKitchenOrders = async (req, res) => {
     try {
-        const data =await orderService.getCompletedKitchenOrders(req.user.branchId);
-            return res.json({
-                success: true,
-                data,
-            });
-        } catch (error) {
-            console.error(
-                "GET COMPLETED KITCHEN ORDERS ERROR:",
-                error
+        const data =
+            await orderService.getCompletedKitchenOrders(
+                req.user
             );
-            return res.status(400).json({
-                success: false,
-                message: error.message,
-            });
-        }
-    };
+
+        return res.json({
+            success: true,
+            data,
+        });
+    } catch (error) {
+        console.error(
+            "GET COMPLETED KITCHEN ORDERS ERROR:",
+            error
+        );
+
+        return res.status(400).json({
+            success: false,
+            message: error.message,
+        });
+    }
+};
 
 module.exports = {
-  create,
-  getById,
-  getActiveOrderByTable,
-  addItem,
-  confirmItems,
-  updateItem,
-  removeItem,
-  updateStatus,
-  payment,
-  createTakeAway,
-  getTakeAway,
-  getHistory,
-  mergeOrders,
-  getPendingOrders,
-  getCompletedKitchenOrders,
+    create,
+    getById,
+    getActiveOrderByTable,
+    addItem,
+    confirmItems,
+    updateItem,
+    removeItem,
+    updateStatus,
+    payment,
+    createTakeAway,
+    getTakeAway,
+    getHistory,
+    mergeOrders,
+    getPendingOrders,
+    getCompletedKitchenOrders,
 };

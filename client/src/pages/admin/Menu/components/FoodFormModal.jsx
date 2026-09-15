@@ -75,11 +75,7 @@ export default function FoodFormModal({
                     })) || [],
             });
 
-            setPreview(
-                food.image
-                    ? `http://localhost:5000${food.image}`
-                    : ""
-            );
+            setPreview( food.image ? `http://localhost:5000${food.image}` : "" );
         } else {
             setForm(emptyForm);
             setPreview("");
@@ -226,9 +222,7 @@ export default function FoodFormModal({
                     <div className="grid grid-cols-3 gap-8 p-6">
                         <div>
                             <div
-                                onClick={() =>
-                                    fileInputRef.current?.click()
-                                }
+                                onClick={() => fileInputRef.current?.click() }
                                 className="flex aspect-square cursor-pointer flex-col items-center justify-center rounded-xl border-2 border-dashed border-gray-300 bg-gray-50 transition hover:border-blue-500 hover:bg-blue-50"
                             >
                                 {preview ? (
@@ -334,13 +328,7 @@ export default function FoodFormModal({
 
                                 <div className="space-y-4">
                                     {branches.map(branch => {
-                                        const item =
-                                            form.branchFoods.find(
-                                                branchFood =>
-                                                    branchFood.branchId ===
-                                                    branch.id
-                                            );
-
+                                        const item = form.branchFoods.find( branchFood => branchFood.branchId ===  branch.id );
                                         const checked = Boolean(item);
 
                                         return (
@@ -353,11 +341,7 @@ export default function FoodFormModal({
                                                         <input
                                                             type="checkbox"
                                                             checked={checked}
-                                                            onChange={() =>
-                                                                toggleBranch(
-                                                                    branch.id
-                                                                )
-                                                            }
+                                                            onChange={() => toggleBranch( branch.id ) }
                                                         />
 
                                                         {branch.name}
@@ -366,12 +350,7 @@ export default function FoodFormModal({
                                                     {checked && (
                                                         <select
                                                             value={item.status}
-                                                            onChange={e =>
-                                                                handleBranchStatusChange(
-                                                                    branch.id,
-                                                                    e.target.value
-                                                                )
-                                                            }
+                                                            onChange={e => handleBranchStatusChange( branch.id, e.target.value ) }
                                                             className="rounded border px-2 py-1"
                                                         >
                                                             <option value="AVAILABLE">

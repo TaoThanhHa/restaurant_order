@@ -228,9 +228,7 @@ export default function CategoryManagement() {
                                     {editingId === category.id ? (
                                         <input
                                             value={editingName}
-                                            onChange={(e) =>
-                                                setEditingName(e.target.value)
-                                            }
+                                            onChange={(e) => setEditingName(e.target.value) }
                                             className="flex-1 w-45 rounded-lg border px-3 py-2 outline-none focus:border-blue-500"
                                         />
                                     ) : (
@@ -260,18 +258,14 @@ export default function CategoryManagement() {
                                             <>
                                                 <Button
                                                     className="bg-yellow-500 hover:bg-yellow-600"
-                                                    onClick={() =>
-                                                        startEdit(category)
-                                                    }
+                                                    onClick={() => startEdit(category) }
                                                 >
                                                     <Pencil size={18} />
                                                 </Button>
 
                                                 <Button
                                                     className="bg-red-500 hover:bg-red-600"
-                                                    onClick={() =>
-                                                        removeCategory(category.id)
-                                                    }
+                                                    onClick={() => removeCategory(category.id) }
                                                 >
                                                     <Trash2 size={18} />
                                                 </Button>

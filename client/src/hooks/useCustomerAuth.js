@@ -5,7 +5,6 @@ export default function useCustomerAuth() {
     const navigate = useNavigate();
 
     const login = (token, customer) => {
-
         localStorage.setItem(
             "customerToken",
             token
@@ -15,15 +14,11 @@ export default function useCustomerAuth() {
             "customer",
             JSON.stringify(customer)
         );
-
     };
 
     const logout = () => {
-
         localStorage.removeItem("customer");
-
         localStorage.removeItem("customerToken");
-
         navigate("/");
 
     };

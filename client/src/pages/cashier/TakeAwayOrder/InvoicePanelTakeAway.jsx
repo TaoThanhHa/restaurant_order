@@ -101,20 +101,17 @@ export default function InvoicePanelTakeAway({
         }
 
         try {
+            const res = await orderService.createTakeAway({
+                phone: phone.trim() || null,
+                paymentMethod,
+                items: cart.map(item => ({
+                    foodId: item.id,
+                    quantity: item.quantity,
+                    note: item.note,
+                })),
+            });
 
-            const res =
-                await orderService.createTakeAway({
-                    phone: phone.trim() || null,
-                    paymentMethod,
-
-                    items: cart.map(item => ({
-                        foodId: item.id,
-                        quantity: item.quantity,
-                        note: item.note,
-                    })),
-                });
-
-            const order = res.data.data;
+            const order = res?.data || res;
 
             printInvoice(order, paymentMethod);
             printKitchenOrder(order);

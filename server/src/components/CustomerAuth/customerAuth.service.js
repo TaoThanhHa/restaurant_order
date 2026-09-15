@@ -13,9 +13,15 @@ const getTableInfo = async (tx, tableId) => {
         where: { qrCode: tableId },
         include: {
             floor: {
-                include: { branch: true },
-            },
-        },
+                include: {
+                    branch: {
+                        include: {
+                            restaurant: true
+                        }
+                    }
+                }
+            }
+        }
     });
 
     if (!table) {
@@ -31,7 +37,10 @@ const getTableInfo = async (tx, tableId) => {
         qrCode: table.qrCode,
         tableNumber: table.tableNumber,
         floorName: table.floor.name,
+        branchId: table.floor.branch.id,
         branchName: table.floor.branch.name,
+        restaurantId: table.floor.branch.restaurantId,
+        restaurantName: table.floor.branch.restaurant?.name || null
     };
 };
 
@@ -40,9 +49,15 @@ const getTable = async (qrCode) => {
         where: { qrCode },
         include: {
             floor: {
-                include: { branch: true },
-            },
-        },
+                include: {
+                    branch: {
+                        include: {
+                            restaurant: true
+                        }
+                    }
+                }
+            }
+        }
     });
 
     if (!table) {
@@ -58,21 +73,25 @@ const getTable = async (qrCode) => {
         qrCode: table.qrCode,
         tableNumber: table.tableNumber,
         floorName: table.floor.name,
+        branchId: table.floor.branch.id,
         branchName: table.floor.branch.name,
+        restaurantId: table.floor.branch.restaurantId,
+        restaurantName: table.floor.branch.restaurant?.name || null
     };
 };
 
-const findActiveGuest = async (tx, deviceId) => {
-    if (!deviceId) {
+const findActiveGuest = async (tx, deviceId, restaurantId) => {
+    if (!deviceId || !restaurantId) {
         return null;
     }
 
     const guest = await tx.customer.findFirst({
         where: {
             deviceId,
+            restaurantId,
             isGuest: true,
-            isActive: true,
-        },
+            isActive: true
+        }
     });
 
     if (!guest) {
@@ -84,8 +103,8 @@ const findActiveGuest = async (tx, deviceId) => {
             where: { id: guest.id },
             data: {
                 isActive: false,
-                guestToken: null,
-            },
+                guestToken: null
+            }
         });
 
         return null;
@@ -97,17 +116,17 @@ const findActiveGuest = async (tx, deviceId) => {
 const transferGuestData = async (tx, guestCustomer, customer) => {
     await tx.orderMember.updateMany({
         where: { customerId: guestCustomer.id },
-        data: { customerId: customer.id },
+        data: { customerId: customer.id }
     });
 
     await tx.order.updateMany({
         where: { createdByCustomerId: guestCustomer.id },
-        data: { createdByCustomerId: customer.id },
+        data: { createdByCustomerId: customer.id }
     });
 
     await tx.serviceRequest.updateMany({
         where: { customerId: guestCustomer.id },
-        data: { customerId: customer.id },
+        data: { customerId: customer.id }
     });
 
     await tx.customer.update({
@@ -115,8 +134,8 @@ const transferGuestData = async (tx, guestCustomer, customer) => {
         data: {
             isActive: false,
             guestToken: null,
-            currentOrderId: null,
-        },
+            currentOrderId: null
+        }
     });
 };
 
@@ -125,14 +144,15 @@ const guest = async ({ deviceId, tableId }) => {
         throw new Error("Thiếu deviceId.");
     }
 
-    return prisma.$transaction(async (tx) => {
+    return prisma.$transaction(async tx => {
         const table = await getTableInfo(tx, tableId);
 
         let customer = await tx.customer.findFirst({
             where: {
                 deviceId,
-                isGuest: true,
-            },
+                restaurantId: table.restaurantId,
+                isGuest: true
+            }
         });
 
         if (customer) {
@@ -141,24 +161,29 @@ const guest = async ({ deviceId, tableId }) => {
                 data: {
                     isActive: true,
                     guestToken: uuidv4(),
-                    expiredAt: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000),
-                    tableId: table.id,
-                },
+                    expiredAt: new Date(
+                        Date.now() + 3 * 24 * 60 * 60 * 1000
+                    ),
+                    tableId: table.id
+                }
             });
         } else {
             customer = await tx.customer.create({
                 data: {
                     deviceId,
+                    restaurantId: table.restaurantId,
                     guestToken: uuidv4(),
                     isGuest: true,
                     isActive: true,
-                    expiredAt: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000),
-                    tableId: table.id,
-                },
+                    expiredAt: new Date(
+                        Date.now() + 3 * 24 * 60 * 60 * 1000
+                    ),
+                    tableId: table.id
+                }
             });
 
             await tx.cart.create({
-                data: { customerId: customer.id },
+                data: { customerId: customer.id }
             });
         }
 
@@ -167,7 +192,7 @@ const guest = async ({ deviceId, tableId }) => {
         return {
             token,
             customer,
-            table,
+            table
         };
     });
 };
@@ -178,7 +203,7 @@ const register = async ({
     phone,
     password,
     tableId,
-    deviceId,
+    deviceId
 }) => {
     if (!name?.trim()) {
         throw new Error("Vui lòng nhập họ và tên.");
@@ -196,42 +221,56 @@ const register = async ({
         throw new Error("Mật khẩu phải có ít nhất 6 ký tự.");
     }
 
-    return prisma.$transaction(async (tx) => {
+    return prisma.$transaction(async tx => {
+        const table = await getTableInfo(tx, tableId);
+        const restaurantId = table.restaurantId;
+
+        const normalizedEmail = email?.trim().toLowerCase();
+        const normalizedPhone = phone?.trim();
+
         const existed = await tx.customer.findFirst({
             where: {
+                restaurantId,
                 OR: [
-                    email
-                        ? { email: email.trim().toLowerCase() }
+                    normalizedEmail
+                        ? { email: normalizedEmail }
                         : undefined,
-                    phone ? { phone: phone.trim() } : undefined,
-                ].filter(Boolean),
-            },
+                    normalizedPhone
+                        ? { phone: normalizedPhone }
+                        : undefined
+                ].filter(Boolean)
+            }
         });
 
         if (existed) {
             throw new Error("Email hoặc số điện thoại đã tồn tại.");
         }
 
-        const table = await getTableInfo(tx, tableId);
-        const guestCustomer = await findActiveGuest(tx, deviceId);
+        const guestCustomer = await findActiveGuest(
+            tx,
+            deviceId,
+            restaurantId
+        );
+
         const hash = await bcrypt.hash(password, 10);
 
         const customer = await tx.customer.create({
             data: {
                 name: name.trim(),
-                email: email?.trim().toLowerCase() || null,
-                phone: phone?.trim() || null,
+                email: normalizedEmail || null,
+                phone: normalizedPhone || null,
                 password: hash,
+                restaurantId,
                 isGuest: false,
                 isActive: true,
                 sessionId: guestCustomer?.sessionId || null,
                 tableId: guestCustomer?.tableId || table.id,
-                currentOrderId: guestCustomer?.currentOrderId || null,
-            },
+                currentOrderId: guestCustomer?.currentOrderId || null
+            }
         });
 
         await tx.cart.create({
-            data: { customerId: customer.id },
+            data: { customerId: customer.id }
         });
 
         if (guestCustomer) {
@@ -239,7 +278,7 @@ const register = async ({
         }
 
         const updatedCustomer = await tx.customer.findUnique({
-            where: { id: customer.id },
+            where: { id: customer.id }
         });
 
         const token = generateCustomerToken(updatedCustomer);
@@ -247,7 +286,7 @@ const register = async ({
         return {
             token,
             customer: updatedCustomer,
-            table,
+            table
         };
     });
 };
@@ -256,7 +295,7 @@ const login = async ({
     identifier,
     password,
     qrCode,
-    deviceId,
+    deviceId
 }) => {
     if (!identifier?.trim()) {
         throw new Error("Vui lòng nhập email hoặc số điện thoại.");
@@ -268,14 +307,23 @@ const login = async ({
 
     const value = identifier.trim();
 
-    return prisma.$transaction(async (tx) => {
+    return prisma.$transaction(async tx => {
+        let restaurantId = null;
+        let table = null;
+
+        if (qrCode) {
+            table = await getTableInfo(tx, qrCode);
+            restaurantId = table.restaurantId;
+        }
+
         const customer = await tx.customer.findFirst({
             where: {
+                ...(restaurantId ? { restaurantId } : {}),
                 OR: [
                     { email: value.toLowerCase() },
-                    { phone: value },
-                ],
-            },
+                    { phone: value }
+                ]
+            }
         });
 
         if (!customer) {
@@ -290,15 +338,25 @@ const login = async ({
             throw new Error("Tài khoản chưa có mật khẩu.");
         }
 
-        const ok = await bcrypt.compare(password, customer.password);
+        const ok = await bcrypt.compare(
+            password,
+            customer.password
+        );
 
         if (!ok) {
             throw new Error("Email hoặc mật khẩu không đúng.");
         }
 
-        const guestCustomer = await findActiveGuest(tx, deviceId);
+        const guestCustomer = await findActiveGuest(
+            tx,
+            deviceId,
+            customer.restaurantId
+        );
 
-        if (guestCustomer && guestCustomer.id !== customer.id) {
+        if (
+            guestCustomer &&
+            guestCustomer.id !== customer.id
+        ) {
             await tx.customer.update({
                 where: { id: customer.id },
                 data: {
@@ -313,21 +371,19 @@ const login = async ({
                     currentOrderId:
                         customer.currentOrderId ||
                         guestCustomer.currentOrderId ||
-                        null,
-                },
+                        null
+                }
             });
 
-            await transferGuestData(tx, guestCustomer, customer);
-        }
-
-        let table = null;
-
-        if (qrCode) {
-            table = await getTableInfo(tx, qrCode);
+            await transferGuestData(
+                tx,
+                guestCustomer,
+                customer
+            );
         }
 
         const updatedCustomer = await tx.customer.findUnique({
-            where: { id: customer.id },
+            where: { id: customer.id }
         });
 
         const token = generateCustomerToken(updatedCustomer);
@@ -335,12 +391,12 @@ const login = async ({
         return {
             token,
             customer: updatedCustomer,
-            table,
+            table
         };
     });
 };
 
-const profile = async (customerId) => {
+const profile = async customerId => {
     const customer = await prisma.customer.findUnique({
         where: { id: customerId },
         include: {
@@ -350,24 +406,26 @@ const profile = async (customerId) => {
                     table: {
                         include: {
                             floor: {
-                                include: { branch: true },
-                            },
-                        },
-                    },
-                },
+                                include: {
+                                    branch: true
+                                }
+                            }
+                        }
+                    }
+                }
             },
             orderMembers: {
                 include: {
                     order: {
                         include: {
                             orderItems: {
-                                include: { food: true },
-                            },
-                        },
-                    },
-                },
-            },
-        },
+                                include: { food: true }
+                            }
+                        }
+                    }
+                }
+            }
+        }
     });
 
     if (!customer) {
@@ -381,15 +439,24 @@ const profile = async (customerId) => {
     return customer;
 };
 
-const forgotPassword = async (email) => {
+const forgotPassword = async (email, qrCode) => {
     if (!email?.trim()) {
         throw new Error("Vui lòng nhập email.");
     }
 
+    if (!qrCode) {
+        throw new Error("Thiếu mã QR của bàn.");
+    }
+
     const normalizedEmail = email.trim().toLowerCase();
 
-    const customer = await prisma.customer.findUnique({
-        where: { email: normalizedEmail },
+    const table = await getTableInfo(prisma, qrCode);
+
+    const customer = await prisma.customer.findFirst({
+        where: {
+            restaurantId: table.restaurantId,
+            email: normalizedEmail
+        }
     });
 
     if (!customer) {
@@ -406,15 +473,20 @@ const forgotPassword = async (email) => {
         throw new Error("Tài khoản đã bị khóa.");
     }
 
-    const otp = Math.floor(100000 + Math.random() * 900000).toString();
-    const expiresAt = new Date(Date.now() + 5 * 60 * 1000);
+    const otp = Math.floor(
+        100000 + Math.random() * 900000
+    ).toString();
+
+    const expiresAt = new Date(
+        Date.now() + 5 * 60 * 1000
+    );
 
     await prisma.customer.update({
         where: { id: customer.id },
         data: {
             emailOtp: otp,
-            emailOtpExpiresAt: expiresAt,
-        },
+            emailOtpExpiresAt: expiresAt
+        }
     });
 
     try {
@@ -433,7 +505,7 @@ const forgotPassword = async (email) => {
                     <hr />
                     <small>Đây là email tự động, vui lòng không trả lời.</small>
                 </div>
-            `,
+            `
         });
     } catch (err) {
         console.error("SEND CUSTOMER OTP ERROR:", err);
@@ -441,11 +513,11 @@ const forgotPassword = async (email) => {
     }
 
     return {
-        message: "Mã OTP đã được gửi đến email của bạn.",
+        message: "Mã OTP đã được gửi đến email của bạn."
     };
 };
 
-const verifyOtp = async ({ email, otp }) => {
+const verifyOtp = async ({ email, otp, qrCode }) => {
     if (!email?.trim()) {
         throw new Error("Vui lòng nhập email.");
     }
@@ -454,10 +526,19 @@ const verifyOtp = async ({ email, otp }) => {
         throw new Error("Vui lòng nhập mã OTP.");
     }
 
+    if (!qrCode) {
+        throw new Error("Thiếu mã QR của bàn.");
+    }
+
     const normalizedEmail = email.trim().toLowerCase();
 
-    const customer = await prisma.customer.findUnique({
-        where: { email: normalizedEmail },
+    const table = await getTableInfo(prisma, qrCode);
+
+    const customer = await prisma.customer.findFirst({
+        where: {
+            restaurantId: table.restaurantId,
+            email: normalizedEmail
+        }
     });
 
     if (!customer) {
@@ -472,7 +553,9 @@ const verifyOtp = async ({ email, otp }) => {
         !customer.emailOtpExpiresAt ||
         customer.emailOtpExpiresAt < new Date()
     ) {
-        throw new Error("OTP đã hết hạn. Vui lòng yêu cầu mã mới.");
+        throw new Error(
+            "OTP đã hết hạn. Vui lòng yêu cầu mã mới."
+        );
     }
 
     if (customer.emailOtp !== otp.trim()) {
@@ -480,11 +563,16 @@ const verifyOtp = async ({ email, otp }) => {
     }
 
     return {
-        message: "Xác thực OTP thành công.",
+        message: "Xác thực OTP thành công."
     };
 };
 
-const resetPassword = async ({ email, otp, password }) => {
+const resetPassword = async ({
+    email,
+    otp,
+    password,
+    qrCode
+}) => {
     if (!email?.trim()) {
         throw new Error("Vui lòng nhập email.");
     }
@@ -501,25 +589,36 @@ const resetPassword = async ({ email, otp, password }) => {
         throw new Error("Mật khẩu phải có ít nhất 6 ký tự.");
     }
 
+    if (!qrCode) {
+        throw new Error("Thiếu mã QR của bàn.");
+    }
+
     await verifyOtp({
         email: email.trim().toLowerCase(),
         otp: otp.trim(),
+        qrCode
     });
 
     const normalizedEmail = email.trim().toLowerCase();
+
+    const table = await getTableInfo(prisma, qrCode);
+
     const hash = await bcrypt.hash(password, 10);
 
-    await prisma.customer.update({
-        where: { email: normalizedEmail },
+    await prisma.customer.updateMany({
+        where: {
+            restaurantId: table.restaurantId,
+            email: normalizedEmail
+        },
         data: {
             password: hash,
             emailOtp: null,
-            emailOtpExpiresAt: null,
-        },
+            emailOtpExpiresAt: null
+        }
     });
 
     return {
-        message: "Đổi mật khẩu thành công.",
+        message: "Đổi mật khẩu thành công."
     };
 };
 
@@ -531,5 +630,5 @@ module.exports = {
     getTable,
     forgotPassword,
     verifyOtp,
-    resetPassword,
+    resetPassword
 };

@@ -10,7 +10,16 @@ const authorize = (...roles) => {
       );
     }
 
-    if (!roles.includes(req.user.role)) {
+    let userRoles = [req.user.role];
+
+    if (
+      req.user.role === "ADMIN" &&
+      req.user.restaurantMode === "SINGLE"
+    ) {
+      userRoles.push("BRANCH");
+    }
+
+    if (!roles.some((role) => userRoles.includes(role))) {
       return response.error(
         res,
         "Bạn không có quyền thực hiện chức năng này.",

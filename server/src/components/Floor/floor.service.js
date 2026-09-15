@@ -1,15 +1,100 @@
 const prisma = require("../../config/prisma");
 
+// ======================================================
+// CHECK BRANCH ACCESS
+// ======================================================
+
+const checkBranchAccess = async (branchId, user) => {
+  const branch = await prisma.branch.findUnique({
+    where: {
+      id: Number(branchId),
+    },
+    select: {
+      id: true,
+      restaurantId: true,
+    },
+  });
+
+  if (!branch) {
+    throw new Error("Chi nhánh không tồn tại.");
+  }
+
+  if (user.role === "BRANCH") {
+    if (Number(user.branchId) !== branch.id) {
+      throw new Error(
+        "Bạn không có quyền thực hiện trên chi nhánh này."
+      );
+    }
+  }
+
+  if (user.role === "ADMIN") {
+    if (
+      Number(user.restaurantId) !==
+      Number(branch.restaurantId)
+    ) {
+      throw new Error(
+        "Bạn không có quyền thực hiện trên chi nhánh này."
+      );
+    }
+  }
+
+  return branch;
+};
+
+// ======================================================
+// CHECK FLOOR ACCESS
+// ======================================================
+
+const checkFloorAccess = async (floorId, user) => {
+  const floor = await prisma.floor.findUnique({
+    where: {
+      id: Number(floorId),
+    },
+    select: {
+      id: true,
+      branchId: true,
+    },
+  });
+
+  if (!floor) {
+    throw new Error("Tầng không tồn tại.");
+  }
+
+  await checkBranchAccess(floor.branchId, user);
+
+  return floor;
+};
+
 const getAll = async (user) => {
+  if (!user?.restaurantId && user?.role === "ADMIN") {
+    throw new Error("Tài khoản chưa thuộc nhà hàng.");
+  }
+
+  if (
+    ["BRANCH", "CASHIER", "ORDER", "KITCHEN"].includes(user?.role) &&
+    !user?.branchId
+  ) {
+    throw new Error("Tài khoản chưa thuộc chi nhánh.");
+  }
 
   const where =
-    user.role.name === "ADMIN"
-      ? {}
+    user.role === "ADMIN"
+      ? {
+          branch: {
+            restaurantId: Number(user.restaurantId),
+          },
+        }
       : {
-          branchId: user.branchId,
+          branchId: Number(user.branchId),
+          branch: {
+            restaurantId: Number(user.restaurantId),
+          },
         };
 
-  return await prisma.floor.findMany({
+  console.log("GET FLOORS USER:", user);
+  console.log("GET FLOORS WHERE:", where);
+
+  const floors = await prisma.floor.findMany({
     where,
     include: {
       branch: true,
@@ -24,69 +109,71 @@ const getAll = async (user) => {
     },
   });
 
+  console.log("GET FLOORS RESULT:", floors);
+
+  return floors;
 };
 
-const getByBranch = async (branchId) => {
-    return await prisma.floor.findMany({
-        where: {
-            branchId: Number(branchId),
-        },
-        include: {
-            tables: true,
-        },
-        orderBy: {
-            id: "asc",
-        },
-    });
-};
+const getByBranch = async (branchId, user) => {
+  await checkBranchAccess(branchId, user);
 
-const getById = async (id) => {
-  const floor = await prisma.floor.findUnique({
+  return await prisma.floor.findMany({
     where: {
-      id,
+      branchId: Number(branchId),
+    },
+    include: {
+      tables: true,
+    },
+    orderBy: {
+      id: "asc",
+    },
+  });
+};
+
+// ======================================================
+// GET BY ID
+// ======================================================
+
+const getById = async (id, user) => {
+  await checkFloorAccess(id, user);
+
+  return await prisma.floor.findUnique({
+    where: {
+      id: Number(id),
     },
     include: {
       branch: true,
       tables: true,
     },
   });
-
-  if (!floor) {
-    throw new Error("Tầng không tồn tại.");
-  }
-
-  return floor;
 };
 
-const create = async (data) => {
-  const { branchId } = data;
+// ======================================================
+// CREATE
+// ======================================================
+
+const create = async (data, user) => {
+  const branchId = Number(data.branchId);
 
   if (!branchId) {
-     throw new Error("Vui lòng chọn chi nhánh.");
+    throw new Error("Vui lòng chọn chi nhánh.");
   }
+
+  await checkBranchAccess(branchId, user);
 
   const floorNumber = Number(data.floorNumber);
 
   if (isNaN(floorNumber) || floorNumber < 1) {
-      throw new Error("Vui lòng nhập số tầng.");
+    throw new Error("Vui lòng nhập số tầng.");
   }
 
-  const name = data.name?.trim() || `Tầng ${floorNumber}`;
-
-  const branch = await prisma.branch.findUnique({
-    where: {
-      id: Number(branchId),
-    },
-  });
-
-  if (!branch) {
-    throw new Error("Chi nhánh không tồn tại.");
-  }
+  const name =
+    data.name?.trim() || `Tầng ${floorNumber}`;
 
   const existed = await prisma.floor.findUnique({
     where: {
       branchId_floorNumber: {
-        branchId: Number(branchId),
+        branchId,
         floorNumber,
       },
     },
@@ -98,34 +185,43 @@ const create = async (data) => {
 
   return await prisma.floor.create({
     data: {
-      branchId: Number(branchId),
+      branchId,
       floorNumber,
       name,
     },
   });
 };
 
-const update = async (id, data) => {
-  const floor = await prisma.floor.findUnique({
-    where: {
-      id,
-    },
-  });
+// ======================================================
+// UPDATE
+// ======================================================
 
-  if (!floor) {
-    throw new Error("Tầng không tồn tại.");
+const update = async (id, data, user) => {
+  const floor = await checkFloorAccess(id, user);
+
+  const branchId = Number(
+    data.branchId ?? floor.branchId
+  );
+
+  await checkBranchAccess(branchId, user);
+
+  const floorNumber = Number(
+    data.floorNumber ?? floor.floorNumber
+  );
+
+  if (isNaN(floorNumber) || floorNumber < 1) {
+    throw new Error("Vui lòng nhập số tầng.");
   }
 
-  const branchId = Number(data.branchId ?? floor.branchId);
-  const floorNumber = Number(data.floorNumber);
+  const name =
+    data.name?.trim() || `Tầng ${floorNumber}`;
 
-  const name = data.name?.trim() || `Tầng ${floorNumber}`;
   const existed = await prisma.floor.findFirst({
     where: {
       branchId,
       floorNumber,
       NOT: {
-        id,
+        id: Number(id),
       },
     },
   });
@@ -136,7 +232,7 @@ const update = async (id, data) => {
 
   return await prisma.floor.update({
     where: {
-      id,
+      id: Number(id),
     },
     data: {
       branchId,
@@ -146,29 +242,26 @@ const update = async (id, data) => {
   });
 };
 
-const remove = async (id) => {
-  const floor = await prisma.floor.findUnique({
-    where: {
-      id,
-    },
-    include: {
-      tables: true,
-    },
-  });
+const remove = async (id, user) => {
+    const floor = await checkFloorAccess(id, user);
 
-  if (!floor) {
-    throw new Error("Tầng không tồn tại.");
-  }
+    await prisma.$transaction(async (tx) => {
+        await tx.table.deleteMany({
+            where: {
+                floorId: floor.id,
+            },
+        });
 
-  if (floor.tables.length > 0) {
-    throw new Error("Tầng đang có bàn, không thể xóa.");
-  }
+        await tx.floor.delete({
+            where: {
+                id: floor.id,
+            },
+        });
+    });
 
-  await prisma.floor.delete({
-    where: {
-      id,
-    },
-  });
+    return {
+        message: "Xóa tầng và toàn bộ bàn thành công.",
+    };
 };
 
 module.exports = {

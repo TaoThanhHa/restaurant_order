@@ -15,16 +15,9 @@ const getCart = async (req, res) => {
   }
 };
 
-  
-// ADD ITEM
-  
-
 const addItem = async (req, res) => {
-
   try {
-
     const cart = await cartService.addItem(req.body);
-
     return response.success(
       res,
       "Thêm món vào giỏ thành công.",
@@ -32,25 +25,16 @@ const addItem = async (req, res) => {
     );
 
   } catch (error) {
-
     return response.error(
       res,
       error.message,
       400
     );
-
   }
-
 };
 
-  
-// REMOVE ITEM
-  
-
 const removeItem = async (req, res) => {
-
   try {
-
     const cart = await cartService.removeItem(
       Number(req.params.id)
     );
@@ -60,17 +44,13 @@ const removeItem = async (req, res) => {
       "Xóa món khỏi giỏ thành công.",
       cart
     );
-
   } catch (error) {
-
     return response.error(
       res,
       error.message,
       400
     );
-
   }
-
 };
 
 module.exports = {

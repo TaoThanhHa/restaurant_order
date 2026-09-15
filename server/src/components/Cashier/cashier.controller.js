@@ -12,10 +12,19 @@ const dashboard = async (req, res) => {
 
 const getTables = async (req, res) => {
     try {
-        const data = await cashierService.getTables(req.user.branchId);
-        return response.success(res, "Danh sách bàn.", data);
+        const data = await service.getTables(req.user);
+
+        return response.success(
+            res,
+            "Lấy danh sách bàn thành công.",
+            data
+        );
     } catch (error) {
-        return response.error(res, error.message);
+        return response.error(
+            res,
+            error.message,
+            400
+        );
     }
 };
 

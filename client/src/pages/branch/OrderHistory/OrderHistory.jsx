@@ -29,13 +29,15 @@ export default function OrderHistory() {
     };
 
     const loadData = async () => {
-        try {
-            const res = await orderService.getHistory();
-            setOrders(Array.isArray(res.data.data) ? res.data.data : []);
-        } catch (err) {
-            showNotification(err.response?.data?.message || err.message);
-        }
-    };
+    try {
+        const res = await orderService.getHistory();
+        setOrders(Array.isArray(res.data) ? res.data : []);
+    } catch (err) {
+        showNotification(
+            err.response?.data?.message || err.message
+        );
+    }
+};
 
     const getOrdererInfo = (order) => {
     const orderCode = order.orderCode || "";
@@ -73,16 +75,15 @@ export default function OrderHistory() {
 };
 
     const handleViewDetail = async (orderId) => {
-        try {
-            setLoadingDetail(true);
-            const res = await orderService.getById(orderId);
-            setSelectedOrder(res.data.data);
-        } catch (err) {
-            showNotification(err.response?.data?.message || err.message);
-        } finally {
-            setLoadingDetail(false);
-        }
-    };
+    try {
+        const res = await orderService.getById(orderId);
+        setSelectedOrder(res.data);
+    } catch (err) {
+        showNotification(
+            err.response?.data?.message || err.message
+        );
+    }
+};
 
     const getWeekRange = (date) => {
         const selected = new Date(date);

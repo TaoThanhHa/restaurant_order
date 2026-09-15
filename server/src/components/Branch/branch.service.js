@@ -1,111 +1,115 @@
+
 const prisma = require("../../config/prisma");
 const bcrypt = require("bcrypt");
 const validator = require("validator");
 const crypto = require("crypto");
 const mailService = require("../Mail/mail.server");
-  
-// GENERATE PASSWORD
-const generatePassword = () => {
 
-    return crypto
+const generatePassword = () =>
+    crypto
         .randomBytes(8)
         .toString("base64")
         .replace(/[+/=]/g, "")
         .substring(0, 10);
 
-};
+const checkBranchAccess = async (branchId, user) => {
+    const id = Number(branchId);
 
-const getAll = async () => {
-
-    return await prisma.branch.findMany({
-
-        select: {
-            id: true,
-            name: true,
-            address: true,
-            phone: true,
-            email: true,
-            isActive: true,
-            createdAt: true,
-        },
-
-        orderBy: {
-            id: "asc",
-        },
-
-    });
-
-};
-
-const getById = async (id, user) => {
-    const branchId = Number(id);
-
-    if (!branchId) {
+    if (!id) {
         throw new Error("Chi nhánh không hợp lệ.");
     }
 
-    if (
-        user.role === "BRANCH" &&
-        Number(user.branchId) !== branchId
-    ) {
-        throw new Error(
-            "Bạn không có quyền truy cập chi nhánh này."
-        );
-    }
-
     const branch = await prisma.branch.findUnique({
-        where: {
-            id: branchId,
-        },
+        where: { id },
         select: {
             id: true,
-            name: true,
-            address: true,
-            phone: true,
-            email: true,
-            isActive: true,
-            createdAt: true,
-        },
+            restaurantId: true
+        }
     });
 
     if (!branch) {
         throw new Error("Chi nhánh không tồn tại.");
     }
 
+    if (user.role === "BRANCH") {
+        if (Number(user.branchId) !== id) {
+            throw new Error("Bạn không có quyền truy cập chi nhánh này.");
+        }
+    } else if (user.role === "ADMIN") {
+        if (Number(user.restaurantId) !== Number(branch.restaurantId)) {
+            throw new Error("Bạn không có quyền truy cập chi nhánh này.");
+        }
+    }
+
     return branch;
 };
 
-const getProfile = async (userId) => {
+const getAll = async (user) => {
+    console.log("BRANCH GET ALL USER:", user);
 
-    const user = await prisma.user.findUnique({
-
+    const branches = await prisma.branch.findMany({
         where: {
-            id: Number(userId),
+            restaurantId: Number(user.restaurantId)
         },
+        select: {
+            id: true,
+            name: true,
+            address: true,
+            phone: true,
+            email: true,
+            isActive: true,
+            createdAt: true
+        },
+        orderBy: {
+            id: "asc"
+        }
+    });
 
+    console.log("BRANCH GET ALL RESULT:", branches);
+
+    return branches;
+};
+
+const getById = async (id, user) => {
+    await checkBranchAccess(id, user);
+
+    return await prisma.branch.findUnique({
+        where: { id: Number(id) },
+        select: {
+            id: true,
+            name: true,
+            address: true,
+            phone: true,
+            email: true,
+            isActive: true,
+            createdAt: true
+        }
+    });
+};
+
+const getProfile = async (userId) => {
+    const user = await prisma.user.findUnique({
+        where: { id: Number(userId) },
         select: {
             id: true,
             username: true,
             email: true,
             isActive: true,
             mustChangePassword: true,
-
+            restaurantId: true,
             role: {
                 select: {
-                    name: true,
-                },
+                    name: true
+                }
             },
-
             branch: {
                 select: {
                     id: true,
-                    name: true,
-                },
+                    name: true
+                }
             },
-
-            createdAt: true,
-        },
-
+            createdAt: true
+        }
     });
 
     if (!user) {
@@ -115,9 +119,12 @@ const getProfile = async (userId) => {
     return user;
 };
 
-  
-// CREATE
-const create = async (data) => {
+const create = async (data, user) => {
+    const restaurantId = Number(user.restaurantId);
+
+    if (!restaurantId) {
+        throw new Error("Tài khoản chưa thuộc nhà hàng.");
+    }
 
     const name = data.name?.trim();
     const address = data.address?.trim() || null;
@@ -137,9 +144,7 @@ const create = async (data) => {
     }
 
     const existedBranch = await prisma.branch.findUnique({
-        where: {
-            email,
-        },
+        where: { email }
     });
 
     if (existedBranch) {
@@ -147,178 +152,109 @@ const create = async (data) => {
     }
 
     const existedUser = await prisma.user.findUnique({
-        where: {
-            email,
-        },
+        where: { email }
     });
 
     if (existedUser) {
         throw new Error("Email tài khoản đã tồn tại.");
     }
 
-    const cashierRole = await prisma.role.findUnique({
-
-        where: {
-            name: "BRANCH",
-        },
-
+    const branchRole = await prisma.role.findUnique({
+        where: { name: "BRANCH" }
     });
 
-    if (!cashierRole) {
+    if (!branchRole) {
         throw new Error("Không tìm thấy role BRANCH.");
     }
 
     const tempPassword = generatePassword();
-
-    const hashedPassword = await bcrypt.hash(
-        tempPassword,
-        10
-    );
+    const hashedPassword = await bcrypt.hash(tempPassword, 10);
 
     const result = await prisma.$transaction(async (tx) => {
-
         const branch = await tx.branch.create({
-
             data: {
-
                 name,
-
                 address,
-
                 phone,
-
                 email,
-
-            },
-
+                restaurantId
+            }
         });
 
-          
-// COPY TOÀN BỘ MÓN ĂN CHO CHI NHÁNH MỚI
-  
+        const foods = await tx.food.findMany({
+            select: {
+                id: true
+            }
+        });
 
-const foods = await tx.food.findMany({
-    select: {
-        id: true,
-    },
-});
-
-if (foods.length > 0) {
-
-    await tx.branchFood.createMany({
-
-        data: foods.map(food => ({
-
-            branchId: branch.id,
-
-            foodId: food.id,
-
-            status: "AVAILABLE",
-
-        })),
-
-    });
-
-}
+        if (foods.length > 0) {
+            await tx.branchFood.createMany({
+                data: foods.map((food) => ({
+                    branchId: branch.id,
+                    foodId: food.id,
+                    status: "AVAILABLE"
+                }))
+            });
+        }
 
         await tx.user.create({
-
             data: {
-
                 username: email,
-
                 email,
-
                 password: hashedPassword,
-
-                roleId: cashierRole.id,
-
+                roleId: branchRole.id,
+                restaurantId,
                 branchId: branch.id,
-
                 isActive: true,
-
-                mustChangePassword: true,
-
-            },
-
+                mustChangePassword: true
+            }
         });
 
         return branch;
-
     });
 
     try {
-
         await mailService.sendBranchAccount(
-
             result.name,
-
             email,
-
             tempPassword
-
         );
-
     } catch (err) {
-
         await prisma.user.deleteMany({
-
             where: {
-
-                branchId: result.id,
-
-            },
-
+                branchId: result.id
+            }
         });
 
         await prisma.branch.delete({
-
             where: {
-
-                id: result.id,
-
-            },
-
+                id: result.id
+            }
         });
 
         throw err;
-
     }
 
     return result;
 };
-  
-// UPDATE
-  
 
-const update = async (id, data) => {
+const update = async (id, data, user) => {
+    await checkBranchAccess(id, user);
 
     const branch = await prisma.branch.findUnique({
-
         where: {
-            id,
+            id: Number(id)
         },
-
         include: {
-
             users: {
-
                 where: {
-
                     role: {
-
-                        name: "BRANCH",
-
-                    },
-
+                        name: "BRANCH"
+                    }
                 },
-
-                take: 1,
-
-            },
-
-        },
-
+                take: 1
+            }
+        }
     });
 
     if (!branch) {
@@ -326,11 +262,8 @@ const update = async (id, data) => {
     }
 
     const name = data.name?.trim() ?? branch.name;
-
     const address = data.address?.trim() ?? branch.address;
-
     const phone = data.phone?.trim() ?? branch.phone;
-
     const email = data.email
         ? data.email.trim().toLowerCase()
         : branch.email;
@@ -339,22 +272,13 @@ const update = async (id, data) => {
         throw new Error("Email không hợp lệ.");
     }
 
-      
-    // EMAIL ĐÃ TỒN TẠI?
-      
-
     const existedBranch = await prisma.branch.findFirst({
-
         where: {
-
             email,
-
             NOT: {
-                id,
-            },
-
-        },
-
+                id: Number(id)
+            }
+        }
     });
 
     if (existedBranch) {
@@ -362,230 +286,121 @@ const update = async (id, data) => {
     }
 
     const existedUser = await prisma.user.findFirst({
-
         where: {
-
             email,
-
             NOT: {
-
-                id: branch.users[0]?.id || 0,
-
-            },
-
-        },
-
+                id: branch.users[0]?.id || 0
+            }
+        }
     });
 
     if (existedUser) {
         throw new Error("Email tài khoản đã tồn tại.");
     }
 
-      
-    // EMAIL KHÔNG ĐỔI
-      
-
     if (email === branch.email) {
-
         return await prisma.branch.update({
-
             where: {
-                id,
+                id: Number(id)
             },
-
             data: {
-
                 name,
-
                 address,
-
                 phone,
-
-                isActive:
-                    data.isActive ?? branch.isActive,
-
-            },
-
+                isActive: data.isActive ?? branch.isActive
+            }
         });
-
     }
 
-      
-    // EMAIL ĐỔI -> RESET PASSWORD
-      
-
     const tempPassword = generatePassword();
+    const hashedPassword = await bcrypt.hash(tempPassword, 10);
 
-    const hashedPassword = await bcrypt.hash(
-        tempPassword,
-        10
-    );
+    const result = await prisma.$transaction(async (tx) => {
+        const updatedBranch = await tx.branch.update({
+            where: {
+                id: Number(id)
+            },
+            data: {
+                name,
+                address,
+                phone,
+                email,
+                isActive: data.isActive ?? branch.isActive
+            }
+        });
 
-    const result = await prisma.$transaction(
+        await tx.user.updateMany({
+            where: {
+                branchId: Number(id),
+                restaurantId: Number(user.restaurantId),
+                role: {
+                    name: "BRANCH"
+                }
+            },
+            data: {
+                username: email,
+                email,
+                password: hashedPassword,
+                mustChangePassword: true
+            }
+        });
 
-        async (tx) => {
-
-            const updatedBranch =
-                await tx.branch.update({
-
-                    where: {
-                        id,
-                    },
-
-                    data: {
-
-                        name,
-
-                        address,
-
-                        phone,
-
-                        email,
-
-                        isActive:
-                            data.isActive ?? branch.isActive,
-
-                    },
-
-                });
-
-            await tx.user.updateMany({
-
-                where: {
-
-                    branchId: id,
-
-                    role: {
-
-                        name: "BRANCH",
-
-                    },
-
-                },
-
-                data: {
-
-                    username: email,
-
-                    email,
-
-                    password: hashedPassword,
-
-                    mustChangePassword: true,
-
-                },
-
-            });
-
-            return updatedBranch;
-
-        }
-
-    );
-
-  
-// SEND EMAIL NEW ACCOUNT
-  
+        return updatedBranch;
+    });
 
     await mailService.sendBranchAccount(
-
         result.name,
-
         email,
-
         tempPassword
-
     );
 
     return result;
-
 };
 
-  
-// REMOVE
-  
+const remove = async (id, user) => {
+    await checkBranchAccess(id, user);
 
-const remove = async (id) => {
-
-    const branch = await prisma.branch.findUnique({
-
-        where: {
-            id,
-        },
-
-        include: {
-
-            users: {
-
-                where: {
-
-                    role: {
-
-                        name: "BRANCH",
-
-                    },
-
-                },
-
+    await prisma.$transaction(async (tx) => {
+        await tx.branch.update({
+            where: {
+                id: Number(id)
             },
-
-        },
-
-    });
-
-    if (!branch) {
-        throw new Error("Chi nhánh không tồn tại.");
-    }
-
-   await prisma.$transaction(async(tx)=>{
-
-    await tx.branch.update({
-
-        where:{
-            id
-        },
-
-        data:{
-            isActive:false
-        }
-
-    });
-
-    await tx.user.updateMany({
-
-        where:{
-
-            branchId:id,
-
-            role:{
-                name:"BRANCH"
+            data: {
+                isActive: false
             }
+        });
 
-        },
-
-        data:{
-            isActive:false
-        }
-
+        await tx.user.updateMany({
+            where: {
+                branchId: Number(id),
+                restaurantId: Number(user.restaurantId),
+                role: {
+                    name: "BRANCH"
+                }
+            },
+            data: {
+                isActive: false
+            }
+        });
     });
-
-});
 };
 
-const toggleStatus = async (id) => {
-    const branch = await prisma.branch.findUnique({
-        where: { id },
-    });
+const toggleStatus = async (id, user) => {
+    await checkBranchAccess(id, user);
 
-    if (!branch) {
-        throw new Error("Chi nhánh không tồn tại.");
-    }
+    const branch = await prisma.branch.findUnique({
+        where: {
+            id: Number(id)
+        }
+    });
 
     return await prisma.branch.update({
-        where: { id },
-        data: {
-            isActive: !branch.isActive,
+        where: {
+            id: Number(id)
         },
+        data: {
+            isActive: !branch.isActive
+        }
     });
 };
 
@@ -594,13 +409,10 @@ const changePassword = async (
     currentPassword,
     newPassword
 ) => {
-
     const user = await prisma.user.findUnique({
-
         where: {
-            id: Number(userId),
-        },
-
+            id: Number(userId)
+        }
     });
 
     if (!user) {
@@ -622,22 +434,16 @@ const changePassword = async (
         );
     }
 
-    const password = await bcrypt.hash(
-        newPassword,
-        10
-    );
+    const password = await bcrypt.hash(newPassword, 10);
 
     await prisma.user.update({
-
         where: {
-            id: user.id,
+            id: user.id
         },
-
         data: {
             password,
-            mustChangePassword: false,
-        },
-
+            mustChangePassword: false
+        }
     });
 
     return true;
@@ -651,5 +457,5 @@ module.exports = {
     update,
     remove,
     toggleStatus,
-    changePassword,
+    changePassword
 };

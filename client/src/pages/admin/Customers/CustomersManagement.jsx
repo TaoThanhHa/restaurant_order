@@ -4,7 +4,6 @@ import { useEffect, useState } from "react";
 import customerAdminService from "../../../services/customerAdmin.service";
 import NotiModal from "../../../components/NotiModal/NotiModal";
 
-// CONSTANTS
 const INITIAL_STATISTICS = {
     totalCustomers: 0,
     guestCustomers: 0,
@@ -111,8 +110,6 @@ export default function CustomerManagement() {
                   label: `Năm ${item}`,
               }));
 
-    // NOTIFICATION
-
     const showNotification = (
         type,
         message,
@@ -133,8 +130,6 @@ export default function CustomerManagement() {
         }));
     };
 
-    // CHANGE PERIOD
-
     const handlePeriodChange = (newPeriod) => {
         setPeriod(newPeriod);
 
@@ -154,8 +149,6 @@ export default function CustomerManagement() {
 
         setPeriodValue(String(currentYear));
     };
-
-    // LOAD CUSTOMERS
 
     const loadCustomers = async () => {
         try {
@@ -205,8 +198,6 @@ export default function CustomerManagement() {
         }
     };
 
-    // LOAD WHEN FILTER CHANGES
-
     useEffect(() => {
         const timer = setTimeout(
             loadCustomers,
@@ -222,12 +213,8 @@ export default function CustomerManagement() {
         search,
     ]);
 
-    // RENDER
-
     return (
         <div className="min-h-full bg-[var(--color-background)] p-3">
-            {/* HEADER */}
-
             <div className="mb-6 flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
                 <div>
                     <h1 className="text-2xl font-bold text-[var(--color-text)]">
@@ -241,8 +228,6 @@ export default function CustomerManagement() {
                 </div>
 
                 <div className="flex flex-wrap items-center gap-2">
-                    {/* YEAR */}
-
                     {period !== "year" && (
                         <select
                             value={year}
@@ -268,8 +253,6 @@ export default function CustomerManagement() {
                         </select>
                     )}
 
-                    {/* PERIOD VALUE */}
-
                     <select
                         value={periodValue}
                         onChange={(e) =>
@@ -292,8 +275,6 @@ export default function CustomerManagement() {
                             )
                         )}
                     </select>
-
-                    {/* PERIOD */}
 
                     <div className="flex rounded-xl bg-white p-1 shadow-sm">
                         {PERIODS.map(
@@ -318,8 +299,6 @@ export default function CustomerManagement() {
                             )
                         )}
                     </div>
-
-                    {/* SORT */}
 
                     <select
                         value={sort}
@@ -381,11 +360,7 @@ export default function CustomerManagement() {
                 />
             </div>
 
-            {/* CONTENT */}
-
             <div className="rounded-2xl bg-white shadow-sm">
-                {/* TOOLBAR */}
-
                 <div className="flex flex-col gap-4 border-b border-slate-100 p-5 lg:flex-row lg:items-center lg:justify-between">
                     <div>
                         <h2 className="font-semibold text-[var(--color-text)]">
@@ -399,18 +374,10 @@ export default function CustomerManagement() {
                     </div>
 
                     <div className="relative w-full lg:w-80">
-                        <Search
-                            size={18}
-                            className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--color-text-muted)]"
-                        />
-
+                        <Search size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--color-text-muted)]"/>
                         <input
                             value={search}
-                            onChange={(e) =>
-                                setSearch(
-                                    e.target.value
-                                )
-                            }
+                            onChange={(e) =>setSearch(e.target.value)}
                             placeholder="Tìm tên, SĐT hoặc email..."
                             className="h-10 w-full rounded-xl border border-slate-200 bg-slate-50 pl-10 pr-4 text-sm outline-none transition focus:border-[var(--color-primary)] focus:bg-white"
                         />
@@ -418,7 +385,6 @@ export default function CustomerManagement() {
                 </div>
 
                 {/* TABLE */}
-
                 <div className="overflow-x-auto">
                     <table className="w-full min-w-[900px]">
                         <thead>
@@ -431,10 +397,7 @@ export default function CustomerManagement() {
                                     "Tổng chi tiêu",
                                     "Lần gần nhất",
                                 ].map((title) => (
-                                    <th
-                                        key={title}
-                                        className="px-5 py-3 text-center text-xs font-semibold uppercase text-[var(--color-text)]"
-                                    >
+                                    <th key={title} className="px-5 py-3 text-center text-xs font-semibold uppercase text-[var(--color-text)]">
                                         {title}
                                     </th>
                                 ))}
@@ -446,29 +409,17 @@ export default function CustomerManagement() {
                         <tbody>
                             {loading ? (
                                 <tr>
-                                    <td
-                                        colSpan={7}
-                                        className="px-5 py-12 text-center text-sm text-[var(--color-text-muted)]"
-                                    >
-                                        Đang tải dữ liệu
-                                        khách hàng...
+                                    <td colSpan={7} className="px-5 py-12 text-center text-sm text-[var(--color-text-muted)]">
+                                        Đang tải dữ liệu khách hàng...
                                     </td>
                                 </tr>
                             ) : (
                                 customers.map(
                                     (customer) => (
                                         <CustomerRow
-                                            key={
-                                                customer.id
-                                            }
-                                            customer={
-                                                customer
-                                            }
-                                            onClick={() =>
-                                                setSelectedCustomer(
-                                                    customer
-                                                )
-                                            }
+                                            key={customer.id }
+                                            customer={customer}
+                                            onClick={() => setSelectedCustomer(customer)}
                                         />
                                     )
                                 )
@@ -476,16 +427,11 @@ export default function CustomerManagement() {
                         </tbody>
                     </table>
                 </div>
-
-                {/* EMPTY */}
-
                 {!loading &&
                     customers.length === 0 && (
                         <EmptyCustomers />
                     )}
             </div>
-
-            {/* DETAIL */}
 
             {selectedCustomer && (
                 <CustomerDetail
@@ -495,9 +441,6 @@ export default function CustomerManagement() {
                     }
                 />
             )}
-
-            {/* NOTIFICATION */}
-
             <NotiModal
                 open={notification.open}
                 type={notification.type}
@@ -509,24 +452,14 @@ export default function CustomerManagement() {
     );
 }
 
-// CUSTOMER ROW
-
 function CustomerRow({
     customer,
     onClick,
 }) {
-    const initial =
-        customer.name
-            ?.charAt(0)
-            ?.toUpperCase() || "?";
+    const initial = customer.name ?.charAt(0) ?.toUpperCase() || "?";
 
     return (
-        <tr
-            onClick={onClick}
-            className="cursor-pointer border-b border-slate-100 transition hover:bg-slate-50"
-        >
-            {/* CUSTOMER */}
-
+        <tr onClick={onClick} className="cursor-pointer border-b border-slate-100 transition hover:bg-slate-50">
             <td className="px-5 py-4">
                 <div className="flex items-center gap-3">
                     <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[var(--color-secondary)] font-semibold text-[var(--color-primary)]">
@@ -539,8 +472,6 @@ function CustomerRow({
                 </div>
             </td>
 
-            {/* CONTACT */}
-
             <td className="px-5 py-4 text-center">
                 <p className="text-sm text-[var(--color-text)]">
                     {customer.phone || "—"}
@@ -551,71 +482,45 @@ function CustomerRow({
                 </p>
             </td>
 
-            {/* VISITS */}
-
             <td className="px-5 py-4 text-center">
                 <span className="inline-flex items-center rounded-full bg-[var(--color-secondary)] px-3 py-1 text-sm font-semibold text-[var(--color-primary)]">
                     {customer.visits || 0} lần
                 </span>
             </td>
 
-            {/* BRANCH */}
-
             <td className="px-5 py-4">
                 <div className="flex items-center justify-center gap-2">
-                    <MapPin
-                        size={16}
-                        className="text-[var(--color-primary)]"
-                    />
-
+                    <MapPin size={16} className="text-[var(--color-primary)]" />
                     <span className="text-sm text-[var(--color-text)]">
-                        {customer.favoriteBranch ||
-                            "—"}
+                        {customer.favoriteBranch || "—"}
                     </span>
                 </div>
             </td>
 
-            {/* SPENT */}
-
             <td className="px-5 py-4 text-center">
                 <span className="text-sm font-semibold text-[var(--color-text)]">
-                    {formatMoney(
-                        customer.totalSpent
-                    )}
+                    {formatMoney(customer.totalSpent)}
                 </span>
             </td>
-
-            {/* LAST VISIT */}
 
             <td className="px-5 py-4 text-center">
                 <div className="flex items-center justify-center gap-2 text-sm text-[var(--color-text-muted)]">
                     <CalendarDays size={15} />
-
                     {formatDate(customer.lastVisit)}
                 </div>
             </td>
 
-            {/* ARROW */}
-
             <td className="px-3">
-                <ChevronRight
-                    size={18}
-                    className="text-[var(--color-text-muted)]"
-                />
+                <ChevronRight size={18} className="text-[var(--color-text-muted)]"/>
             </td>
         </tr>
     );
 }
 
-// EMPTY
-
 function EmptyCustomers() {
     return (
         <div className="py-16 text-center">
-            <Users
-                size={40}
-                className="mx-auto text-slate-300"
-            />
+            <Users size={40} className="mx-auto text-slate-300" />
 
             <p className="mt-3 font-medium text-[var(--color-text-muted)]">
                 Không tìm thấy khách hàng
@@ -628,8 +533,6 @@ function EmptyCustomers() {
         </div>
     );
 }
-
-// STAT CARD
 
 function StatCard({
     icon,
@@ -662,16 +565,11 @@ function StatCard({
     );
 }
 
-// CUSTOMER DETAIL
-
 function CustomerDetail({
     customer,
     onClose,
 }) {
-    const initial =
-        customer.name
-            ?.charAt(0)
-            ?.toUpperCase() || "?";
+    const initial = customer.name ?.charAt(0) ?.toUpperCase() || "?";
 
     const branches = Array.isArray(
         customer.branches
@@ -684,18 +582,10 @@ function CustomerDetail({
         : [];
 
     return (
-        <div
-            className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
-            onClick={onClose}
-        >
-            <div
-                className="max-h-[90vh] w-full max-w-3xl overflow-y-auto rounded-3xl bg-white shadow-xl"
-                onClick={(e) =>
-                    e.stopPropagation()
-                }
-            >
-                {/* HEADER */}
-
+        <div  className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onClick={onClose}>
+            <div className="max-h-[90vh] w-full max-w-3xl overflow-y-auto rounded-3xl bg-white shadow-xl"
+                onClick={(e) => e.stopPropagation() }
+            > 
                 <div className="border-b border-slate-100 p-6">
                     <div className="flex items-start justify-between">
                         <div className="flex items-center gap-4">
@@ -705,13 +595,11 @@ function CustomerDetail({
 
                             <div>
                                 <h2 className="text-xl font-bold text-[var(--color-text)]">
-                                    {customer.name ||
-                                        "Khách hàng"}
+                                    {customer.name || "Khách hàng"}
                                 </h2>
 
                                 <p className="mt-1 text-sm text-[var(--color-text-muted)]">
-                                    {customer.phone ||
-                                        "—"}
+                                    {customer.phone || "—"}
                                 </p>
                             </div>
                         </div>
@@ -736,22 +624,15 @@ function CustomerDetail({
 
                     <DetailStat
                         label="Tổng chi tiêu"
-                        value={formatMoney(
-                            customer.totalSpent
-                        )}
+                        value={formatMoney( customer.totalSpent )}
                     />
 
                     <DetailStat
                         label="Cơ sở yêu thích"
-                        value={
-                            customer.favoriteBranch ||
-                            "—"
-                        }
+                        value={customer.favoriteBranch || "—" }
                     />
                 </div>
-
-                {/* BRANCH */}
-
+ 
                 <div className="px-6 pb-6">
                     <h3 className="mb-4 font-semibold text-[var(--color-text)]">
                         Thống kê theo cơ sở
@@ -766,42 +647,29 @@ function CustomerDetail({
                             {branches.map(
                                 (branch) => (
                                     <div
-                                        key={
-                                            branch.branchId
-                                        }
+                                        key={ branch.branchId  }
                                         className="rounded-2xl border border-slate-100 p-4"
                                     >
                                         <div className="flex items-center justify-between gap-4">
                                             <div className="flex items-center gap-3">
                                                 <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[var(--color-secondary)] text-[var(--color-primary)]">
-                                                    <MapPin
-                                                        size={
-                                                            18
-                                                        }
-                                                    />
+                                                    <MapPin size={ 18 } />
                                                 </div>
 
                                                 <div>
                                                     <p className="font-medium text-[var(--color-text)]">
-                                                        {
-                                                            branch.branchName
-                                                        }
+                                                        { branch.branchName }
                                                     </p>
 
                                                     <p className="text-xs text-[var(--color-text-muted)]">
-                                                        {branch.visits ||
-                                                            0}{" "}
+                                                        {branch.visits || 0}{" "}
                                                         lần ghé
                                                     </p>
                                                 </div>
                                             </div>
 
                                             <p className="font-semibold text-[var(--color-text)]">
-                                                {formatMoney(
-                                                    branch.totalSpent ??
-                                                        branch.spent ??
-                                                        0
-                                                )}
+                                                {formatMoney( branch.totalSpent ?? branch.spent ?? 0)}
                                             </p>
                                         </div>
                                     </div>
@@ -814,9 +682,7 @@ function CustomerDetail({
         </div>
     );
 }
-
-// DETAIL STAT
-
+ 
 function DetailStat({
     label,
     value,

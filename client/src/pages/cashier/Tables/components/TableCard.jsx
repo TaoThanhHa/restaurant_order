@@ -113,7 +113,7 @@ export default function TableCard({
                         type="button"
                         className="
                             mb-3
-                            w-25
+                            w-30
                             rounded-lg
                             bg-white
                             px-3
@@ -153,6 +153,8 @@ export default function TableCard({
                     ">
 
                         {orders.map(order => {
+                            console.log("TABLE:", table);
+console.log("ORDERS:", table.orders);
 
                             const statusInfo =
                                 STATUS[order.status];

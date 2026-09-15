@@ -67,11 +67,8 @@ function AccountSection() {
 
         try {
             setLoading(true);
-
             await adminService.requestChangeEmail(newEmail);
-
             setOtpSent(true);
-
             showNotification({
                 type: "success",
                 title: "Đã gửi OTP",
@@ -102,16 +99,12 @@ function AccountSection() {
 
         try {
             setLoading(true);
-
             await adminService.verifyChangeEmail(otp);
-
             setEditingEmail(false);
             setOtpSent(false);
             setNewEmail("");
             setOtp("");
-
             await loadProfile();
-
             showNotification({
                 type: "success",
                 title: "Đổi email thành công",
@@ -209,9 +202,7 @@ function AccountSection() {
                                 <input
                                     type="text"
                                     value={otp}
-                                    onChange={(e) =>
-                                        setOtp(e.target.value)
-                                    }
+                                    onChange={(e) => setOtp(e.target.value) }
                                     placeholder="Nhập mã OTP"
                                     maxLength={6}
                                     className="flex-1 rounded-lg border px-4 py-3 outline-none"

@@ -19,14 +19,12 @@ export default function FloorModal({
         message: "",
     });
 
-    // INIT FORM
     useEffect(() => {
         if (!open) return;
 
         setFloorNumber( floor?.floorNumber?.toString() || "");
     }, [open, floor]);
 
-    // NOTIFICATION
     const showNotification = ({
         type = "warning",
         title,
@@ -47,8 +45,7 @@ export default function FloorModal({
         }));
     };
 
-    // SUBMIT
-    const handleSubmit = () => {
+    const handleSubmit = () => { 
         const value = Number(floorNumber);
 
         if (!floorNumber.trim()) {
@@ -69,9 +66,7 @@ export default function FloorModal({
             return;
         }
 
-        onSave({
-            floorNumber: value,
-        });
+        onSave({floorNumber: value, });
     };
 
     if (!open) return null;
@@ -83,7 +78,6 @@ export default function FloorModal({
                     className="w-full max-w-md overflow-hidden rounded-2xl bg-white shadow-xl"
                     onClick={(e) => e.stopPropagation()}
                 >
-                    {/* HEADER */}
                     <div className="flex items-center justify-between border-b p-5">
                         <h2 className="text-xl font-bold text-gray-800">
                             {floor ? "Chỉnh sửa tầng" : "Thêm tầng"}
@@ -121,7 +115,6 @@ export default function FloorModal({
                         </div>
                     </div>
 
-                    {/* FOOTER */}
                     <div className="flex justify-end gap-3 border-t p-5">
                         <Button
                             type="button"
@@ -131,17 +124,13 @@ export default function FloorModal({
                             Hủy
                         </Button>
 
-                        <Button
-                            type="button"
-                            onClick={handleSubmit}
-                        >
+                        <Button type="button" onClick={handleSubmit} >
                             {floor ? "Lưu thay đổi"  : "Thêm tầng"}
                         </Button>
                     </div>
                 </div>
             </div>
 
-            {/* VALIDATION NOTIFICATION */}
             <NotiModal
                 open={notification.open}
                 type={notification.type}

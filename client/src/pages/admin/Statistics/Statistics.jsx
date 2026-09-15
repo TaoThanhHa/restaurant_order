@@ -1,13 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import {
-    ArrowDown,
-    ArrowUp,
-    ShoppingBag,
-    Store,
-    TrendingDown,
-    TrendingUp,
-    Trophy,
-} from "lucide-react";
+import { ArrowDown, ArrowUp, ShoppingBag, Store, TrendingDown, TrendingUp, Trophy,} from "lucide-react";
 
 import adminService from "../../../services/adminStatistics.service";
 import NotiModal from "../../../components/NotiModal/NotiModal";
@@ -80,9 +72,7 @@ export default function Statistics({ branchOnly = false }) {
 
     const getSunday = (dateValue) => {
         const sunday = new Date(getMonday(dateValue));
-
         sunday.setDate(sunday.getDate() + 6);
-
         return sunday;
     };
 
@@ -99,16 +89,12 @@ export default function Statistics({ branchOnly = false }) {
         const loadBranches = async () => {
             try {
                 const res = await adminService.getBranches();
-
-                console.log("BRANCHES RESPONSE:", res);
-
                 if (res?.success) {
                     setBranches(Array.isArray(res.data) ? res.data : []);
                     return;
                 }
 
                 setBranches([]);
-
                 showNotification(
                     "warning",
                     "Không có dữ liệu",
@@ -116,9 +102,7 @@ export default function Statistics({ branchOnly = false }) {
                 );
             } catch (error) {
                 console.error("Lỗi lấy danh sách chi nhánh:", error);
-
                 setBranches([]);
-
                 showNotification(
                     "error",
                     "Không thể tải dữ liệu",
@@ -135,10 +119,7 @@ export default function Statistics({ branchOnly = false }) {
         const loadStatistics = async () => {
             try {
                 setLoading(true);
-
-                const params = {
-                    period,
-                };
+                const params = {period,};
 
                 if (!branchOnly && branchId) {
                     params.branchId = branchId;
@@ -621,9 +602,10 @@ export default function Statistics({ branchOnly = false }) {
 
                         <p className="mt-3 text-2xl font-bold text-purple-500">
                             {formatMoney(
-                                summary.averageOrder
+                                Math.round(Number(summary.averageOrder || 0))
                             )}
                         </p>
+
                     </div>
                 </div>
 

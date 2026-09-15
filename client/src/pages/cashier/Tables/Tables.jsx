@@ -25,6 +25,8 @@ export default function Tables() {
                 const data = res?.data || [];
                 setFloors(data);
                 if (data.length > 0) setFloorId(data[0].id);
+                console.log("GET TABLES RESPONSE:", res);
+                console.log("FLOOR ID:", floorId);
             } catch (error) {
                 console.error("LOAD FLOORS ERROR:", error.response?.data || error);
             }
@@ -46,12 +48,15 @@ export default function Tables() {
 
             const res = await tableService.getByFloor(floorId);
 
-            const data = (res?.data || []).map((table) => ({
-                ...table,
-                status: table.status,
-            }));
+            console.log("GET TABLES RESPONSE:", res);
 
-            console.log("TABLES:", data);
+            const data = Array.isArray(res)
+                ? res
+                : Array.isArray(res?.data)
+                    ? res.data
+                    : [];
+
+            console.log("TABLES DATA:", data);
 
             setTables(data);
         } catch (error) {
@@ -59,6 +64,8 @@ export default function Tables() {
                 "LOAD TABLES ERROR:",
                 error.response?.data || error
             );
+
+            setTables([]);
         } finally {
             if (showLoading) {
                 setLoading(false);
@@ -109,7 +116,7 @@ export default function Tables() {
                     Tầng này chưa có bàn.
                 </div>
             ) : (
-                <div className="grid grid-cols-1 gap-5 md:grid-cols-2 xl:grid-cols-3">
+                <div className="grid grid-cols-1 gap-5 md:grid-cols-2 xl:grid-cols-4">
                     {tables.map(table => (
                         <TableCard key={table.id} table={table} onClick={() => handleTableClick(table)} />
                     ))}

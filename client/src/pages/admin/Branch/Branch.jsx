@@ -20,11 +20,19 @@ export default function Branch() {
     const loadBranches = async () => {
         try {
             setLoading(true);
+
             const res = await branchService.getAll();
-            setBranches(res.data);
+
+            console.log("BRANCH RESPONSE:", res);
+
+            setBranches(res.data || []);
         } catch (err) {
             console.log(err);
-            alert(err.response?.data?.message || err.message);
+
+            alert(
+                err.response?.data?.message ||
+                err.message
+            );
         } finally {
             setLoading(false);
         }

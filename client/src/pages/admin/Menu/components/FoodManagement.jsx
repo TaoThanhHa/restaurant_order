@@ -116,8 +116,7 @@ export default function FoodManagement() {
                 !selectedCategory ||
                 food.categoryId === selectedCategory;
 
-            const matchKeyword =
-                food.name?.toLowerCase().includes(text);
+            const matchKeyword = food.name?.toLowerCase().includes(text);
 
             const matchStatus =
                 statusTab === "active"
@@ -294,4 +293,3 @@ export default function FoodManagement() {
         </div>
     );
 }
-

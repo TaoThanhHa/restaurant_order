@@ -39,10 +39,12 @@ import CustomerOrderHistory from "../pages/customer/Account/OrderHistory";
 import OrderLayout from "../layouts/OrderLayout/OrderLayout";
 
 import Kitchen from "../pages/kitchen/Kitchen";
+
 // Warehouse
 import Warehouse from "../pages/warehouse/Warehouse";
 import InventoryImport from "../pages/warehouse/Import/InventoryImport";
 
+import HomePage from "../pages/auth/HomePage/HomePage";
 import ProtectedRoute from "./ProtectedRoute";
 
 export default function AppRoutes() {
@@ -50,14 +52,12 @@ export default function AppRoutes() {
 
     return (
         <Routes>
-            {/* Mặc định */}
-            <Route path="/" element={<Navigate to="/login" replace />} />
+            <Route path="/" element={<HomePage />} />
 
-            {/* Login */}
             <Route path="/login" element={<Login />} />
             <Route path="/forgot-password" element={<ForgotPassword />} />
 
-            {/* Branch */}
+            {/* Branch / Cashier / Order */}
             <Route
                 path="/branch"
                 element={
@@ -73,8 +73,9 @@ export default function AppRoutes() {
                 <Route path="take-away" element={<TakeAwayOrder />} />
                 <Route path="order-history" element={<OrderHistory />} />
                 <Route path="profile" element={<Profile />} />
-                <Route path="statistics" element={<Statistics branchOnly />} />
             </Route>
+
+            {/* Branch */}
             <Route
                 path="/branch"
                 element={
@@ -85,6 +86,7 @@ export default function AppRoutes() {
             >
                 <Route path="table" element={<TableManagement mode="branch" />} />
                 <Route path="employee" element={<BranchStaff />} />
+                <Route path="statistics" element={<Statistics branchOnly />} />
             </Route>
 
             {/* Admin */}
@@ -96,6 +98,7 @@ export default function AppRoutes() {
                     </ProtectedRoute>
                 }
             >
+                {/* ADMIN MULTI */}
                 <Route path="dashboard" element={<AdminDashboard />} />
                 <Route path="menu" element={<Menu />} />
                 <Route path="branch" element={<Branch />} />
@@ -103,6 +106,15 @@ export default function AppRoutes() {
                 <Route path="statistics" element={<Statistics />} />
                 <Route path="profile" element={<AdminProfile />} />
                 <Route path="table" element={<TableManagement mode="admin" />} />
+
+                {/* ADMIN SINGLE */}
+                <Route path="tables" element={<Tables />} />
+                <Route path="tables/:tableId" element={<TableDetail />} />
+                <Route path="floors" element={<TableManagement mode="admin" />} />
+                <Route path="foods" element={<Foods />} />
+                <Route path="take-away" element={<TakeAwayOrder />} />
+                <Route path="employees" element={<BranchStaff />} />
+                <Route path="order-history" element={<OrderHistory />} />
             </Route>
 
             {/* Customer */}
@@ -144,7 +156,6 @@ export default function AppRoutes() {
                 }
             />
 
-            {/* 404 */}
             <Route path="*" element={<Navigate to="/login" replace />} />
         </Routes>
     );

@@ -1,5 +1,4 @@
 import { useEffect, useState } from "react";
-
 import Button from "../../../../components/Button/Button";
 import orderService from "../../../../services/order.service";
 
@@ -8,64 +7,48 @@ export default function MergeOrderModal({
     onClose,
     orders = [],
     reload,
-    onSelectOrder
+    onSelectOrder,
 }) {
-
     const [targetOrderId, setTargetOrderId] = useState("");
     const [sourceOrderIds, setSourceOrderIds] = useState([]);
     const [loading, setLoading] = useState(false);
 
-    useEffect(() => {
+    const safeOrders = Array.isArray(orders)
+        ? orders.filter(Boolean)
+        : [];
 
+    useEffect(() => {
         if (!open) return;
 
-        setTargetOrderId(
-            orders[0]?.id || ""
-        );
-
+        setTargetOrderId(safeOrders[0]?.id || "");
         setSourceOrderIds([]);
-
     }, [open, orders]);
 
     if (!open) return null;
 
     const handleTargetChange = id => {
+        const orderId = Number(id);
 
-        setTargetOrderId(Number(id));
+        setTargetOrderId(orderId);
 
         setSourceOrderIds(prev =>
-            prev.filter(
-                orderId => orderId !== Number(id)
-            )
+            prev.filter(id => id !== orderId)
         );
-
     };
 
     const handleSourceChange = id => {
-
-        id = Number(id);
+        const orderId = Number(id);
 
         setSourceOrderIds(prev => {
-
-            if (prev.includes(id)) {
-
-                return prev.filter(
-                    orderId => orderId !== id
-                );
-
+            if (prev.includes(orderId)) {
+                return prev.filter(id => id !== orderId);
             }
 
-            return [
-                ...prev,
-                id
-            ];
-
+            return [...prev, orderId];
         });
-
     };
 
     const handleMerge = async () => {
-
         if (!targetOrderId) {
             alert("Vui lòng chọn đơn chính");
             return;
@@ -81,65 +64,38 @@ export default function MergeOrderModal({
         }
 
         try {
-
             setLoading(true);
 
             await orderService.mergeOrders({
-                targetOrderId,
-                sourceOrderIds
+                targetOrderId: Number(targetOrderId),
+                sourceOrderIds: sourceOrderIds.map(Number),
             });
 
-            // Đóng modal trước
             onClose();
 
-            // Reload lại bàn và chọn đơn chính
-            await reload(targetOrderId);
+            if (reload) {
+                await reload(Number(targetOrderId));
+            }
 
+            if (onSelectOrder) {
+                onSelectOrder(Number(targetOrderId));
+            }
         } catch (err) {
-
             alert(
                 err.response?.data?.message ||
-                err.message
+                err.message ||
+                "Không thể gộp đơn"
             );
-
         } finally {
-
             setLoading(false);
-
         }
     };
 
     return (
-
-        <div className="
-            fixed
-            inset-0
-            z-50
-            flex
-            items-center
-            justify-center
-            bg-black/40
-            p-4
-        ">
-
-            <div className="
-                w-full
-                max-w-lg
-                rounded-xl
-                bg-white
-                shadow-xl
-            ">
-
-                <div className="
-                    flex
-                    items-center
-                    justify-between
-                    border-b
-                    p-5
-                ">
-
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+            <div className="w-full max-w-lg rounded-xl bg-white shadow-xl">
+                <div className="flex items-center justify-between border-b p-5">
                     <div>
-
                         <h2 className="text-lg font-bold">
                             Gộp đơn
                         </h2>
@@ -147,57 +103,38 @@ export default function MergeOrderModal({
                         <p className="text-sm text-gray-500">
                             Chọn đơn chính và các đơn cần gộp
                         </p>
-
                     </div>
 
                     <button
                         onClick={onClose}
-                        className="
-                            text-xl
-                            text-gray-400
-                            hover:text-gray-700
-                        "
+                        className="text-xl text-gray-400 hover:text-gray-700"
                     >
                         ✕
                     </button>
-
                 </div>
 
                 <div className="p-5">
-
                     <h3 className="mb-3 font-semibold">
                         Đơn chính
                     </h3>
 
                     <div className="space-y-2">
-
-                        {orders.map(order => (
-
+                        {safeOrders.map(order => (
                             <label
                                 key={order.id}
-                                className={`
-                                    flex
-                                    cursor-pointer
-                                    items-center
-                                    justify-between
-                                    rounded-lg
-                                    border
-                                    p-3
-                                    ${
-                                        Number(targetOrderId) === order.id
-                                            ? "border-blue-500 bg-blue-50"
-                                            : ""
-                                    }
-                                `}
+                                className={`flex cursor-pointer items-center justify-between rounded-lg border p-3 ${
+                                    Number(targetOrderId) === order.id
+                                        ? "border-blue-500 bg-blue-50"
+                                        : ""
+                                }`}
                             >
-
                                 <div className="flex items-center gap-3">
-
                                     <input
                                         type="radio"
                                         name="targetOrder"
                                         checked={
-                                            Number(targetOrderId) === order.id
+                                            Number(targetOrderId) ===
+                                            Number(order.id)
                                         }
                                         onChange={() =>
                                             handleTargetChange(order.id)
@@ -205,24 +142,21 @@ export default function MergeOrderModal({
                                     />
 
                                     <div>
-
                                         <div className="font-semibold">
                                             {order.orderCode ||
                                                 `Đơn #${order.id}`}
                                         </div>
 
                                         <div className="text-sm text-gray-500">
-                                            {order.orderItems?.length || 0} món
+                                            {Array.isArray(order.orderItems)
+                                                ? order.orderItems.length
+                                                : 0}{" "}
+                                            món
                                         </div>
-
                                     </div>
-
                                 </div>
-
                             </label>
-
                         ))}
-
                     </div>
 
                     <div className="my-5 border-t" />
@@ -232,75 +166,51 @@ export default function MergeOrderModal({
                     </h3>
 
                     <div className="space-y-2">
-
-                        {orders
+                        {safeOrders
                             .filter(
                                 order =>
-                                    order.id !== Number(targetOrderId)
+                                    Number(order.id) !==
+                                    Number(targetOrderId)
                             )
                             .map(order => (
-
                                 <label
                                     key={order.id}
-                                    className="
-                                        flex
-                                        cursor-pointer
-                                        items-center
-                                        justify-between
-                                        rounded-lg
-                                        border
-                                        p-3
-                                    "
+                                    className="flex cursor-pointer items-center justify-between rounded-lg border p-3"
                                 >
-
                                     <div className="flex items-center gap-3">
-
                                         <input
                                             type="checkbox"
-                                            checked={
-                                                sourceOrderIds.includes(
-                                                    order.id
-                                                )
-                                            }
+                                            checked={sourceOrderIds.includes(
+                                                Number(order.id)
+                                            )}
                                             onChange={() =>
                                                 handleSourceChange(order.id)
                                             }
                                         />
 
                                         <div>
-
                                             <div className="font-semibold">
                                                 {order.orderCode ||
                                                     `Đơn #${order.id}`}
                                             </div>
 
                                             <div className="text-sm text-gray-500">
-                                                {order.orderItems?.length || 0} món
+                                                {Array.isArray(
+                                                    order.orderItems
+                                                )
+                                                    ? order.orderItems.length
+                                                    : 0}{" "}
+                                                món
                                             </div>
-
                                         </div>
-
                                     </div>
-
                                 </label>
-
                             ))}
-
                     </div>
-
                 </div>
 
-                <div className="
-                    flex
-                    justify-end
-                    gap-3
-                    border-t
-                    p-5
-                ">
-
-                    <Button
-                        onClick={onClose}
-                    >
+                <div className="flex justify-end gap-3 border-t p-5">
+                    <Button onClick={onClose}>
                         Hủy
                     </Button>
 
@@ -313,16 +223,10 @@ export default function MergeOrderModal({
                     >
                         {loading
                             ? "Đang gộp..."
-                            : "Gộp đơn"
-                        }
+                            : "Gộp đơn"}
                     </Button>
-
                 </div>
-
             </div>
-
         </div>
-
     );
-
 }

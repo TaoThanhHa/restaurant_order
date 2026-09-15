@@ -28,35 +28,35 @@ export default function TakeAwayOrder() {
                 if (showLoading) {
                     setLoading(true);
                 }
+
                 const res = await orderService.getTakeAway();
-                const newOrders = res?.data?.data || [];
+                const newOrders = res || [];
+
                 setOrders(newOrders);
 
-                setSelectedOrder((prevSelected) => {
+                setSelectedOrder(prevSelected => {
                     if (!prevSelected) {
                         return newOrders.length
                             ? newOrders[0]
                             : null;
                     }
 
-                    const updatedOrder =
-                        newOrders.find(
-                            order =>
-                                order.id === prevSelected.id
-                        );
+                    const updatedOrder = newOrders.find(
+                        order => order.id === prevSelected.id
+                    );
 
                     if (!updatedOrder) {
                         return newOrders.length
                             ? newOrders[0]
                             : null;
                     }
+
                     return updatedOrder;
                 });
-
             } catch (err) {
                 console.error(
                     "LOAD TAKE AWAY ERROR:",
-                    err
+                    err.response?.data || err
                 );
             } finally {
                 if (showLoading) {

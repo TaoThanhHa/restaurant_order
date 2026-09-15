@@ -16,12 +16,10 @@ export default function ProtectedRoute({
         );
     }
 
-    // Chưa đăng nhập
     if (!user) {
         return <Navigate to="/login" replace />;
     }
 
-    // Không đúng quyền
     if (
         roles.length > 0 &&
         !roles.includes(user.role)

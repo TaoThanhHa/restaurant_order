@@ -40,21 +40,15 @@ function AdminProfile() {
     const renderSection = () => {
         switch (activeSection) {
             case "restaurant": return <RestaurantSection />;
-
             case "account": return <AccountSection />;
-
             case "security": return <SecuritySection />;
-
             case "appearance": return <AppearanceSection />;
-
             default: return <RestaurantSection />;
         }
     };
 
     return (
         <div>
-
-            {/* TITLE */}
             <div className="mb-4">
                 <h1 className="text-2xl font-bold text-[var(--color-text)]">
                     Cài đặt
@@ -62,7 +56,6 @@ function AdminProfile() {
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-                {/* SIDEBAR SETTINGS */}
                 <div className="bg-white rounded-xl border border-[var(--color-border)] p-3 h-fit">
                     {sections.map((section) => {
                         const Icon = section.icon;
@@ -99,7 +92,6 @@ function AdminProfile() {
                         );
                     })}
                 </div>
-                {/* CONTENT */}
                 <div className="lg:col-span-3">
                     {renderSection()}
                 </div>
