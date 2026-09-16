@@ -4,12 +4,13 @@ import { Plus, Search } from "lucide-react";
 import Button from "../../../../components/Button/Button";
 import FoodCard from "../../../../components/FoodCard/FoodCard";
 import FoodFormModal from "./FoodFormModal";
+import NotiModal from "../../../../components/NotiModal/NotiModal";
 
 import foodService from "../../../../services/food.service";
 import categoryService from "../../../../services/category.service";
 import branchService from "../../../../services/branch.service";
 
-export default function FoodManagement() {
+export default function FoodManagement({ restaurantMode = "SINGLE" }) {
     const [foods, setFoods] = useState([]);
     const [categories, setCategories] = useState([]);
     const [branches, setBranches] = useState([]);
@@ -23,28 +24,72 @@ export default function FoodManagement() {
     const [statusTab, setStatusTab] = useState("active");
     const [keyword, setKeyword] = useState("");
 
+    const [notification, setNotification] = useState({
+        open: false,
+        type: "success",
+        title: "",
+        message: "",
+    });
+
+    const isMulti = restaurantMode === "MULTI";
+
     useEffect(() => {
         loadData();
-    }, []);
+    }, [restaurantMode]);
 
     const loadData = async () => {
         setLoading(true);
 
         try {
-            const [foodRes, categoryRes, branchRes] = await Promise.all([
+            const requests = [
                 foodService.getAll(),
                 categoryService.getAll(),
-                branchService.getAll(),
-            ]);
+            ];
+
+            if (isMulti) {
+                requests.push(branchService.getAll());
+            }
+
+            const [foodRes, categoryRes, branchRes] =
+                await Promise.all(requests);
 
             setFoods(foodRes.data.data);
             setCategories(categoryRes.data.data);
-            setBranches(branchRes.data);
+            setBranches(isMulti ? branchRes?.data || [] : []);
         } catch (err) {
-            alert(err.response?.data?.message || err.message);
+            showNotification({
+                type: "error",
+                title: "Không thể tải dữ liệu",
+                message:
+                    err.response?.data?.message ||
+                    err.message ||
+                    "Đã xảy ra lỗi khi tải danh sách món.",
+            });
         } finally {
             setLoading(false);
         }
+    };
+
+    const showNotification = ({
+        type = "success",
+        title = "",
+        message = "",
+    }) => {
+        setNotification({
+            open: true,
+            type,
+            title,
+            message,
+        });
+    };
+
+    const closeNotification = () => {
+        setNotification({
+            open: false,
+            type: "success",
+            title: "",
+            message: "",
+        });
     };
 
     const handleCreate = () => {
@@ -58,29 +103,59 @@ export default function FoodManagement() {
     };
 
     const handleSave = async data => {
-        try {
-            if (selectedFood) {
-                await foodService.update(selectedFood.id, data);
-            } else {
-                await foodService.create(data);
-            }
+        if (selectedFood) {
+            await foodService.update(selectedFood.id, data);
 
             setOpenModal(false);
             setSelectedFood(null);
             await loadData();
-        } catch (err) {
-            alert(err.response?.data?.message || err.message);
+
+            showNotification({
+                type: "success",
+                title: "Cập nhật thành công",
+                message: "Cập nhật món ăn thành công.",
+            });
+
+            return;
         }
+
+        await foodService.create(data);
+
+        setOpenModal(false);
+        setSelectedFood(null);
+        await loadData();
+
+        showNotification({
+            type: "success",
+            title: "Tạo món thành công",
+            message: "Món ăn đã được thêm vào danh sách.",
+        });
     };
 
     const handleInactive = async food => {
         if (!window.confirm(`Ngừng kinh doanh "${food.name}"?`)) return;
 
         try {
-            await foodService.update(food.id, { status: "INACTIVE" });
+            await foodService.update(food.id, {
+                status: "INACTIVE",
+            });
+
             await loadData();
+
+            showNotification({
+                type: "success",
+                title: "Cập nhật thành công",
+                message: `Đã ngừng kinh doanh "${food.name}".`,
+            });
         } catch (err) {
-            alert(err.response?.data?.message || err.message);
+            showNotification({
+                type: "error",
+                title: "Không thể cập nhật",
+                message:
+                    err.response?.data?.message ||
+                    err.message ||
+                    "Đã xảy ra lỗi khi cập nhật món.",
+            });
         }
     };
 
@@ -93,19 +168,22 @@ export default function FoodManagement() {
     };
 
     const isFoodActive = food => {
-        if (selectedBranch) {
-            const branchFood = getBranchFood(food);
-
-            if (!branchFood) {
-                return false;
-            }
-
-            return branchFood.status !== "INACTIVE";
+        if (!isMulti) {
+            return food.status !== "INACTIVE";
         }
 
-        return food.branchFoods?.some(
-            item => item.status !== "INACTIVE"
-        ) ?? false;
+        if (selectedBranch) {
+            const branchFood = getBranchFood(food);
+            return branchFood
+                ? branchFood.status !== "INACTIVE"
+                : false;
+        }
+
+        return (
+            food.branchFoods?.some(
+                item => item.status !== "INACTIVE"
+            ) ?? false
+        );
     };
 
     const displayFoods = useMemo(() => {
@@ -116,14 +194,19 @@ export default function FoodManagement() {
                 !selectedCategory ||
                 food.categoryId === selectedCategory;
 
-            const matchKeyword = food.name?.toLowerCase().includes(text);
+            const matchKeyword =
+                food.name?.toLowerCase().includes(text);
 
             const matchStatus =
                 statusTab === "active"
                     ? isFoodActive(food)
                     : !isFoodActive(food);
 
-            return matchCategory && matchKeyword && matchStatus;
+            return (
+                matchCategory &&
+                matchKeyword &&
+                matchStatus
+            );
         });
     }, [
         foods,
@@ -131,17 +214,8 @@ export default function FoodManagement() {
         selectedBranch,
         statusTab,
         keyword,
+        restaurantMode,
     ]);
-
-    const filteredFoodsByBranch = useMemo(() => {
-        if (!selectedBranch) return foods;
-
-        return foods.filter(food =>
-            food.branchFoods?.some(
-                item => item.branchId === Number(selectedBranch)
-            )
-        );
-    }, [foods, selectedBranch]);
 
     return (
         <div className="flex h-full flex-col">
@@ -166,29 +240,39 @@ export default function FoodManagement() {
 
                             <input
                                 value={keyword}
-                                onChange={e => setKeyword(e.target.value)}
+                                onChange={e =>
+                                    setKeyword(e.target.value)
+                                }
                                 placeholder="Tìm theo tên món..."
                                 className="w-full rounded-lg border py-2 pl-10 pr-3 outline-none focus:border-[var(--color-primary)]"
                             />
                         </div>
 
-                        <select
-                            value={selectedBranch}
-                            onChange={e => {
-                                setSelectedBranch(e.target.value);
-                                setStatusTab("active");
-                            }}
-                            className="h-9 w-60 rounded-lg border px-3 outline-none focus:border-[var(--color-primary)]"
-                        >
-                            <option value="">Tất cả cơ sở</option>
+                        {isMulti && (
+                            <select
+                                value={selectedBranch}
+                                onChange={e => {
+                                    setSelectedBranch(
+                                        e.target.value
+                                    );
+                                    setStatusTab("active");
+                                }}
+                                className="h-9 w-60 rounded-lg border px-3 outline-none focus:border-[var(--color-primary)]"
+                            >
+                                <option value="">
+                                    Tất cả cơ sở
+                                </option>
 
-                            {Array.isArray(branches) &&
-                                branches.map(branch => (
-                                    <option key={branch.id} value={branch.id}>
+                                {branches.map(branch => (
+                                    <option
+                                        key={branch.id}
+                                        value={branch.id}
+                                    >
                                         {branch.name}
                                     </option>
                                 ))}
-                        </select>
+                            </select>
+                        )}
 
                         <Button
                             onClick={handleCreate}
@@ -239,7 +323,9 @@ export default function FoodManagement() {
                     {categories.map(category => (
                         <button
                             key={category.id}
-                            onClick={() => setSelectedCategory(category.id)}
+                            onClick={() =>
+                                setSelectedCategory(category.id)
+                            }
                             className={`rounded-full px-4 py-2 ${
                                 selectedCategory === category.id
                                     ? "bg-[var(--color-primary)] text-white"
@@ -284,11 +370,20 @@ export default function FoodManagement() {
                 food={selectedFood}
                 categories={categories}
                 branches={branches}
+                restaurantMode={restaurantMode}
                 onClose={() => {
                     setOpenModal(false);
                     setSelectedFood(null);
                 }}
                 onSave={handleSave}
+            />
+
+            <NotiModal
+                open={notification.open}
+                type={notification.type}
+                title={notification.title}
+                message={notification.message}
+                onClose={closeNotification}
             />
         </div>
     );

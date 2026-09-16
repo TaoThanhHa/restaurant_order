@@ -11,6 +11,7 @@ export default function FoodFormModal({
     food = null,
     categories = [],
     branches = [],
+    restaurantMode = "SINGLE",
     onClose,
     onSave,
 }) {
@@ -28,6 +29,7 @@ export default function FoodFormModal({
 
     const [form, setForm] = useState(emptyForm);
     const [preview, setPreview] = useState("");
+    const [saving, setSaving] = useState(false);
     const [notification, setNotification] = useState({
         open: false,
         type: "success",
@@ -35,17 +37,14 @@ export default function FoodFormModal({
         message: "",
     });
 
+    const isMulti = restaurantMode === "MULTI";
+
     const showNotification = ({
         type = "success",
         title = "",
         message = "",
     }) => {
-        setNotification({
-            open: true,
-            type,
-            title,
-            message,
-        });
+        setNotification({ open: true, type, title, message });
     };
 
     const closeNotification = () => {
@@ -68,19 +67,26 @@ export default function FoodFormModal({
                 description: food.description || "",
                 image: food.image || "",
                 status: food.status || "AVAILABLE",
-                branchFoods:
-                    food.branchFoods?.map(item => ({
-                        branchId: item.branchId,
-                        status: item.status,
-                    })) || [],
+                branchFoods: isMulti
+                    ? food.branchFoods?.map(item => ({
+                          branchId: item.branchId,
+                          status: item.status,
+                      })) || []
+                    : [],
             });
 
-            setPreview( food.image ? `http://localhost:5000${food.image}` : "" );
+            setPreview(
+                food.image
+                    ? `http://localhost:5000${food.image}`
+                    : ""
+            );
         } else {
             setForm(emptyForm);
             setPreview("");
         }
-    }, [food, open]);
+
+        setSaving(false);
+    }, [food, open, restaurantMode]);
 
     if (!open) return null;
 
@@ -124,14 +130,15 @@ export default function FoodFormModal({
     const toggleBranch = branchId => {
         setForm(prev => {
             const existed = prev.branchFoods.some(
-                item => item.branchId === branchId
+                item => Number(item.branchId) === Number(branchId)
             );
 
             return {
                 ...prev,
                 branchFoods: existed
                     ? prev.branchFoods.filter(
-                          item => item.branchId !== branchId
+                          item =>
+                              Number(item.branchId) !== Number(branchId)
                       )
                     : [
                           ...prev.branchFoods,
@@ -148,14 +155,16 @@ export default function FoodFormModal({
         setForm(prev => ({
             ...prev,
             branchFoods: prev.branchFoods.map(item =>
-                item.branchId === branchId
+                Number(item.branchId) === Number(branchId)
                     ? { ...item, status }
                     : item
             ),
         }));
     };
 
-    const handleSubmit = () => {
+    const handleSubmit = async () => {
+        if (saving) return;
+
         if (!form.name.trim()) {
             showNotification({
                 type: "warning",
@@ -183,7 +192,7 @@ export default function FoodFormModal({
             return;
         }
 
-        if (mode === "create" && form.branchFoods.length === 0) {
+        if (isMulti && form.branchFoods.length === 0) {
             showNotification({
                 type: "warning",
                 title: "Thiếu chi nhánh",
@@ -192,11 +201,32 @@ export default function FoodFormModal({
             return;
         }
 
-        onSave({
+        const data = {
             ...form,
             price: Number(form.price),
-            branchFoods: form.branchFoods,
-        });
+            branchIds: isMulti
+                ? form.branchFoods.map(item => item.branchId)
+                : [],
+            branchFoods: isMulti ? form.branchFoods : [],
+        };
+
+        try {
+            setSaving(true);
+            await onSave(data);
+        } catch (err) {
+            console.error("SAVE FOOD ERROR:", err);
+
+            showNotification({
+                type: "error",
+                title: "Không thể lưu món",
+                message:
+                    err.response?.data?.message ||
+                    err.message ||
+                    "Đã xảy ra lỗi khi lưu món ăn.",
+            });
+        } finally {
+            setSaving(false);
+        }
     };
 
     return (
@@ -213,7 +243,8 @@ export default function FoodFormModal({
                         <button
                             type="button"
                             onClick={onClose}
-                            className="rounded-lg p-2 transition hover:bg-gray-100"
+                            disabled={saving}
+                            className="rounded-lg p-2 transition hover:bg-gray-100 disabled:opacity-50"
                         >
                             <X size={22} />
                         </button>
@@ -222,7 +253,10 @@ export default function FoodFormModal({
                     <div className="grid grid-cols-3 gap-8 p-6">
                         <div>
                             <div
-                                onClick={() => fileInputRef.current?.click() }
+                                onClick={() =>
+                                    !saving &&
+                                    fileInputRef.current?.click()
+                                }
                                 className="flex aspect-square cursor-pointer flex-col items-center justify-center rounded-xl border-2 border-dashed border-gray-300 bg-gray-50 transition hover:border-blue-500 hover:bg-blue-50"
                             >
                                 {preview ? (
@@ -258,12 +292,12 @@ export default function FoodFormModal({
                                 <label className="mb-2 block font-semibold">
                                     Tên món
                                 </label>
-
                                 <input
                                     name="name"
                                     value={form.name}
                                     onChange={handleChange}
-                                    className="w-full rounded-lg border p-3 outline-none focus:border-blue-500"
+                                    disabled={saving}
+                                    className="w-full rounded-lg border p-3 outline-none focus:border-blue-500 disabled:bg-gray-100"
                                 />
                             </div>
 
@@ -271,12 +305,12 @@ export default function FoodFormModal({
                                 <label className="mb-2 block font-semibold">
                                     Danh mục
                                 </label>
-
                                 <select
                                     name="categoryId"
                                     value={form.categoryId}
                                     onChange={handleChange}
-                                    className="w-full rounded-lg border p-3 outline-none focus:border-blue-500"
+                                    disabled={saving}
+                                    className="w-full rounded-lg border p-3 outline-none focus:border-blue-500 disabled:bg-gray-100"
                                 >
                                     <option value="">
                                         -- Chọn danh mục --
@@ -297,13 +331,13 @@ export default function FoodFormModal({
                                 <label className="mb-2 block font-semibold">
                                     Giá
                                 </label>
-
                                 <input
                                     type="number"
                                     name="price"
                                     value={form.price}
                                     onChange={handleChange}
-                                    className="w-full rounded-lg border p-3 outline-none focus:border-blue-500"
+                                    disabled={saving}
+                                    className="w-full rounded-lg border p-3 outline-none focus:border-blue-500 disabled:bg-gray-100"
                                 />
                             </div>
 
@@ -311,63 +345,87 @@ export default function FoodFormModal({
                                 <label className="mb-2 block font-semibold">
                                     Mô tả
                                 </label>
-
                                 <textarea
                                     rows={4}
                                     name="description"
                                     value={form.description}
                                     onChange={handleChange}
-                                    className="w-full rounded-lg border p-3 outline-none focus:border-blue-500"
+                                    disabled={saving}
+                                    className="w-full rounded-lg border p-3 outline-none focus:border-blue-500 disabled:bg-gray-100"
                                 />
                             </div>
 
-                            <div>
-                                <label className="mb-3 block font-semibold">
-                                    Chi nhánh
-                                </label>
+                            {isMulti && (
+                                <div>
+                                    <label className="mb-3 block font-semibold">
+                                        Chi nhánh
+                                    </label>
 
-                                <div className="space-y-4">
-                                    {branches.map(branch => {
-                                        const item = form.branchFoods.find( branchFood => branchFood.branchId ===  branch.id );
-                                        const checked = Boolean(item);
+                                    <div className="space-y-4">
+                                        {branches.map(branch => {
+                                            const item =
+                                                form.branchFoods.find(
+                                                    branchFood =>
+                                                        Number(
+                                                            branchFood.branchId
+                                                        ) ===
+                                                        Number(branch.id)
+                                                );
 
-                                        return (
-                                            <div
-                                                key={branch.id}
-                                                className="rounded-lg border p-3"
-                                            >
-                                                <div className="flex items-center justify-between">
-                                                    <label className="flex items-center gap-2">
-                                                        <input
-                                                            type="checkbox"
-                                                            checked={checked}
-                                                            onChange={() => toggleBranch( branch.id ) }
-                                                        />
+                                            const checked = Boolean(item);
 
-                                                        {branch.name}
-                                                    </label>
+                                            return (
+                                                <div
+                                                    key={branch.id}
+                                                    className="rounded-lg border p-3"
+                                                >
+                                                    <div className="flex items-center justify-between">
+                                                        <label className="flex items-center gap-2">
+                                                            <input
+                                                                type="checkbox"
+                                                                checked={
+                                                                    checked
+                                                                }
+                                                                disabled={saving}
+                                                                onChange={() =>
+                                                                    toggleBranch(
+                                                                        branch.id
+                                                                    )
+                                                                }
+                                                            />
+                                                            {branch.name}
+                                                        </label>
 
-                                                    {checked && (
-                                                        <select
-                                                            value={item.status}
-                                                            onChange={e => handleBranchStatusChange( branch.id, e.target.value ) }
-                                                            className="rounded border px-2 py-1"
-                                                        >
-                                                            <option value="AVAILABLE">
-                                                                Còn kinh doanh
-                                                            </option>
-
-                                                            <option value="INACTIVE">
-                                                                Ngừng kinh doanh
-                                                            </option>
-                                                        </select>
-                                                    )}
+                                                        {checked && (
+                                                            <select
+                                                                value={
+                                                                    item.status
+                                                                }
+                                                                disabled={saving}
+                                                                onChange={e =>
+                                                                    handleBranchStatusChange(
+                                                                        branch.id,
+                                                                        e.target
+                                                                            .value
+                                                                    )
+                                                                }
+                                                                className="rounded border px-2 py-1"
+                                                            >
+                                                                <option value="AVAILABLE">
+                                                                    Còn kinh doanh
+                                                                </option>
+                                                                <option value="INACTIVE">
+                                                                    Ngừng kinh doanh
+                                                                </option>
+                                                            </select>
+                                                        )}
+                                                    </div>
                                                 </div>
-                                            </div>
-                                        );
-                                    })}
+                                            );
+                                        })}
+                                    </div>
                                 </div>
-                            </div>
+                            )}
                         </div>
                     </div>
 
@@ -376,14 +434,20 @@ export default function FoodFormModal({
                             type="button"
                             className="!bg-gray-400"
                             onClick={onClose}
+                            disabled={saving}
                         >
                             Hủy
                         </Button>
 
-                        <Button onClick={handleSubmit}>
-                            {mode === "create"
-                                ? "Tạo món"
-                                : "Lưu thay đổi"}
+                        <Button
+                            onClick={handleSubmit}
+                            disabled={saving}
+                        >
+                            {saving
+                                ? "Đang lưu..."
+                                : mode === "create"
+                                  ? "Tạo món"
+                                  : "Lưu thay đổi"}
                         </Button>
                     </div>
                 </div>

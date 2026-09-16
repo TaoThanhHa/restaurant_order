@@ -10,6 +10,11 @@ const getById = async (id) => {
     return res.data;
 };
 
+const getSingleBranch = async () => {
+    const response = await api.get("/branches/single");
+    return response.data;
+};
+
 const create = async (data) => {
     const res = await api.post("/branches", data);
     return res.data;
@@ -28,6 +33,7 @@ const toggleStatus = async (id) => {
 export default {
     getAll,
     getById,
+    getSingleBranch,
     create,
     update,
     toggleStatus,

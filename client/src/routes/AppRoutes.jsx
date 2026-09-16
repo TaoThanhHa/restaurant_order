@@ -5,7 +5,6 @@ import Login from "../pages/auth/Login/Login";
 import AuthLayout from "../layouts/AuthLayout/AuthLayout";
 import ForgotPassword from "../pages/auth/Login/ForgotPassword";
 
-// Branch
 import CashierDashboard from "../pages/branch/Dashboard/Dashboard";
 import Tables from "../pages/cashier/Tables/Tables";
 import TableDetail from "../pages/cashier/Tables/TableDetail/TableDetail";
@@ -16,7 +15,6 @@ import TableManagement from "../pages/admin/Table/FloorManagement";
 import Profile from "../pages/branch/Profile/BranchProfile";
 import BranchStaff from "../pages/branch/Employee/BranchStaff";
 
-// Admin
 import AdminDashboard from "../pages/admin/Dashboard/Dashboard";
 import Menu from "../pages/admin/Menu/Menu";
 import Branch from "../pages/admin/Branch/Branch";
@@ -24,7 +22,6 @@ import CustomerManagement from "../pages/admin/Customers/CustomersManagement";
 import Statistics from "../pages/admin/Statistics/Statistics";
 import AdminProfile from "../pages/admin/Profile/AdminProfile";
 
-// Customer
 import CustomerWelcome from "../pages/customer/CustomerWelcome";
 import CustomerGuest from "../pages/customer/CustomerGuest";
 import CustomerLogin from "../pages/customer/CustomerLogin";
@@ -35,12 +32,9 @@ import Order from "../pages/customer/Order/Order";
 import Account from "../pages/customer/Account/Account";
 import CustomerOrderHistory from "../pages/customer/Account/OrderHistory";
 
-// Order
 import OrderLayout from "../layouts/OrderLayout/OrderLayout";
-
 import Kitchen from "../pages/kitchen/Kitchen";
 
-// Warehouse
 import Warehouse from "../pages/warehouse/Warehouse";
 import InventoryImport from "../pages/warehouse/Import/InventoryImport";
 
@@ -57,7 +51,7 @@ export default function AppRoutes() {
             <Route path="/login" element={<Login />} />
             <Route path="/forgot-password" element={<ForgotPassword />} />
 
-            {/* Branch / Cashier / Order */}
+            {/* BRANCH / CASHIER / ORDER */}
             <Route
                 path="/branch"
                 element={
@@ -73,23 +67,17 @@ export default function AppRoutes() {
                 <Route path="take-away" element={<TakeAwayOrder />} />
                 <Route path="order-history" element={<OrderHistory />} />
                 <Route path="profile" element={<Profile />} />
+
+                {user?.role === "BRANCH" && (
+                    <>
+                        <Route path="table" element={<TableManagement mode="branch" />} />
+                        <Route path="employee" element={<BranchStaff />} />
+                        <Route path="statistics" element={<Statistics branchOnly />} />
+                    </>
+                )}
             </Route>
 
-            {/* Branch */}
-            <Route
-                path="/branch"
-                element={
-                    <ProtectedRoute roles={["BRANCH"]}>
-                        <AuthLayout />
-                    </ProtectedRoute>
-                }
-            >
-                <Route path="table" element={<TableManagement mode="branch" />} />
-                <Route path="employee" element={<BranchStaff />} />
-                <Route path="statistics" element={<Statistics branchOnly />} />
-            </Route>
-
-            {/* Admin */}
+            {/* ADMIN */}
             <Route
                 path="/admin"
                 element={
@@ -110,14 +98,14 @@ export default function AppRoutes() {
                 {/* ADMIN SINGLE */}
                 <Route path="tables" element={<Tables />} />
                 <Route path="tables/:tableId" element={<TableDetail />} />
-                <Route path="floors" element={<TableManagement mode="admin" />} />
-                <Route path="foods" element={<Foods />} />
+                <Route path="floors" element={<TableManagement mode="single" />} />
+                <Route path="foods" element={<Menu />} />
                 <Route path="take-away" element={<TakeAwayOrder />} />
                 <Route path="employees" element={<BranchStaff />} />
                 <Route path="order-history" element={<OrderHistory />} />
             </Route>
 
-            {/* Customer */}
+            {/* CUSTOMER */}
             <Route path="/customer/:qrCode" element={<CustomerWelcome />} />
             <Route path="/customer/guest/:qrCode" element={<CustomerGuest />} />
             <Route path="/customer/login/:qrCode" element={<CustomerLogin />} />
@@ -128,7 +116,7 @@ export default function AppRoutes() {
             <Route path="/customer/history/:qrCode" element={<CustomerOrderHistory />} />
             <Route path="/customer/forgot/:qrCode" element={<CustomerForgotPassword />} />
 
-            {/* Warehouse */}
+            {/* WAREHOUSE */}
             <Route
                 path="/warehouse"
                 element={
@@ -146,7 +134,7 @@ export default function AppRoutes() {
                 }
             />
 
-            {/* Kitchen */}
+            {/* KITCHEN */}
             <Route
                 path="/kitchen"
                 element={

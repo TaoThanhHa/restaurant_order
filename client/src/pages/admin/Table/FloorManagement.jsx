@@ -1,40 +1,33 @@
 import { useEffect, useState } from "react";
 import { Plus, AlertTriangle, X } from "lucide-react";
-
 import Button from "../../../components/Button/Button";
 import NotiModal from "../../../components/NotiModal/NotiModal";
-
 import FloorCard from "./FloorCard";
 import FloorModal from "./FloorModal";
 import TableModal from "./TableModal";
-
 import branchService from "../../../services/branch.service";
 import floorService from "../../../services/floor.service";
 
 export default function FloorManagement({ mode = "admin" }) {
     const isAdmin = mode === "admin";
+    const isSingle = mode === "single";
 
     const [branches, setBranches] = useState([]);
     const [selectedBranch, setSelectedBranch] = useState("");
-
     const [currentBranch, setCurrentBranch] = useState(null);
     const [floors, setFloors] = useState([]);
     const [loading, setLoading] = useState(false);
-
     const [openFloorModal, setOpenFloorModal] = useState(false);
     const [selectedFloor, setSelectedFloor] = useState(null);
-
     const [openTableModal, setOpenTableModal] = useState(false);
     const [selectedTable, setSelectedTable] = useState(null);
-
     const [deleteFloor, setDeleteFloor] = useState(null);
     const [deletingFloor, setDeletingFloor] = useState(false);
-
     const [notification, setNotification] = useState({
         open: false,
         type: "success",
         title: "",
-        message: "",
+        message: ""
     });
 
     const getCurrentUser = () => {
@@ -49,99 +42,84 @@ export default function FloorManagement({ mode = "admin" }) {
 
     const branchId = isAdmin
         ? selectedBranch
-        : user?.branchId;
+        : isSingle
+            ? currentBranch?.id
+            : user?.branchId;
 
-    const showNotification = ({
-        type = "success",
-        title,
-        message,
-    }) => {
-        setNotification({
-            open: true,
-            type,
-            title,
-            message,
-        });
-    };
+    const showNotification = ({ type = "success", title, message }) =>
+        setNotification({ open: true, type, title, message });
 
-    const closeNotification = () => {
-        setNotification((prev) => ({
-            ...prev,
-            open: false,
-        }));
-    };
+    const closeNotification = () =>
+        setNotification(prev => ({ ...prev, open: false }));
 
     const getErrorMessage = (error, fallback) =>
-        error?.response?.data?.message ||
-        error?.message ||
-        fallback;
-
-    // ======================================================
-    // BRANCH
-    // ======================================================
+        error?.response?.data?.message || error?.message || fallback;
 
     const loadBranches = async () => {
         if (!isAdmin) return;
 
         try {
             const res = await branchService.getAll();
-            const data = res?.data || [];
+            const data = res?.data || res || [];
 
             setBranches(data);
 
-            if (data.length > 0) {
+            if (data.length > 0 && !selectedBranch) {
                 setSelectedBranch(data[0].id);
             }
         } catch (error) {
-            console.error(
-                "Lỗi lấy danh sách chi nhánh:",
-                error
-            );
-
+            console.error("Lỗi lấy danh sách chi nhánh:", error);
             showNotification({
                 type: "error",
                 title: "Không thể tải dữ liệu",
-                message: getErrorMessage(
-                    error,
-                    "Không thể lấy danh sách chi nhánh."
-                ),
+                message: getErrorMessage(error, "Không thể lấy danh sách chi nhánh.")
             });
         }
     };
 
-    // ======================================================
-    // BRANCH ACCOUNT
-    // ======================================================
-
-    const loadCurrentBranch = async () => {
-        if (isAdmin || !user?.branchId) return;
+    const loadSingleBranch = async () => {
+        if (!isSingle) return;
 
         try {
-            const res = await branchService.getById(
-                user.branchId
-            );
+            const res = await branchService.getSingleBranch();
+            const data = res?.data || res || null;
 
-            setCurrentBranch(res?.data || null);
+            if (!data?.id) {
+                setCurrentBranch(null);
+                return;
+            }
+
+            setCurrentBranch(data);
         } catch (error) {
-            console.error(
-                "Lỗi lấy thông tin chi nhánh:",
-                error
-            );
+            console.error("Lỗi lấy chi nhánh mặc định:", error);
+            setCurrentBranch(null);
 
             showNotification({
                 type: "error",
                 title: "Không thể tải dữ liệu",
-                message: getErrorMessage(
-                    error,
-                    "Không thể lấy thông tin chi nhánh."
-                ),
+                message: getErrorMessage(error, "Không thể lấy chi nhánh mặc định.")
             });
         }
     };
 
-    // ======================================================
-    // FLOOR
-    // ======================================================
+    const loadCurrentBranch = async () => {
+        if (isAdmin || isSingle || !user?.branchId) return;
+
+        try {
+            const res = await branchService.getById(user.branchId);
+            const data = res?.data || res || null;
+            setCurrentBranch(data);
+        } catch (error) {
+            console.error("Lỗi lấy thông tin chi nhánh:", error);
+            setCurrentBranch(null);
+
+            showNotification({
+                type: "error",
+                title: "Không thể tải dữ liệu",
+                message: getErrorMessage(error, "Không thể lấy thông tin chi nhánh.")
+            });
+        }
+    };
 
     const loadFloors = async () => {
         if (!branchId) {
@@ -152,24 +130,16 @@ export default function FloorManagement({ mode = "admin" }) {
         try {
             setLoading(true);
 
-            const res = await floorService.getByBranch(
-                branchId
-            );
-
-            setFloors(res?.data || []);
+            const res = await floorService.getByBranch(branchId);
+            setFloors(res?.data || res || []);
         } catch (error) {
-            console.error(
-                "Lỗi lấy danh sách tầng:",
-                error
-            );
+            console.error("Lỗi lấy danh sách tầng:", error);
+            setFloors([]);
 
             showNotification({
                 type: "error",
                 title: "Không thể tải dữ liệu",
-                message: getErrorMessage(
-                    error,
-                    "Không thể lấy danh sách tầng."
-                ),
+                message: getErrorMessage(error, "Không thể lấy danh sách tầng.")
             });
         } finally {
             setLoading(false);
@@ -177,29 +147,31 @@ export default function FloorManagement({ mode = "admin" }) {
     };
 
     useEffect(() => {
+        setCurrentBranch(null);
+
         if (isAdmin) {
             loadBranches();
+        } else if (isSingle) {
+            loadSingleBranch();
         } else {
             loadCurrentBranch();
         }
-    }, [isAdmin]);
+    }, [mode]);
 
     useEffect(() => {
         if (branchId) {
             loadFloors();
+        } else {
+            setFloors([]);
         }
     }, [branchId]);
-
-    // ======================================================
-    // FLOOR MODAL
-    // ======================================================
 
     const openCreateFloorModal = () => {
         setSelectedFloor(null);
         setOpenFloorModal(true);
     };
 
-    const openEditFloorModal = (floor) => {
+    const openEditFloorModal = floor => {
         setSelectedFloor(floor);
         setOpenFloorModal(true);
     };
@@ -209,78 +181,60 @@ export default function FloorManagement({ mode = "admin" }) {
         setSelectedFloor(null);
     };
 
-    const handleSaveFloor = async (data) => {
+    const handleSaveFloor = async data => {
         if (!branchId) {
             showNotification({
                 type: "error",
                 title: "Không xác định được chi nhánh",
-                message:
-                    "Không thể xác định chi nhánh cần thao tác.",
+                message: "Không thể xác định chi nhánh cần thao tác."
             });
-
             return;
         }
 
         try {
             if (selectedFloor) {
-                await floorService.update(
-                    selectedFloor.id,
-                    data
-                );
+                await floorService.update(selectedFloor.id, {
+                    ...data,
+                    branchId: Number(branchId)
+                });
 
                 showNotification({
                     type: "success",
                     title: "Cập nhật thành công",
-                    message:
-                        "Thông tin tầng đã được cập nhật.",
+                    message: "Thông tin tầng đã được cập nhật."
                 });
             } else {
                 await floorService.create({
                     ...data,
-                    branchId,
+                    branchId: Number(branchId)
                 });
 
                 showNotification({
                     type: "success",
                     title: "Thêm tầng thành công",
-                    message:
-                        "Tầng mới đã được thêm vào chi nhánh.",
+                    message: "Tầng mới đã được thêm vào chi nhánh."
                 });
             }
 
             closeFloorModal();
             await loadFloors();
         } catch (error) {
-            console.error(
-                "Lỗi lưu tầng:",
-                error
-            );
+            console.error("Lỗi lưu tầng:", error);
 
             showNotification({
                 type: "error",
                 title: selectedFloor
                     ? "Không thể cập nhật tầng"
                     : "Không thể thêm tầng",
-                message: getErrorMessage(
-                    error,
-                    "Đã xảy ra lỗi khi lưu thông tin tầng."
-                ),
+                message: getErrorMessage(error, "Đã xảy ra lỗi khi lưu thông tin tầng.")
             });
         }
     };
 
-    // ======================================================
-    // DELETE FLOOR
-    // ======================================================
-
-    const requestDeleteFloor = (floor) => {
-        setDeleteFloor(floor);
-    };
+    const requestDeleteFloor = floor => setDeleteFloor(floor);
 
     const closeDeleteFloor = () => {
-        if (deletingFloor) return;
-
-        setDeleteFloor(null);
+        if (!deletingFloor) setDeleteFloor(null);
     };
 
     const handleDeleteFloor = async () => {
@@ -292,47 +246,35 @@ export default function FloorManagement({ mode = "admin" }) {
             setDeletingFloor(true);
 
             await floorService.remove(floor.id);
-
             setDeleteFloor(null);
 
             showNotification({
                 type: "success",
                 title: "Xóa thành công",
-                message: `Tầng "${floor.name}" và toàn bộ bàn trong tầng đã được xóa.`,
+                message: `Tầng "${floor.name}" và toàn bộ bàn trong tầng đã được xóa.`
             });
 
             await loadFloors();
         } catch (error) {
-            console.error(
-                "Lỗi xóa tầng:",
-                error
-            );
-
+            console.error("Lỗi xóa tầng:", error);
             setDeleteFloor(null);
 
             showNotification({
                 type: "error",
                 title: "Không thể xóa tầng",
-                message: getErrorMessage(
-                    error,
-                    "Đã xảy ra lỗi khi xóa tầng."
-                ),
+                message: getErrorMessage(error, "Đã xảy ra lỗi khi xóa tầng.")
             });
         } finally {
             setDeletingFloor(false);
         }
     };
 
-    // ======================================================
-    // TABLE
-    // ======================================================
-
     const openCreateTableModal = () => {
         setSelectedTable(null);
         setOpenTableModal(true);
     };
 
-    const openEditTableModal = (table) => {
+    const openEditTableModal = table => {
         setSelectedTable(table);
         setOpenTableModal(true);
     };
@@ -342,27 +284,16 @@ export default function FloorManagement({ mode = "admin" }) {
         setSelectedTable(null);
     };
 
-    // ======================================================
-    // BRANCH NAME
-    // ======================================================
-
     const branchName = isAdmin
-        ? branches.find(
-              (branch) =>
-                  branch.id === Number(selectedBranch)
-          )?.name
-        : currentBranch?.name ||
-          "Chi nhánh của bạn";
+        ? branches.find(branch => Number(branch.id) === Number(selectedBranch))?.name
+        : currentBranch?.name || "Chi nhánh của bạn";
 
     return (
         <div className="flex h-full flex-col">
-            {/* HEADER */}
             <div className="border-b bg-white p-5">
                 <div className="flex items-center justify-between gap-4">
                     <div>
-                        <h2 className="text-2xl font-bold">
-                            Quản lý bàn
-                        </h2>
+                        <h2 className="text-2xl font-bold">Quản lý bàn</h2>
 
                         {!isAdmin && (
                             <p className="mt-1 text-sm text-gray-500">
@@ -375,38 +306,19 @@ export default function FloorManagement({ mode = "admin" }) {
                         {isAdmin && (
                             <select
                                 value={selectedBranch}
-                                onChange={(e) =>
-                                    setSelectedBranch(
-                                        Number(
-                                            e.target.value
-                                        )
-                                    )
-                                }
+                                onChange={e => setSelectedBranch(Number(e.target.value))}
                                 className="rounded-lg border border-gray-300 px-4 py-2 outline-none focus:border-[var(--color-primary)]"
                             >
-                                {branches.map(
-                                    (branch) => (
-                                        <option
-                                            key={
-                                                branch.id
-                                            }
-                                            value={
-                                                branch.id
-                                            }
-                                        >
-                                            {
-                                                branch.name
-                                            }
-                                        </option>
-                                    )
-                                )}
+                                {branches.map(branch => (
+                                    <option key={branch.id} value={branch.id}>
+                                        {branch.name}
+                                    </option>
+                                ))}
                             </select>
                         )}
 
                         <Button
-                            onClick={
-                                openCreateFloorModal
-                            }
+                            onClick={openCreateFloorModal}
                             disabled={!branchId}
                         >
                             <Plus size={18} />
@@ -414,12 +326,8 @@ export default function FloorManagement({ mode = "admin" }) {
                         </Button>
 
                         <Button
-                            onClick={
-                                openCreateTableModal
-                            }
-                            disabled={
-                                !floors.length
-                            }
+                            onClick={openCreateTableModal}
+                            disabled={!floors.length}
                         >
                             <Plus size={18} />
                             Thêm bàn
@@ -428,7 +336,6 @@ export default function FloorManagement({ mode = "admin" }) {
                 </div>
             </div>
 
-            {/* CONTENT */}
             <div className="flex-1 overflow-auto bg-gray-100 p-3 hide-scrollbar">
                 {loading ? (
                     <div className="flex min-h-[200px] items-center justify-center text-gray-500">
@@ -444,23 +351,13 @@ export default function FloorManagement({ mode = "admin" }) {
                     </div>
                 ) : (
                     <div className="space-y-6">
-                        {floors.map((floor) => (
+                        {floors.map(floor => (
                             <FloorCard
                                 key={floor.id}
                                 floor={floor}
-                                onEdit={() =>
-                                    openEditFloorModal(
-                                        floor
-                                    )
-                                }
-                                onDelete={() =>
-                                    requestDeleteFloor(
-                                        floor
-                                    )
-                                }
-                                onEditTable={
-                                    openEditTableModal
-                                }
+                                onEdit={() => openEditFloorModal(floor)}
+                                onDelete={() => requestDeleteFloor(floor)}
+                                onEditTable={openEditTableModal}
                                 reload={loadFloors}
                             />
                         ))}
@@ -468,7 +365,6 @@ export default function FloorManagement({ mode = "admin" }) {
                 )}
             </div>
 
-            {/* FLOOR MODAL */}
             <FloorModal
                 open={openFloorModal}
                 floor={selectedFloor}
@@ -476,7 +372,6 @@ export default function FloorManagement({ mode = "admin" }) {
                 onSave={handleSaveFloor}
             />
 
-            {/* TABLE MODAL */}
             <TableModal
                 open={openTableModal}
                 floors={floors}
@@ -486,7 +381,6 @@ export default function FloorManagement({ mode = "admin" }) {
                 onSuccess={showNotification}
             />
 
-            {/* DELETE FLOOR CONFIRMATION */}
             {deleteFloor && (
                 <div
                     className="fixed inset-0 z-[9998] flex items-center justify-center bg-black/40 p-5 backdrop-blur-[2px]"
@@ -494,15 +388,10 @@ export default function FloorManagement({ mode = "admin" }) {
                 >
                     <div
                         className="w-full max-w-sm rounded-3xl bg-white p-6 shadow-2xl"
-                        onClick={(e) =>
-                            e.stopPropagation()
-                        }
+                        onClick={e => e.stopPropagation()}
                     >
                         <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-yellow-50">
-                            <AlertTriangle
-                                size={34}
-                                className="text-yellow-500"
-                            />
+                            <AlertTriangle size={34} className="text-yellow-500" />
                         </div>
 
                         <div className="mt-4 text-center">
@@ -519,20 +408,15 @@ export default function FloorManagement({ mode = "admin" }) {
                             </p>
 
                             <p className="mt-2 text-sm leading-6 text-red-500">
-                                Toàn bộ bàn trong tầng
-                                này cũng sẽ bị xóa.
+                                Toàn bộ bàn trong tầng này cũng sẽ bị xóa.
                             </p>
                         </div>
 
                         <div className="mt-6 flex gap-3">
                             <button
                                 type="button"
-                                onClick={
-                                    closeDeleteFloor
-                                }
-                                disabled={
-                                    deletingFloor
-                                }
+                                onClick={closeDeleteFloor}
+                                disabled={deletingFloor}
                                 className="flex-1 rounded-xl border border-gray-200 bg-gray-100 px-4 py-3 font-semibold text-gray-700 transition hover:bg-gray-200 disabled:cursor-not-allowed disabled:opacity-50"
                             >
                                 Hủy
@@ -540,28 +424,18 @@ export default function FloorManagement({ mode = "admin" }) {
 
                             <button
                                 type="button"
-                                onClick={
-                                    handleDeleteFloor
-                                }
-                                disabled={
-                                    deletingFloor
-                                }
+                                onClick={handleDeleteFloor}
+                                disabled={deletingFloor}
                                 className="flex-1 rounded-xl bg-red-500 px-4 py-3 font-semibold text-white transition hover:bg-red-600 disabled:cursor-not-allowed disabled:opacity-50"
                             >
-                                {deletingFloor
-                                    ? "Đang xóa..."
-                                    : "Xác nhận"}
+                                {deletingFloor ? "Đang xóa..." : "Xác nhận"}
                             </button>
                         </div>
 
                         <button
                             type="button"
-                            onClick={
-                                closeDeleteFloor
-                            }
-                            disabled={
-                                deletingFloor
-                            }
+                            onClick={closeDeleteFloor}
+                            disabled={deletingFloor}
                             className="absolute"
                             aria-label="Đóng"
                         >
@@ -571,7 +445,6 @@ export default function FloorManagement({ mode = "admin" }) {
                 </div>
             )}
 
-            {/* NOTIFICATION */}
             <NotiModal
                 open={notification.open}
                 type={notification.type}

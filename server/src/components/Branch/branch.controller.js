@@ -28,6 +28,15 @@ const getById = async (req, res) => {
     }
 };
 
+const getSingleBranch = async (req, res) => {
+    try {
+        const branch = await branchService.getSingleBranch(req.user);
+        res.json(branch);
+    } catch (error) {
+        res.status(400).json({ message: error.message });
+    }
+};
+
 const getProfile = async (req, res) => {
     try {
         const user = await branchService.getProfile(req.user.id);
@@ -122,6 +131,7 @@ const changePassword = async (req, res) => {
 module.exports = {
     getAll,
     getById,
+    getSingleBranch,
     getProfile,
     create,
     update,

@@ -1,9 +1,5 @@
 const prisma = require("../../config/prisma");
 
-// ======================================================
-// CHECK BRANCH ACCESS
-// ======================================================
-
 const checkBranchAccess = async (branchId, user) => {
   const branch = await prisma.branch.findUnique({
     where: {
