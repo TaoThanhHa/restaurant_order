@@ -316,13 +316,8 @@ export default function InvoicePanelOrder({
                     customerId,
                 });
 
-            orderId =
-                res.data.data.id;
+            orderId = res.id;
         }
-
-        // ====================================
-        // BRANCH ADD ITEM
-        // ====================================
 
         for (const item of safeCart) {
 

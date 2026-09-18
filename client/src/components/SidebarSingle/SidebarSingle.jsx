@@ -1,21 +1,9 @@
 import { useEffect, useState } from "react";
 import { NavLink } from "react-router-dom";
 
-import {
-    Utensils,
-    LayoutDashboard,
-    Table2,
-    UtensilsCrossed,
-    Users,
-    ShoppingBag,
-    Layers3,
-    ReceiptText,
-    ChartNoAxesCombined,
-    User,
-} from "lucide-react";
+import { Utensils, LayoutDashboard, Table2, UtensilsCrossed, Users, ShoppingBag, Layers3, ReceiptText, ChartNoAxesCombined, User,} from "lucide-react";
 
 import adminService from "../../services/admin.service";
-
 import "./SidebarSingle.css";
 
 export default function SidebarSingle() {
@@ -23,17 +11,12 @@ export default function SidebarSingle() {
         name: "Làng Tre",
         logo: "",
     });
-
-    const SERVER_URL =
-        import.meta.env.VITE_API_URL?.replace(/\/api\/?$/, "") || "";
+    const SERVER_URL = import.meta.env.VITE_API_URL?.replace(/\/api\/?$/, "") || "";
 
     const getImageUrl = (url) => {
         if (!url) return "";
 
-        if (
-            url.startsWith("http://") ||
-            url.startsWith("https://")
-        ) {
+        if (url.startsWith("http://") | url.startsWith("https://")) {
             return url;
         }
 
@@ -51,13 +34,9 @@ export default function SidebarSingle() {
                     logo: data?.restaurant?.logo || "",
                 });
             } catch (error) {
-                console.error(
-                    "LOAD RESTAURANT ERROR:",
-                    error
-                );
+                console.error("LOAD RESTAURANT ERROR:", error);
             }
         };
-
         loadRestaurant();
     }, []);
 
@@ -76,6 +55,11 @@ export default function SidebarSingle() {
             name: "Tầng bàn",
             path: "/admin/floors",
             icon: <Layers3 size={20} />,
+        },
+        {
+            name: "Đặt bàn trước",
+            path: "/admin/reservations",
+            icon: <Table2 size={20} />,
         },
         {
             name: "Thực đơn",
@@ -136,13 +120,7 @@ export default function SidebarSingle() {
                     <NavLink
                         key={menu.path}
                         to={menu.path}
-                        className={({ isActive }) =>
-                            `menu_single ${
-                                isActive
-                                    ? "menu_single_active"
-                                    : ""
-                            }`
-                        }
+                        className={({ isActive }) =>`menu_single ${isActive ? "menu_single_active" : ""}`}
                     >
                         <span className="menu_single-icon">
                             {menu.icon}

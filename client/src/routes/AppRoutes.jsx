@@ -14,6 +14,7 @@ import OrderHistory from "../pages/branch/OrderHistory/OrderHistory";
 import TableManagement from "../pages/admin/Table/FloorManagement";
 import Profile from "../pages/branch/Profile/BranchProfile";
 import BranchStaff from "../pages/branch/Employee/BranchStaff";
+import ReservationManagement from "../pages/branch/ReservationManagement/ReservationManagement";
 
 import AdminDashboard from "../pages/admin/Dashboard/Dashboard";
 import Menu from "../pages/admin/Menu/Menu";
@@ -61,7 +62,7 @@ export default function AppRoutes() {
                 }
             >
                 <Route path="dashboard" element={<CashierDashboard />} />
-                <Route path="tables" element={<Tables />} />
+                <Route path="tables" element={<Tables mode="branch" />} />
                 <Route path="tables/:tableId" element={<TableDetail />} />
                 <Route path="foods" element={<Foods />} />
                 <Route path="take-away" element={<TakeAwayOrder />} />
@@ -73,6 +74,8 @@ export default function AppRoutes() {
                         <Route path="table" element={<TableManagement mode="branch" />} />
                         <Route path="employee" element={<BranchStaff />} />
                         <Route path="statistics" element={<Statistics branchOnly />} />
+                        <Route path="customers" element={<CustomerManagement />} />
+                        <Route path="reservations" element={<ReservationManagement />}/>
                     </>
                 )}
             </Route>
@@ -96,13 +99,14 @@ export default function AppRoutes() {
                 <Route path="table" element={<TableManagement mode="admin" />} />
 
                 {/* ADMIN SINGLE */}
-                <Route path="tables" element={<Tables />} />
+                <Route path="tables" element={<Tables mode="single" />} />
                 <Route path="tables/:tableId" element={<TableDetail />} />
                 <Route path="floors" element={<TableManagement mode="single" />} />
                 <Route path="foods" element={<Menu />} />
                 <Route path="take-away" element={<TakeAwayOrder />} />
                 <Route path="employees" element={<BranchStaff />} />
                 <Route path="order-history" element={<OrderHistory />} />
+                <Route path="reservations" element={<ReservationManagement />}/>
             </Route>
 
             {/* CUSTOMER */}

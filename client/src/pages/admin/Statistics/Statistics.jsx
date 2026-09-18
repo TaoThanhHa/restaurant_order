@@ -89,26 +89,24 @@ export default function Statistics({ branchOnly = false }) {
         const loadBranches = async () => {
             try {
                 const res = await adminService.getBranches();
+
                 if (res?.success) {
-                    setBranches(Array.isArray(res.data) ? res.data : []);
+                    setBranches(
+                        Array.isArray(res.data)
+                            ? res.data
+                            : []
+                    );
                     return;
                 }
 
                 setBranches([]);
-                showNotification(
-                    "warning",
-                    "Không có dữ liệu",
-                    res?.message || "Không thể lấy danh sách chi nhánh."
-                );
             } catch (error) {
-                console.error("Lỗi lấy danh sách chi nhánh:", error);
-                setBranches([]);
-                showNotification(
-                    "error",
-                    "Không thể tải dữ liệu",
-                    error.response?.data?.message ||
-                        "Không thể lấy danh sách chi nhánh."
+                console.error(
+                    "Lỗi lấy danh sách chi nhánh:",
+                    error
                 );
+
+                setBranches([]);
             }
         };
 
@@ -338,7 +336,9 @@ export default function Statistics({ branchOnly = false }) {
                 </div>
 
                 <div className="flex flex-wrap items-end gap-4 rounded-2xl bg-white p-5 shadow">
-                    {!branchOnly && (
+                    {!branchOnly &&
+                        statistics?.mode === "MULTI" &&
+                        statistics?.showBranchFilter && (
                         <div>
                             <label className="mb-2 block text-sm font-medium text-[var(--color-text)]">
                                 Chi nhánh
@@ -1309,7 +1309,10 @@ export default function Statistics({ branchOnly = false }) {
                     </>
                 )}
 
-                {!branchOnly && !branchId && (
+                {!branchOnly &&
+                    statistics?.mode === "MULTI" &&
+                    statistics?.showBranchRevenue &&
+                    !branchId && (               
                     <div className="rounded-2xl bg-white p-6 shadow">
                         <div className="mb-6 flex items-center gap-3">
                             <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-[var(--color-secondary)]">

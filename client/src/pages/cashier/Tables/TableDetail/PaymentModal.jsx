@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { X } from "lucide-react";
 
 import Button from "../../../../components/Button/Button";
@@ -14,11 +14,21 @@ export default function PaymentModal({
 }) {
     const [phone, setPhone] = useState("");
     const [method, setMethod] = useState("CASH");
+    const [errorMessage, setErrorMessage] = useState("");
+    const [loading, setLoading] = useState(false);
+
+    useEffect(() => {
+        if (open) {
+            setPhone(order?.customer?.phone || "");
+            setMethod("CASH");
+            setErrorMessage("");
+        }
+    }, [open, order]);
 
     if (!open) return null;
 
     const orderItems = (order?.orderItems || []).filter(
-        (item) => item.status !== "CANCELLED"
+        item => item.status !== "CANCELLED"
     );
 
     const total = orderItems.reduce(
@@ -26,33 +36,42 @@ export default function PaymentModal({
         0
     );
 
+    const hasCustomer = Boolean(order?.customer?.id);
+    const customerPhone = order?.customer?.phone || "";
+
     const handlePayment = async () => {
         try {
+            setLoading(true);
+            setErrorMessage("");
+
+            await orderService.payment(order.id, {
+                paymentMethod: method,
+                phone: hasCustomer ? customerPhone : phone.trim() || null,
+            });
+
             const orderRes = await orderService.getById(order.id);
             const fullOrder = orderRes?.data || orderRes;
 
             const printableOrder = {
                 ...fullOrder,
                 orderItems: (fullOrder?.orderItems || []).filter(
-                    (item) => item.status !== "CANCELLED"
+                    item => item.status !== "CANCELLED"
                 ),
             };
-
-            await orderService.payment(order.id, {
-                paymentMethod: method,
-                phone: phone.trim() || null,
-            });
 
             printInvoice(printableOrder, method);
 
             onClose();
             await reload();
         } catch (err) {
-            alert(
+            setErrorMessage(
                 err.response?.data?.message ||
-                    err.message ||
-                    "Không thể thanh toán."
+                err.response?.data?.error ||
+                err.message ||
+                "Không thể thanh toán."
             );
+        } finally {
+            setLoading(false);
         }
     };
 
@@ -65,7 +84,11 @@ export default function PaymentModal({
                         {order.orderCode || `#${order.id}`}
                     </h2>
 
-                    <button onClick={onClose}>
+                    <button
+                        type="button"
+                        onClick={onClose}
+                        disabled={loading}
+                    >
                         <X />
                     </button>
                 </div>
@@ -96,7 +119,7 @@ export default function PaymentModal({
                         </thead>
 
                         <tbody>
-                            {orderItems.map((item) => (
+                            {orderItems.map(item => (
                                 <tr key={item.id}>
                                     <td>
                                         {item.food?.name || "Món ăn"}
@@ -123,21 +146,34 @@ export default function PaymentModal({
                         </tbody>
                     </table>
 
-                    <div className="flex">
-                        <div className="mt-6 pr-4">
+                    <div className="flex gap-6">
+                        <div className="mt-6 flex-1">
                             <label className="mb-2 block font-semibold">
                                 Số điện thoại khách hàng
                             </label>
 
-                            <input
-                                type="tel"
-                                value={phone}
-                                onChange={(e) =>
-                                    setPhone(e.target.value)
-                                }
-                                placeholder="Nhập số điện thoại"
-                                className="w-full rounded-lg border border-gray-300 px-3 py-2 outline-none focus:border-blue-500"
-                            />
+                            {hasCustomer ? (
+                                <div className="rounded-lg border border-gray-300 bg-gray-100 px-3 py-2 text-gray-700">
+                                    {customerPhone}
+                                </div>
+                            ) : (
+                                <input
+                                    type="tel"
+                                    value={phone}
+                                    onChange={e =>
+                                        setPhone(e.target.value)
+                                    }
+                                    placeholder="Nhập số điện thoại"
+                                    className="w-full rounded-lg border border-gray-300 px-3 py-2 outline-none focus:border-blue-500"
+                                    disabled={loading}
+                                />
+                            )}
+
+                            {hasCustomer && (
+                                <p className="mt-1 text-xs text-gray-500">
+                                    Số điện thoại từ tài khoản khách hàng
+                                </p>
+                            )}
                         </div>
 
                         <div className="mt-6">
@@ -153,6 +189,7 @@ export default function PaymentModal({
                                         onChange={() =>
                                             setMethod("CASH")
                                         }
+                                        disabled={loading}
                                     />
                                     Tiền mặt
                                 </label>
@@ -164,12 +201,19 @@ export default function PaymentModal({
                                         onChange={() =>
                                             setMethod("BANKING")
                                         }
+                                        disabled={loading}
                                     />
                                     Chuyển khoản
                                 </label>
                             </div>
                         </div>
                     </div>
+
+                    {errorMessage && (
+                        <div className="mt-4 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-600">
+                            {errorMessage}
+                        </div>
+                    )}
 
                     <div className="mt-6 flex justify-between text-xl font-bold">
                         <span>Tổng tiền</span>
@@ -184,8 +228,9 @@ export default function PaymentModal({
                     <Button
                         className="w-full"
                         onClick={handlePayment}
+                        disabled={loading}
                     >
-                        Thanh toán
+                        {loading ? "Đang thanh toán..." : "Thanh toán"}
                     </Button>
                 </div>
             </div>

@@ -1,6 +1,8 @@
 import { useEffect, useState } from "react";
 import { X, Minus, Plus } from "lucide-react";
 import Button from "../Button/Button";
+import cartService from "../../services/cart.service";
+import NotiModal from "../NotiModal/NotiModal";
 
 export default function AddFoodModal({
     open,
@@ -8,10 +10,17 @@ export default function AddFoodModal({
     food,
     cart,
     setCart,
+    mode = "customer",
 }) {
-
     const [quantity, setQuantity] = useState(1);
     const [note, setNote] = useState("");
+    const [loading, setLoading] = useState(false);
+    const [notiModal, setNotiModal] = useState({
+        open: false,
+        type: "error",
+        title: "",
+        message: "",
+    });
 
     useEffect(() => {
         if (open) {
@@ -21,17 +30,64 @@ export default function AddFoodModal({
     }, [open]);
 
     if (!open || !food) return null;
-    
+
     const item = food.food ?? food;
-    const image=item.image
-    ?`${import.meta.env.VITE_API_URL.replace("/api","")}${item.image}`
-    :"https://placehold.co/400x400?text=Food";
 
-    const handleAdd = () => {
+    const image = item.image
+        ? `${import.meta.env.VITE_API_URL.replace("/api", "")}${item.image}`
+        : "https://placehold.co/400x400?text=Food";
 
-        const existed = cart.find(
-            x => x.id === item.id
-        );
+    const mapCart = data => {
+        const items = data?.items || data?.data?.items || [];
+
+        return items.map(item => ({
+            id: item.food?.id || item.foodId,
+            name: item.food?.name,
+            image: item.food?.image
+                ? `${import.meta.env.VITE_API_URL.replace("/api", "")}${item.food.image}`
+                : "https://placehold.co/400x400?text=Food",
+            price: Number(item.food?.price || 0),
+            quantity: item.quantity,
+            note: item.note || "",
+        }));
+    };
+
+    const handleAdd = async () => {
+        if (mode === "customer") {
+            try {
+                setLoading(true);
+
+                const res = await cartService.addItem({
+                    foodId: item.id,
+                    quantity,
+                    note: note.trim() || null,
+                });
+
+                setCart(mapCart(res));
+                onClose();
+            } catch (err) {
+                console.error(
+                    "ADD CART ERROR:",
+                    err.response?.data || err
+                );
+
+                setNotiModal({
+                    open: true,
+                    type: "error",
+                    title: "Không thể thêm món",
+                    message:
+                        err.response?.data?.message ||
+                        err.message ||
+                        "Không thể thêm món vào giỏ hàng.",
+                });
+            } finally {
+                setLoading(false);
+            }
+
+            return;
+        }
+
+        const existed = cart.find(x => x.id === item.id);
 
         if (existed) {
             setCart(
@@ -40,137 +96,149 @@ export default function AddFoodModal({
                         ? {
                               ...x,
                               quantity: x.quantity + quantity,
-                              note:
-                                  note.trim() !== ""
-                                      ? note
-                                      : x.note,
+                              note: note.trim() || x.note,
                           }
                         : x
                 )
             );
-
         } else {
             setCart([
                 ...cart,
                 {
                     id: item.id,
                     name: item.name,
-                    image: image,
+                    image,
                     price: Number(item.price),
                     quantity,
                     note,
                 },
             ]);
         }
+
         onClose();
     };
 
     return (
-        <div
-            className={`fixed inset-0 z-50 flex items-center justify-center
-                transition-all duration-300
-                ${open ? "bg-black/40 opacity-100" : "pointer-events-none bg-black/0 opacity-0"}`}
+        <>
+            <div
+                className={`fixed inset-0 z-50 flex items-center justify-center transition-all duration-300 ${
+                    open
+                        ? "bg-black/40 opacity-100"
+                        : "pointer-events-none bg-black/0 opacity-0"
+                }`}
             >
+                <div className="flex max-h-[90vh] w-full max-w-md flex-col rounded-xl bg-white shadow-xl">
+                    <div className="flex items-center justify-between border-b px-5 py-4">
+                        <h2 className="text-lg font-bold">
+                            Thêm món
+                        </h2>
 
-            <div className="w-full max-w-md max-h-[90vh] rounded-xl bg-white shadow-xl flex flex-col">
-                {/* Header */}
+                        <button
+                            onClick={onClose}
+                            className="rounded p-1 hover:bg-gray-100"
+                        >
+                            <X size={20} />
+                        </button>
+                    </div>
 
-                <div className="flex items-center justify-between border-b px-5 py-4">
-                    <h2 className="text-lg font-bold">
-                        Thêm món
-                    </h2>
-                    <button
-                        onClick={onClose}
-                        className="rounded p-1 hover:bg-gray-500"
-                    >
-                        <X size={20} />
-                    </button>
-                </div>
+                    <div className="hide-scrollbar flex-1 overflow-y-auto p-5">
+                        <div className="flex justify-between">
+                            <img
+                                src={image}
+                                alt={item.name}
+                                className="aspect-square w-[50%] rounded-xl object-cover"
+                                onError={e => {
+                                    e.currentTarget.src =
+                                        "https://placehold.co/400x400?text=Food";
+                                }}
+                            />
 
-                {/* Body */}
-                <div className="flex-1 overflow-y-auto hide-scrollbar p-5">
-                <div className="flex justify-between">
-                    <img
-                        src={image}
-                        alt={item.name}
-                        className="aspect-square w-[50%] rounded-xl object-cover"
-                        onError={(e)=>{
-                            console.log(image);
-                            e.currentTarget.src="https://placehold.co/400x400?text=Food";
-                        }}
-                    />
-                    <div className="w-[50%]">
+                            <div className="w-[50%]">
+                                <h3 className="mt-4 text-xl font-bold">
+                                    {item.name}
+                                </h3>
 
-                    <h3 className="mt-4 text-xl font-bold">
-                        {item.name}
-                    </h3>
+                                <p className="mt-1 text-lg font-bold text-red-500">
+                                    {Number(item.price).toLocaleString()}đ
+                                </p>
 
-                    <p className="mt-1 text-l font-bold text-red-500">
-                        {Number(item.price).toLocaleString()}đ
-                    </p>
+                                <div className="mt-6">
+                                    <label className="mb-2 block font-medium">
+                                        Số lượng
+                                    </label>
 
-                    {/* Quantity */}
-                    <div className="mt-6">
-                        <label className="mb-2 block font-medium">
-                            Số lượng
-                        </label>
+                                    <div className="flex items-center justify-center gap-4">
+                                        <button
+                                            onClick={() =>
+                                                setQuantity(q =>
+                                                    Math.max(1, q - 1)
+                                                )
+                                            }
+                                            className="rounded-lg border p-2 hover:bg-gray-100"
+                                        >
+                                            <Minus size={18} />
+                                        </button>
 
-                        <div className="flex items-center justify-center gap-4">
-                            <button
-                                onClick={() => setQuantity(q => Math.max(1, q - 1))}
-                                className="rounded-lg border p-2 hover:bg-gray-100"
-                            >
-                                <Minus size={18} />
-                            </button>
+                                        <span className="w-10 text-center text-xl font-bold">
+                                            {quantity}
+                                        </span>
 
-                            <span className="w-10 text-center text-xl font-bold">
-                                {quantity}
-                            </span>
-
-                            <button
-                                onClick={() =>  setQuantity(q => q + 1)}
-                                className="rounded-lg border p-2 hover:bg-gray-100"
-                            >
-                                <Plus size={18} />
-                            </button>
-
+                                        <button
+                                            onClick={() =>
+                                                setQuantity(q => q + 1)
+                                            }
+                                            className="rounded-lg border p-2 hover:bg-gray-100"
+                                        >
+                                            <Plus size={18} />
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
 
-                    </div>
-                    </div>
-                    </div>
+                        <div className="mt-6">
+                            <label className="mb-2 block font-medium">
+                                Ghi chú
+                            </label>
 
-                    {/* Note */}
-
-                    <div className="mt-6">
-
-                        <label className="mb-2 block font-medium">
-                            Ghi chú
-                        </label>
-
-                        <textarea
-                            rows={3}
-                            value={note}
-                            onChange={e => setNote(e.target.value)}
-                            placeholder="Ví dụ: Không hành, ít cay..."
-                            className="w-full rounded-lg border p-3 outline-none focus:border-blue-500"
-                        />
-
+                            <textarea
+                                rows={3}
+                                value={note}
+                                onChange={e => setNote(e.target.value)}
+                                placeholder="Ví dụ: Không hành, ít cay..."
+                                className="w-full rounded-lg border p-3 outline-none focus:border-blue-500"
+                            />
+                        </div>
                     </div>
 
-                </div>
-
-                {/* Footer */}
-                <div className="border-t p-5">
-                    <Button
-                        className="w-full"
-                        onClick={handleAdd}
-                    >
-                        Thêm vào giỏ
-                    </Button>
-
+                    <div className="border-t p-5">
+                        <Button
+                            className="w-full"
+                            disabled={loading}
+                            onClick={handleAdd}
+                        >
+                            {loading
+                                ? "Đang thêm..."
+                                : "Thêm vào giỏ"}
+                        </Button>
+                    </div>
                 </div>
             </div>
-        </div>
+
+            <NotiModal
+                open={notiModal.open}
+                type={notiModal.type}
+                title={notiModal.title}
+                message={notiModal.message}
+                onClose={() =>
+                    setNotiModal({
+                        open: false,
+                        type: "error",
+                        title: "",
+                        message: "",
+                    })
+                }
+            />
+        </>
     );
 }

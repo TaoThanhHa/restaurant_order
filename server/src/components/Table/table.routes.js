@@ -11,6 +11,8 @@ router.get("/:id", auth,  controller.getById);
 router.post("/", auth, authorize("ADMIN","BRANCH"), controller.create);
 router.put("/:id", auth, authorize("ADMIN","BRANCH"), controller.update);
 router.delete("/:id", auth, authorize("ADMIN","BRANCH"), controller.remove);
+router.put("/:id/transfer", auth, authorize("ADMIN", "BRANCH", "CASHIER"), controller.transferTable);
+router.post("/:id/merge", auth, authorize("ADMIN", "BRANCH", "CASHIER"),controller.mergeTables);
 router.get("/scan/:qrCode", controller.scanQr);
 router.post("/:id/open", auth,  controller.open);
 

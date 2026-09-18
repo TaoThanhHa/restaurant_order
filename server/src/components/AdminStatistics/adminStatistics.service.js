@@ -1,12 +1,12 @@
 const prisma = require("../../config/prisma");
 
-const startOfDay = (date) => {
+const startOfDay = date => {
     const d = new Date(date);
     d.setHours(0, 0, 0, 0);
     return d;
 };
 
-const endOfDay = (date) => {
+const endOfDay = date => {
     const d = new Date(date);
     d.setHours(23, 59, 59, 999);
     return d;
@@ -24,22 +24,22 @@ const addMonths = (date, months) => {
     return d;
 };
 
-const formatDate = (date) => {
+const formatDate = date => {
     const year = date.getFullYear();
     const month = String(date.getMonth() + 1).padStart(2, "0");
     const day = String(date.getDate()).padStart(2, "0");
     return `${year}-${month}-${day}`;
 };
 
-const formatLabel = (date) => {
+const formatLabel = date => {
     const day = String(date.getDate()).padStart(2, "0");
     const month = String(date.getMonth() + 1).padStart(2, "0");
     return `${day}/${month}`;
 };
 
-const toNumber = (value) => Number(value || 0);
+const toNumber = value => Number(value || 0);
 
-const getMonday = (date) => {
+const getMonday = date => {
     const d = startOfDay(date);
     const day = d.getDay();
     const diff = day === 0 ? -6 : 1 - day;
@@ -51,43 +51,73 @@ const getPeriod = (period, filters = {}) => {
     const today = startOfDay(new Date());
 
     if (period === "day") {
-        const selectedDate = filters.date ? new Date(`${filters.date}T00:00:00`) : today;
-        if (Number.isNaN(selectedDate.getTime())) 
-        throw new Error("Ngày chọn không hợp lệ.");
-        return { fromDate: startOfDay(selectedDate), toDate: endOfDay(selectedDate) };
+        const selectedDate = filters.date
+            ? new Date(`${filters.date}T00:00:00`)
+            : today;
+
+        if (Number.isNaN(selectedDate.getTime())) {
+            throw new Error("Ngày chọn không hợp lệ.");
+        }
+
+        return {
+            fromDate: startOfDay(selectedDate),
+            toDate: endOfDay(selectedDate)
+        };
     }
 
     if (period === "week") {
-        const selectedDate = filters.weekStart ? new Date(`${filters.weekStart}T00:00:00`) : today;
-        if (Number.isNaN(selectedDate.getTime())) 
-        throw new Error("Ngày chọn tuần không hợp lệ.");
+        const selectedDate = filters.weekStart
+            ? new Date(`${filters.weekStart}T00:00:00`)
+            : today;
+
+        if (Number.isNaN(selectedDate.getTime())) {
+            throw new Error("Ngày chọn tuần không hợp lệ.");
+        }
+
         const fromDate = getMonday(selectedDate);
-        return { fromDate, toDate: endOfDay(addDays(fromDate, 6)) };
+
+        return {
+            fromDate,
+            toDate: endOfDay(addDays(fromDate, 6))
+        };
     }
 
     if (period === "month") {
         const year = Number(filters.year);
         const month = Number(filters.month);
-        if (!year || !month || month < 1 || month > 12) 
-        throw new Error("Năm hoặc tháng không hợp lệ.");
+
+        if (!year || !month || month < 1 || month > 12) {
+            throw new Error("Năm hoặc tháng không hợp lệ.");
+        }
+
         const fromDate = new Date(year, month - 1, 1);
         const toDate = new Date(year, month, 0);
-        return { fromDate: startOfDay(fromDate), toDate: endOfDay(toDate) };
+
+        return {
+            fromDate: startOfDay(fromDate),
+            toDate: endOfDay(toDate)
+        };
     }
 
     if (period === "quarter") {
         const year = Number(filters.year);
         const quarter = Number(filters.quarter);
-        if (!year || !quarter || quarter < 1 || quarter > 4) 
-        throw new Error("Năm hoặc quý không hợp lệ.");
+
+        if (!year || !quarter || quarter < 1 || quarter > 4) {
+            throw new Error("Năm hoặc quý không hợp lệ.");
+        }
+
         const startMonth = (quarter - 1) * 3;
         const fromDate = new Date(year, startMonth, 1);
         const toDate = new Date(year, startMonth + 3, 0);
-        return { fromDate: startOfDay(fromDate), toDate: endOfDay(toDate) };
+
+        return {
+            fromDate: startOfDay(fromDate),
+            toDate: endOfDay(toDate)
+        };
     }
 
-    
-        throw new Error("Loại thống kê không hợp lệ.");
+    throw new Error("Loại thống kê không hợp lệ.");
 };
 
 const getPreviousPeriod = (period, fromDate) => {
@@ -100,8 +130,14 @@ const getPreviousPeriod = (period, fromDate) => {
 
     if (period === "month") {
         const previousTo = endOfDay(addDays(fromDate, -1));
-        const previousFrom = startOfDay(new Date(previousTo.getFullYear(), previousTo.getMonth(), 1));
-        return { fromDate: previousFrom, toDate: previousTo };
+        const previousFrom = startOfDay(
+            new Date(previousTo.getFullYear(), previousTo.getMonth(), 1)
+        );
+
+        return {
+            fromDate: previousFrom,
+            toDate: previousTo
+        };
     }
 
     return null;
@@ -122,6 +158,7 @@ const createBuckets = (period, fromDate, toDate) => {
     if (period === "week") {
         for (let i = 0; i < 7; i++) {
             const date = addDays(fromDate, i);
+
             buckets.push({
                 key: formatDate(date),
                 label: formatLabel(date),
@@ -129,6 +166,7 @@ const createBuckets = (period, fromDate, toDate) => {
                 to: endOfDay(date)
             });
         }
+
         return buckets;
     }
 
@@ -139,8 +177,13 @@ const createBuckets = (period, fromDate, toDate) => {
             let bucketFrom = new Date(current);
             let bucketTo = endOfDay(addDays(current, 6));
 
-            if (bucketFrom < fromDate) bucketFrom = new Date(fromDate);
-            if (bucketTo > toDate) bucketTo = new Date(toDate);
+            if (bucketFrom < fromDate) {
+                bucketFrom = new Date(fromDate);
+            }
+
+            if (bucketTo > toDate) {
+                bucketTo = new Date(toDate);
+            }
 
             buckets.push({
                 key: formatDate(bucketFrom),
@@ -158,28 +201,156 @@ const createBuckets = (period, fromDate, toDate) => {
     if (period === "quarter") {
         for (let i = 0; i < 3; i++) {
             const bucketFrom = addMonths(fromDate, i);
-            const bucketTo = new Date(bucketFrom.getFullYear(), bucketFrom.getMonth() + 1, 0);
+            const bucketTo = new Date(
+                bucketFrom.getFullYear(),
+                bucketFrom.getMonth() + 1,
+                0
+            );
 
             buckets.push({
-                key: `${bucketFrom.getFullYear()}-${String(bucketFrom.getMonth() + 1).padStart(2, "0")}`,
+                key: `${bucketFrom.getFullYear()}-${String(
+                    bucketFrom.getMonth() + 1
+                ).padStart(2, "0")}`,
                 label: `Tháng ${bucketFrom.getMonth() + 1}`,
                 from: startOfDay(bucketFrom),
                 to: endOfDay(bucketTo)
             });
         }
+
         return buckets;
     }
 
     return buckets;
 };
 
-const getPayments = async (branchId, fromDate, toDate) => {
+const getStatisticsScope = async (user, requestedBranchId = null) => {
+    if (!user) {
+        throw new Error("Chưa xác thực người dùng.");
+    }
+
+    const restaurantId = Number(user.restaurantId);
+
+    if (!restaurantId) {
+        throw new Error("Tài khoản chưa được gán nhà hàng.");
+    }
+
+    const restaurant = await prisma.restaurant.findUnique({
+        where: { id: restaurantId },
+        select: {
+            id: true,
+            mode: true,
+            branches: {
+                where: { isActive: true },
+                select: {
+                    id: true,
+                    name: true
+                },
+                orderBy: { id: "asc" }
+            }
+        }
+    });
+
+    if (!restaurant) {
+        throw new Error("Nhà hàng không tồn tại.");
+    }
+
+    if (!restaurant.branches.length) {
+        throw new Error("Nhà hàng chưa có chi nhánh.");
+    }
+
+    if (user.role === "BRANCH") {
+        const userBranchId = Number(user.branchId);
+
+        if (!userBranchId) {
+            throw new Error("Tài khoản chưa được phân quyền chi nhánh.");
+        }
+
+        const branch = restaurant.branches.find(
+            item => item.id === userBranchId
+        );
+
+        if (!branch) {
+            throw new Error("Bạn không có quyền truy cập chi nhánh này.");
+        }
+
+        return {
+            restaurantId,
+            mode: restaurant.mode,
+            branchId: branch.id,
+            branches: [branch],
+            showBranchFilter: false,
+            showBranchRevenue: false
+        };
+    }
+
+    if (user.role !== "ADMIN") {
+        throw new Error("Bạn không có quyền xem thống kê.");
+    }
+
+    if (restaurant.mode === "SINGLE") {
+        const branch = restaurant.branches[0];
+
+        if (requestedBranchId && Number(requestedBranchId) !== branch.id) {
+            throw new Error("Nhà hàng SINGLE chỉ có một chi nhánh.");
+        }
+
+        return {
+            restaurantId,
+            mode: restaurant.mode,
+            branchId: branch.id,
+            branches: [branch],
+            showBranchFilter: false,
+            showBranchRevenue: false
+        };
+    }
+
+    if (requestedBranchId) {
+        const branchId = Number(requestedBranchId);
+
+        const branch = restaurant.branches.find(
+            item => item.id === branchId
+        );
+
+        if (!branch) {
+            throw new Error("Chi nhánh không thuộc nhà hàng.");
+        }
+
+        return {
+            restaurantId,
+            mode: restaurant.mode,
+            branchId: branch.id,
+            branches: restaurant.branches,
+            showBranchFilter: true,
+            showBranchRevenue: false
+        };
+    }
+
+    return {
+        restaurantId,
+        mode: restaurant.mode,
+        branchId: null,
+        branches: restaurant.branches,
+        showBranchFilter: true,
+        showBranchRevenue: true
+    };
+};
+
+const getPayments = async (scope, fromDate, toDate) => {
     const where = {
         paymentStatus: "PAID",
-        paidAt: { gte: fromDate, lte: toDate }
+        paidAt: {
+            gte: fromDate,
+            lte: toDate
+        },
+        order: {
+            branch: {
+                restaurantId: scope.restaurantId,
+                ...(scope.branchId
+                    ? { id: scope.branchId }
+                    : {})
+            }
+        }
     };
-
-    if (branchId) where.order = { branchId: Number(branchId) };
 
     return prisma.payment.findMany({
         where,
@@ -192,154 +363,62 @@ const getPayments = async (branchId, fromDate, toDate) => {
                     id: true,
                     branchId: true,
                     orderType: true,
-                    branch: { select: { id: true, name: true } },
+                    branch: {
+                        select: {
+                            id: true,
+                            name: true
+                        }
+                    },
                     orderMembers: {
                         select: {
-                            customer: { select: { id: true, isGuest: true } }
+                            customer: {
+                                select: {
+                                    id: true,
+                                    isGuest: true
+                                }
+                            }
                         }
                     },
                     orderItems: {
-                        where: { status: { not: "CANCELLED" } },
+                        where: {
+                            status: {
+                                not: "CANCELLED"
+                            }
+                        },
                         select: {
                             quantity: true,
                             price: true,
-                            food: { select: { id: true, name: true } }
+                            food: {
+                                select: {
+                                    id: true,
+                                    name: true
+                                }
+                            }
                         }
                     }
                 }
             }
         },
-        orderBy: { paidAt: "asc" }
+        orderBy: {
+            paidAt: "asc"
+        }
     });
 };
 
 const findBucketIndex = (date, buckets) => {
     if (!date) return -1;
+
     const time = new Date(date).getTime();
-    return buckets.findIndex((bucket) => time >= bucket.from.getTime() && time <= bucket.to.getTime());
-};
 
-const buildFoodMap = (payments) => {
-    const foodMap = new Map();
-
-    payments.forEach((payment) => {
-        const order = payment.order;
-        if (!order) return;
-
-        (order.orderItems || []).forEach((item) => {
-            if (!item.food) return;
-
-            const foodId = item.food.id;
-            const quantity = toNumber(item.quantity);
-            const revenue = quantity * toNumber(item.price);
-
-            if (!foodMap.has(foodId)) {
-                foodMap.set(foodId, {
-                    id: foodId,
-                    name: item.food.name,
-                    quantity: 0,
-                    revenue: 0
-                });
-            }
-
-            const food = foodMap.get(foodId);
-            food.quantity += quantity;
-            food.revenue += revenue;
-        });
-    });
-
-    return foodMap;
-};
-
-const getSellableFoods = async (branchId) => {
-    const branchCondition = branchId
-        ? { branchId: Number(branchId), status: { not: "INACTIVE" } }
-        : { status: { not: "INACTIVE" } };
-
-    return prisma.food.findMany({
-        where: { branchFoods: { some: branchCondition } },
-        select: {
-            id: true,
-            name: true,
-            createdAt: true,
-            category: { select: { id: true, name: true } }
-        },
-        orderBy: { name: "asc" }
-    });
-};
-
-const getFoodTrend = async (branchId, period, fromDate, toDate, currentPayments = null) => {
-    if (period !== "week" && period !== "month") {
-        return { increased: [], decreased: [] };
-    }
-
-    const previousPeriod = getPreviousPeriod(period, fromDate);
-    if (!previousPeriod) return { increased: [], decreased: [] };
-
-    const [previousPayments, foods] = await Promise.all([
-        getPayments(branchId, previousPeriod.fromDate, previousPeriod.toDate),
-        getSellableFoods(branchId)
-    ]);
-
-    const currentMap = buildFoodMap(currentPayments || []);
-    const previousMap = buildFoodMap(previousPayments);
-    const increased = [];
-    const decreased = [];
-
-    foods.forEach((food) => {
-        const createdAt = food.createdAt ? new Date(food.createdAt) : null;
-        if (createdAt && createdAt >= fromDate) return;
-
-        const currentQuantity = toNumber(currentMap.get(food.id)?.quantity);
-        const previousQuantity = toNumber(previousMap.get(food.id)?.quantity);
-
-        if (currentQuantity === 0 && previousQuantity === 0) return;
-        if (previousQuantity === 0) return;
-
-        const difference = currentQuantity - previousQuantity;
-        const percentage = (difference / previousQuantity) * 100;
-
-        const item = {
-            id: food.id,
-            name: food.name,
-            category: food.category ? { id: food.category.id, name: food.category.name } : null,
-            currentQuantity,
-            previousQuantity,
-            difference,
-            percentage: Number(percentage.toFixed(1))
-        };
-
-        if (percentage >= 20) increased.push(item);
-        if (percentage <= -20) decreased.push(item);
-    });
-
-    increased.sort((a, b) => b.percentage - a.percentage);
-    decreased.sort((a, b) => a.percentage - b.percentage);
-
-    return {
-        increased: increased.slice(0, 10),
-        decreased: decreased.slice(0, 10)
-    };
-};
-
-const getUnsoldFoods = async (branchId, currentPayments = []) => {
-    const foods = await getSellableFoods(branchId);
-    const foodMap = buildFoodMap(currentPayments);
-
-    return foods
-        .filter((food) => {
-            const sold = foodMap.get(food.id);
-            return !sold || toNumber(sold.quantity) === 0;
-        })
-        .map((food) => ({
-            id: food.id,
-            name: food.name,
-            category: food.category ? { id: food.category.id, name: food.category.name } : null
-        }));
+    return buckets.findIndex(
+        bucket =>
+            time >= bucket.from.getTime() &&
+            time <= bucket.to.getTime()
+    );
 };
 
 const addOrderItemsToFoodMap = (foodMap, orderItems = []) => {
-    orderItems.forEach((item) => {
+    orderItems.forEach(item => {
         if (!item.food) return;
 
         const foodId = item.food.id;
@@ -356,31 +435,238 @@ const addOrderItemsToFoodMap = (foodMap, orderItems = []) => {
         }
 
         const food = foodMap.get(foodId);
+
         food.quantity += quantity;
         food.revenue += revenue;
     });
 };
 
-const getStatistics = async (branchId, period, filters = {}) => {
-    const { fromDate, toDate } = getPeriod(period, filters);
-    const branchFilter = branchId ? Number(branchId) : undefined;
-    const buckets = createBuckets(period, fromDate, toDate);
-    const payments = await getPayments(branchFilter, fromDate, toDate);
+const getSellableFoods = async scope => {
+    const branchCondition = scope.branchId
+        ? {
+              branchId: scope.branchId,
+              status: { not: "INACTIVE" }
+          }
+        : {
+              status: { not: "INACTIVE" }
+          };
 
-    const timeline = buckets.map((bucket) => ({
+    return prisma.food.findMany({
+        where: {
+            branchFoods: {
+                some: {
+                    ...branchCondition,
+                    branch: {
+                        restaurantId: scope.restaurantId
+                    }
+                }
+            }
+        },
+        select: {
+            id: true,
+            name: true,
+            createdAt: true,
+            category: {
+                select: {
+                    id: true,
+                    name: true
+                }
+            }
+        },
+        orderBy: {
+            name: "asc"
+        }
+    });
+};
+
+const getFoodTrend = async (
+    scope,
+    period,
+    fromDate,
+    toDate,
+    currentPayments = null
+) => {
+    if (period !== "week" && period !== "month") {
+        return {
+            increased: [],
+            decreased: []
+        };
+    }
+
+    const previousPeriod = getPreviousPeriod(period, fromDate);
+
+    if (!previousPeriod) {
+        return {
+            increased: [],
+            decreased: []
+        };
+    }
+
+    const [previousPayments, foods] = await Promise.all([
+        getPayments(
+            scope,
+            previousPeriod.fromDate,
+            previousPeriod.toDate
+        ),
+        getSellableFoods(scope)
+    ]);
+
+    const currentMap = buildFoodMap(currentPayments || []);
+    const previousMap = buildFoodMap(previousPayments);
+
+    const increased = [];
+    const decreased = [];
+
+    foods.forEach(food => {
+        const createdAt = food.createdAt
+            ? new Date(food.createdAt)
+            : null;
+
+        if (createdAt && createdAt >= fromDate) {
+            return;
+        }
+
+        const currentQuantity = toNumber(
+            currentMap.get(food.id)?.quantity
+        );
+
+        const previousQuantity = toNumber(
+            previousMap.get(food.id)?.quantity
+        );
+
+        if (currentQuantity === 0 && previousQuantity === 0) {
+            return;
+        }
+
+        if (previousQuantity === 0) {
+            return;
+        }
+
+        const difference = currentQuantity - previousQuantity;
+        const percentage =
+            (difference / previousQuantity) * 100;
+
+        const item = {
+            id: food.id,
+            name: food.name,
+            category: food.category
+                ? {
+                      id: food.category.id,
+                      name: food.category.name
+                  }
+                : null,
+            currentQuantity,
+            previousQuantity,
+            difference,
+            percentage: Number(percentage.toFixed(1))
+        };
+
+        if (percentage >= 20) {
+            increased.push(item);
+        }
+
+        if (percentage <= -20) {
+            decreased.push(item);
+        }
+    });
+
+    increased.sort(
+        (a, b) => b.percentage - a.percentage
+    );
+
+    decreased.sort(
+        (a, b) => a.percentage - b.percentage
+    );
+
+    return {
+        increased: increased.slice(0, 10),
+        decreased: decreased.slice(0, 10)
+    };
+};
+
+const buildFoodMap = payments => {
+    const foodMap = new Map();
+
+    payments.forEach(payment => {
+        const order = payment.order;
+
+        if (!order) return;
+
+        addOrderItemsToFoodMap(
+            foodMap,
+            order.orderItems
+        );
+    });
+
+    return foodMap;
+};
+
+const getUnsoldFoods = async (
+    scope,
+    currentPayments = []
+) => {
+    const foods = await getSellableFoods(scope);
+    const foodMap = buildFoodMap(currentPayments);
+
+    return foods
+        .filter(food => {
+            const sold = foodMap.get(food.id);
+            return !sold || toNumber(sold.quantity) === 0;
+        })
+        .map(food => ({
+            id: food.id,
+            name: food.name,
+            category: food.category
+                ? {
+                      id: food.category.id,
+                      name: food.category.name
+                  }
+                : null
+        }));
+};
+
+const getStatistics = async ({
+    user,
+    branchId = null,
+    period,
+    filters = {}
+}) => {
+    const scope = await getStatisticsScope(
+        user,
+        branchId
+    );
+
+    const { fromDate, toDate } = getPeriod(
+        period,
+        filters
+    );
+
+    const buckets = createBuckets(
+        period,
+        fromDate,
+        toDate
+    );
+
+    const payments = await getPayments(
+        scope,
+        fromDate,
+        toDate
+    );
+
+    const timeline = buckets.map(bucket => ({
         key: bucket.key,
         label: bucket.label,
         total: 0
     }));
 
-    const customerTimeline = buckets.map((bucket) => ({
+    const customerTimeline = buckets.map(bucket => ({
         key: bucket.key,
         label: bucket.label,
         member: 0,
         guest: 0
     }));
 
-    const orderTypeTimeline = buckets.map((bucket) => ({
+    const orderTypeTimeline = buckets.map(bucket => ({
         key: bucket.key,
         label: bucket.label,
         dineIn: 0,
@@ -395,83 +681,174 @@ const getStatistics = async (branchId, period, filters = {}) => {
     const foodMap = new Map();
     const branchMap = new Map();
 
-    payments.forEach((payment) => {
+    payments.forEach(payment => {
         const order = payment.order;
+
         if (!order) return;
 
-        const amount = toNumber(payment.totalAmount);
-        const paidAt = new Date(payment.paidAt);
+        const amount = toNumber(
+            payment.totalAmount
+        );
+
+        const paidAt = new Date(
+            payment.paidAt
+        );
 
         totalRevenue += amount;
         orderIds.add(order.id);
 
-        if (order.orderType === "DINE_IN") totalDineIn += amount;
-        if (order.orderType === "TAKE_AWAY") totalTakeAway += amount;
+        if (order.orderType === "DINE_IN") {
+            totalDineIn += amount;
+        }
 
-        const bucketIndex = findBucketIndex(paidAt, buckets);
+        if (order.orderType === "TAKE_AWAY") {
+            totalTakeAway += amount;
+        }
+
+        const bucketIndex = findBucketIndex(
+            paidAt,
+            buckets
+        );
 
         if (bucketIndex >= 0) {
             timeline[bucketIndex].total += amount;
 
-            const members = order.orderMembers || [];
-            const hasMember = members.some((member) => member.customer && member.customer.isGuest === false);
+            const members =
+                order.orderMembers || [];
+
+            const hasMember = members.some(
+                member =>
+                    member.customer &&
+                    member.customer.isGuest === false
+            );
 
             if (hasMember) {
-                customerTimeline[bucketIndex].member += amount;
+                customerTimeline[
+                    bucketIndex
+                ].member += amount;
             } else {
-                customerTimeline[bucketIndex].guest += amount;
+                customerTimeline[
+                    bucketIndex
+                ].guest += amount;
             }
 
-            if (order.orderType === "DINE_IN") orderTypeTimeline[bucketIndex].dineIn += amount;
-            if (order.orderType === "TAKE_AWAY") orderTypeTimeline[bucketIndex].takeAway += amount;
+            if (
+                order.orderType ===
+                "DINE_IN"
+            ) {
+                orderTypeTimeline[
+                    bucketIndex
+                ].dineIn += amount;
+            }
+
+            if (
+                order.orderType ===
+                "TAKE_AWAY"
+            ) {
+                orderTypeTimeline[
+                    bucketIndex
+                ].takeAway += amount;
+            }
         }
 
-        addOrderItemsToFoodMap(foodMap, order.orderItems);
+        addOrderItemsToFoodMap(
+            foodMap,
+            order.orderItems
+        );
+
+        if (scope.branchId) {
+            return;
+        }
 
         const branch = order.branch;
 
-        if (branch) {
-            if (!branchMap.has(branch.id)) {
-                branchMap.set(branch.id, {
-                    id: branch.id,
-                    name: branch.name,
-                    revenue: 0
-                });
-            }
+        if (!branch) return;
 
-            branchMap.get(branch.id).revenue += amount;
+        if (!branchMap.has(branch.id)) {
+            branchMap.set(branch.id, {
+                id: branch.id,
+                name: branch.name,
+                revenue: 0
+            });
         }
+
+        branchMap.get(branch.id).revenue += amount;
     });
 
-    const foods = Array.from(foodMap.values());
+    const foods = Array.from(
+        foodMap.values()
+    );
 
     const bestSelling = [...foods]
-        .sort((a, b) => b.quantity !== a.quantity ? b.quantity - a.quantity : b.revenue - a.revenue)
+        .sort((a, b) =>
+            b.quantity !== a.quantity
+                ? b.quantity - a.quantity
+                : b.revenue - a.revenue
+        )
         .slice(0, 10);
 
     const leastSelling = [...foods]
-        .sort((a, b) => a.quantity !== b.quantity ? a.quantity - b.quantity : a.revenue - b.revenue)
+        .sort((a, b) =>
+            a.quantity !== b.quantity
+                ? a.quantity - b.quantity
+                : a.revenue - b.revenue
+        )
         .slice(0, 10);
 
-    const branchRevenue = Array.from(branchMap.values()).sort((a, b) => b.revenue - a.revenue);
-    const orderCount = orderIds.size;
-    const averageOrder = orderCount > 0 ? totalRevenue / orderCount : 0;
+    const branchRevenue = Array.from(
+        branchMap.values()
+    ).sort(
+        (a, b) =>
+            b.revenue - a.revenue
+    );
 
-    let foodTrend = { increased: [], decreased: [] };
+    const orderCount = orderIds.size;
+
+    const averageOrder =
+        orderCount > 0
+            ? totalRevenue / orderCount
+            : 0;
+
+    let foodTrend = {
+        increased: [],
+        decreased: []
+    };
+
     let unsoldFoods = [];
 
-    if (period === "week" || period === "month") {
-        [foodTrend, unsoldFoods] = await Promise.all([
-            getFoodTrend(branchFilter, period, fromDate, toDate, payments),
-            getUnsoldFoods(branchFilter, payments)
+    if (
+        period === "week" ||
+        period === "month"
+    ) {
+        [
+            foodTrend,
+            unsoldFoods
+        ] = await Promise.all([
+            getFoodTrend(
+                scope,
+                period,
+                fromDate,
+                toDate,
+                payments
+            ),
+            getUnsoldFoods(
+                scope,
+                payments
+            )
         ]);
     }
 
     return {
         period,
-        branchId: branchFilter || null,
+        mode: scope.mode,
+        restaurantId: scope.restaurantId,
+        branchId: scope.branchId,
+        branches: scope.branches,
+        showBranchFilter: scope.showBranchFilter,
+        showBranchRevenue: scope.showBranchRevenue,
         fromDate: formatDate(fromDate),
         toDate: formatDate(toDate),
+
         summary: {
             totalRevenue,
             totalDineIn,
@@ -479,6 +856,7 @@ const getStatistics = async (branchId, period, filters = {}) => {
             orderCount,
             averageOrder
         },
+
         timeline,
         customerTimeline,
         orderTypeTimeline,
@@ -490,4 +868,7 @@ const getStatistics = async (branchId, period, filters = {}) => {
     };
 };
 
-module.exports = { getStatistics };
+module.exports = {
+    getStatistics
+};
+

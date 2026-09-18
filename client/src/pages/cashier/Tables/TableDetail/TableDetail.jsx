@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
-import { useParams } from "react-router-dom";
+import { useParams, useLocation } from "react-router-dom";
 
 import tableService from "../../../../services/table.service";
 import orderService from "../../../../services/order.service";
@@ -13,6 +13,7 @@ import NotiModal from "../../../../components/NotiModal/NotiModal";
 
 export default function TableDetail() {
     const { tableId } = useParams();
+    const location = useLocation();
 
     const [loading, setLoading] = useState(true);
     const [table, setTable] = useState(null);
@@ -26,6 +27,9 @@ export default function TableDetail() {
         type: "error",
         message: "",
     });
+    const mode = location.pathname.startsWith("/admin/")
+        ? "single"
+        : "branch";
 
     // LOAD TABLE
     const loadTable = useCallback(
@@ -174,26 +178,41 @@ export default function TableDetail() {
         });
     };
 
-    
-    // CREATE ORDER
     const handleCreateOrder = async () => {
         try {
             const customerRes = await tableService.open(table.id, {
                 name: `Khách bàn ${table.tableNumber}`,
             });
 
+            console.log("OPEN TABLE RESPONSE:", customerRes);
+
+            const customer = customerRes?.data?.customer;
+
+            if (!customer?.id) {
+                throw new Error("Không lấy được thông tin khách hàng.");
+            }
+
             const orderRes = await orderService.create({
-                customerId: customerRes.data.customer.id,
+                customerId: customer.id,
             });
+
+            console.log("CREATE ORDER RESPONSE:", orderRes);
 
             await loadTable(false);
 
-            const createdOrder = orderRes?.data?.data;
+            const createdOrder = orderRes?.data;
 
-            if (createdOrder) setSelectedOrder(createdOrder);
+            if (createdOrder) {
+                setSelectedOrder(createdOrder);
+            }
 
             setShowFoodPanel(true);
         } catch (err) {
+            console.error(
+                "CREATE ORDER ERROR:",
+                err.response?.data || err
+            );
+
             setNoti({
                 open: true,
                 type: "error",
@@ -204,10 +223,6 @@ export default function TableDetail() {
             });
         }
     };
-
-    
-    // ADD FOOD
-    
 
     const handleAddFood = (order) => {
         setSelectedOrder(order);
@@ -239,24 +254,20 @@ export default function TableDetail() {
         );
     }
 
-    
-    // RENDER
-    
-
     return (
         <>
             {!showFoodPanel ? (
                 <div className="grid min-h-[calc(100vh-85px)] grid-cols-1 gap-3 bg-[var(--color-background)] lg:grid-cols-2 lg:gap-2">
                     <div className="min-h-[400px] overflow-hidden rounded-xl bg-white shadow lg:h-[calc(100vh-85px)]">
-                        <OrderList
+                       <OrderList
                             table={table}
                             orders={table.orders || []}
                             selectedOrder={selectedOrder}
                             onSelectOrder={setSelectedOrder}
                             onCreateOrder={handleCreateOrder}
-                            reload={loadTable}
                             onMergeOrders={() => setOpenMerge(true)}
-                            onOrderUpdated={handleOrderUpdated}
+                            reload={() => loadTable(false)}
+                            mode={mode}
                         />
                     </div>
 
@@ -271,7 +282,7 @@ export default function TableDetail() {
                     </div>
                 </div>
             ) : (
-                <div className="grid min-h-[calc(100vh-85px)] grid-cols-1 gap-3 bg-[vả(--color-background)] lg:grid-cols-12 lg:gap-2">
+                <div className="grid min-h-[calc(100vh-85px)] grid-cols-1 gap-3 bg-[var(--color-background)] lg:grid-cols-12 lg:gap-2">
                     <div className="min-h-[400px] overflow-hidden rounded-2xl bg-white shadow lg:col-span-8 lg:h-[calc(100vh-85px)]">
                         <FoodPanel
                             title="Order"

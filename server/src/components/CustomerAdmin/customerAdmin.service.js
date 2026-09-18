@@ -41,6 +41,124 @@ const getRestaurantId = user => {
     return restaurantId;
 };
 
+const getBranchId = async user => {
+    if (!user) {
+        throw new Error("Chưa xác thực người dùng.");
+    }
+
+    if (user.role !== "BRANCH") {
+        return null;
+    }
+
+    const branchId = Number(user.branchId);
+
+    if (!branchId) {
+        throw new Error("Tài khoản chưa được gán chi nhánh.");
+    }
+
+    const branch = await prisma.branch.findFirst({
+        where: {
+            id: branchId,
+            restaurantId: Number(user.restaurantId),
+            isActive: true
+        },
+        select: { id: true }
+    });
+
+    if (!branch) {
+        throw new Error("Chi nhánh không tồn tại hoặc đã bị khóa.");
+    }
+
+    return branch.id;
+};
+
+const getOrderWhere = ({
+    restaurantId,
+    branchId,
+    from,
+    to
+}) => ({
+    createdAt: {
+        gte: from,
+        lt: to
+    },
+    ...(branchId
+        ? { branchId }
+        : { branch: { restaurantId } })
+});
+
+const getOrderRelationWhere = ({
+    restaurantId,
+    branchId,
+    from,
+    to
+}) => ({
+    is: getOrderWhere({
+        restaurantId,
+        branchId,
+        from,
+        to
+    })
+});
+
+const calculateVisits = orders => {
+    const sessionIds = new Set();
+    let takeawayVisits = 0;
+
+    orders.forEach(order => {
+        if (order.sessionId) {
+            sessionIds.add(order.sessionId);
+        } else if (order.orderType === "TAKE_AWAY") {
+            takeawayVisits++;
+        }
+    });
+
+    return sessionIds.size + takeawayVisits;
+};
+
+const calculateBranches = orders => {
+    const branchMap = new Map();
+
+    orders.forEach(order => {
+        const branch =
+            order.branch ||
+            order.session?.table?.floor?.branch;
+
+        if (!branch) return;
+
+        if (!branchMap.has(branch.id)) {
+            branchMap.set(branch.id, {
+                branchId: branch.id,
+                branchName: branch.name,
+                sessionIds: new Set(),
+                takeawayCount: 0,
+                totalSpent: 0
+            });
+        }
+
+        const branchData = branchMap.get(branch.id);
+
+        if (order.sessionId) {
+            branchData.sessionIds.add(order.sessionId);
+        } else if (order.orderType === "TAKE_AWAY") {
+            branchData.takeawayCount++;
+        }
+
+        branchData.totalSpent += Number(order.totalAmount || 0);
+    });
+
+    return Array.from(branchMap.values())
+        .map(branch => ({
+            branchId: branch.branchId,
+            branchName: branch.branchName,
+            visits:
+                branch.sessionIds.size +
+                branch.takeawayCount,
+            totalSpent: branch.totalSpent
+        }))
+        .sort((a, b) => b.visits - a.visits);
+};
+
 const getCustomers = async ({
     user,
     search,
@@ -50,7 +168,15 @@ const getCustomers = async ({
     sort = "visits_desc"
 } = {}) => {
     const restaurantId = getRestaurantId(user);
+    const branchId = await getBranchId(user);
     const { from, to } = getDateRange(period, year, value);
+
+    const orderWhere = getOrderRelationWhere({
+        restaurantId,
+        branchId,
+        from,
+        to
+    });
 
     const customers = await prisma.customer.findMany({
         where: {
@@ -58,18 +184,30 @@ const getCustomers = async ({
             isGuest: false,
             orderMembers: {
                 some: {
-                    order: {
-                        restaurantId,
-                        createdAt: { gte: from, lt: to }
-                    }
+                    order: orderWhere
                 }
             },
             ...(search
                 ? {
                       OR: [
-                          { name: { contains: search, mode: "insensitive" } },
-                          { email: { contains: search, mode: "insensitive" } },
-                          { phone: { contains: search, mode: "insensitive" } }
+                          {
+                              name: {
+                                  contains: search,
+                                  mode: "insensitive"
+                              }
+                          },
+                          {
+                              email: {
+                                  contains: search,
+                                  mode: "insensitive"
+                              }
+                          },
+                          {
+                              phone: {
+                                  contains: search,
+                                  mode: "insensitive"
+                              }
+                          }
                       ]
                   }
                 : {})
@@ -77,10 +215,7 @@ const getCustomers = async ({
         include: {
             orderMembers: {
                 where: {
-                    order: {
-                        restaurantId,
-                        createdAt: { gte: from, lt: to }
-                    }
+                    order: orderWhere
                 },
                 include: {
                     order: {
@@ -91,7 +226,9 @@ const getCustomers = async ({
                                     table: {
                                         include: {
                                             floor: {
-                                                include: { branch: true }
+                                                include: {
+                                                    branch: true
+                                                }
                                             }
                                         }
                                     }
@@ -101,8 +238,7 @@ const getCustomers = async ({
                     }
                 }
             }
-        },
-        orderBy: { id: "desc" }
+        }
     });
 
     const result = customers.map(customer => {
@@ -110,60 +246,20 @@ const getCustomers = async ({
             .map(member => member.order)
             .filter(Boolean);
 
-        const sessionIds = new Set();
-        let takeawayVisits = 0;
-
-        orders.forEach(order => {
-            if (order.sessionId) sessionIds.add(order.sessionId);
-            else if (order.orderType === "TAKE_AWAY") takeawayVisits++;
-        });
-
-        const visits = sessionIds.size + takeawayVisits;
+        const visits = calculateVisits(orders);
 
         const totalSpent = orders.reduce(
-            (sum, order) => sum + Number(order.totalAmount || 0),
+            (sum, order) =>
+                sum + Number(order.totalAmount || 0),
             0
         );
 
-        const branchMap = new Map();
-
-        orders.forEach(order => {
-            const branch = order.branch || order.session?.table?.floor?.branch;
-            if (!branch) return;
-
-            if (!branchMap.has(branch.id)) {
-                branchMap.set(branch.id, {
-                    branchId: branch.id,
-                    branchName: branch.name,
-                    sessionIds: new Set(),
-                    takeawayCount: 0,
-                    totalSpent: 0
-                });
-            }
-
-            const branchData = branchMap.get(branch.id);
-
-            if (order.sessionId) {
-                branchData.sessionIds.add(order.sessionId);
-            } else if (order.orderType === "TAKE_AWAY") {
-                branchData.takeawayCount++;
-            }
-
-            branchData.totalSpent += Number(order.totalAmount || 0);
-        });
-
-        const branches = Array.from(branchMap.values())
-            .map(branch => ({
-                branchId: branch.branchId,
-                branchName: branch.branchName,
-                visits: branch.sessionIds.size + branch.takeawayCount,
-                totalSpent: branch.totalSpent
-            }))
-            .sort((a, b) => b.visits - a.visits);
+        const branches = calculateBranches(orders);
 
         const latestOrder = orders.reduce(
             (latest, order) =>
-                !latest || order.createdAt > latest.createdAt
+                !latest ||
+                order.createdAt > latest.createdAt
                     ? order
                     : latest,
             null
@@ -180,7 +276,8 @@ const getCustomers = async ({
             visits,
             totalSpent,
             lastVisit: latestOrder?.createdAt || null,
-            favoriteBranch: branches[0]?.branchName || null,
+            favoriteBranch:
+                branches[0]?.branchName || null,
             branches
         };
     });
@@ -194,80 +291,136 @@ const getCustomers = async ({
             case "spent_asc":
                 return a.totalSpent - b.totalSpent;
             case "last_visit_desc":
-                return new Date(b.lastVisit) - new Date(a.lastVisit);
+                return (
+                    new Date(b.lastVisit || 0) -
+                    new Date(a.lastVisit || 0)
+                );
             case "last_visit_asc":
-                return new Date(a.lastVisit) - new Date(b.lastVisit);
+                return (
+                    new Date(a.lastVisit || 0) -
+                    new Date(b.lastVisit || 0)
+                );
             default:
                 return b.visits - a.visits;
         }
     });
 
-    const registeredCustomers = await prisma.customer.findMany({
-        where: {
-            restaurantId,
-            isGuest: false,
-            orderMembers: {
-                some: {
-                    order: {
-                        restaurantId,
-                        createdAt: { gte: from, lt: to }
+    const registeredCustomers =
+        await prisma.customer.findMany({
+            where: {
+                restaurantId,
+                isGuest: false,
+                orderMembers: {
+                    some: {
+                        order: orderWhere
                     }
                 }
+            },
+            select: {
+                id: true,
+                createdAt: true
             }
-        },
+        });
+
+    const newCustomers = registeredCustomers.filter(
+        customer => {
+            const createdAt = new Date(
+                customer.createdAt
+            );
+
+            return (
+                createdAt >= from &&
+                createdAt < to
+            );
+        }
+    ).length;
+
+    const returningCustomers =
+        registeredCustomers.length - newCustomers;
+
+    const guestOrders = await prisma.order.findMany({
+        where: getOrderWhere({
+            restaurantId,
+            branchId,
+            from,
+            to
+        }),
         select: {
             id: true,
-            createdAt: true
-        }
-    });
-
-    const newCustomers = registeredCustomers.filter(customer => {
-        const createdAt = new Date(customer.createdAt);
-        return createdAt >= from && createdAt < to;
-    }).length;
-
-    const returningCustomers = registeredCustomers.length - newCustomers;
-
-    const guestCustomers = await prisma.customer.count({
-        where: {
-            restaurantId,
-            isGuest: true,
+            createdByCustomer: {
+                select: {
+                    id: true,
+                    isGuest: true
+                }
+            },
             orderMembers: {
-                some: {
-                    order: {
-                        restaurantId,
-                        createdAt: { gte: from, lt: to }
+                select: {
+                    customer: {
+                        select: {
+                            id: true,
+                            isGuest: true
+                        }
                     }
                 }
             }
         }
     });
 
-    const statisticsOrders = await prisma.order.findMany({
-        where: {
-            restaurantId,
-            createdAt: { gte: from, lt: to },
-            orderMembers: { some: {} }
-        },
-        select: {
-            totalAmount: true
+    const guestCustomerIds = new Set();
+
+    guestOrders.forEach(order => {
+        if (
+            order.createdByCustomer?.isGuest
+        ) {
+            guestCustomerIds.add(
+                order.createdByCustomer.id
+            );
         }
+
+        order.orderMembers.forEach(member => {
+            if (
+                member.customer?.isGuest
+            ) {
+                guestCustomerIds.add(
+                    member.customer.id
+                );
+            }
+        });
     });
 
+    const guestCustomers = guestCustomerIds.size;
+
+    const statisticsOrders =
+        await prisma.order.findMany({
+            where: getOrderWhere({
+                restaurantId,
+                branchId,
+                from,
+                to
+            }),
+            select: {
+                totalAmount: true
+            }
+        });
+
     const totalSpent = statisticsOrders.reduce(
-        (sum, order) => sum + Number(order.totalAmount || 0),
+        (sum, order) =>
+            sum + Number(order.totalAmount || 0),
         0
     );
 
     return {
         period,
-        year: Number(year) || new Date().getFullYear(),
-        value: Number(value),
+        year:
+            Number(year) ||
+            new Date().getFullYear(),
+        value: value ? Number(value) : null,
         from,
         to,
         statistics: {
             totalCustomers:
-                newCustomers + returningCustomers + guestCustomers,
+                registeredCustomers.length +
+                guestCustomers,
             guestCustomers,
             returningCustomers,
             newCustomers,
@@ -279,12 +432,20 @@ const getCustomers = async ({
 
 const getCustomerById = async (
     customerId,
-    { user, period = "year", year, value } = {}
+    {
+        user,
+        period = "year",
+        year,
+        value
+    } = {}
 ) => {
     const restaurantId = getRestaurantId(user);
+    const branchId = await getBranchId(user);
     const id = Number(customerId);
 
-    if (!id) throw new Error("Customer ID không hợp lệ.");
+    if (!id) {
+        throw new Error("Customer ID không hợp lệ.");
+    }
 
     const customer = await prisma.customer.findFirst({
         where: {
@@ -298,7 +459,9 @@ const getCustomerById = async (
                         include: {
                             payment: true,
                             orderItems: {
-                                include: { food: true }
+                                include: {
+                                    food: true
+                                }
                             },
                             branch: true,
                             session: {
@@ -306,7 +469,9 @@ const getCustomerById = async (
                                     table: {
                                         include: {
                                             floor: {
-                                                include: { branch: true }
+                                                include: {
+                                                    branch: true
+                                                }
                                             }
                                         }
                                     }
@@ -319,59 +484,58 @@ const getCustomerById = async (
         }
     });
 
-    if (!customer) throw new Error("Khách hàng không tồn tại.");
+    if (!customer) {
+        throw new Error(
+            "Khách hàng không tồn tại."
+        );
+    }
 
-    const { from, to } = getDateRange(period, year, value);
+    const { from, to } = getDateRange(
+        period,
+        year,
+        value
+    );
 
     const orders = customer.orderMembers
         .map(member => member.order)
         .filter(Boolean)
-        .filter(
-            order =>
-                order.branch?.restaurantId === restaurantId &&
-                order.createdAt >= from &&
-                order.createdAt < to
+        .filter(order => {
+            if (
+                Number(order.branch?.restaurantId) !==
+                restaurantId
+            ) {
+                return false;
+            }
+
+            if (
+                order.createdAt < from ||
+                order.createdAt >= to
+            ) {
+                return false;
+            }
+
+            if (
+                branchId &&
+                Number(order.branchId) !== branchId
+            ) {
+                return false;
+            }
+
+            return true;
+        });
+
+    if (!orders.length) {
+        throw new Error(
+            "Khách hàng không có dữ liệu tại chi nhánh này."
         );
+    }
 
-    const branchMap = new Map();
-
-    orders.forEach(order => {
-        const branch = order.branch || order.session?.table?.floor?.branch;
-        if (!branch) return;
-
-        if (!branchMap.has(branch.id)) {
-            branchMap.set(branch.id, {
-                branchId: branch.id,
-                branchName: branch.name,
-                visits: 0,
-                totalSpent: 0
-            });
-        }
-
-        const item = branchMap.get(branch.id);
-        item.visits += 1;
-        item.totalSpent += Number(order.totalAmount || 0);
-    });
-
-    const branches = Array.from(branchMap.values()).sort(
-        (a, b) => b.visits - a.visits
-    );
-
-    const sessionIds = new Set();
-    let takeawayVisits = 0;
-
-    orders.forEach(order => {
-        if (order.sessionId) {
-            sessionIds.add(order.sessionId);
-        } else if (order.orderType === "TAKE_AWAY") {
-            takeawayVisits++;
-        }
-    });
-
-    const visitCount = sessionIds.size + takeawayVisits;
+    const branches = calculateBranches(orders);
+    const visitCount = calculateVisits(orders);
 
     const totalSpent = orders.reduce(
-        (sum, order) => sum + Number(order.totalAmount || 0),
+        (sum, order) =>
+            sum + Number(order.totalAmount || 0),
         0
     );
 
@@ -387,7 +551,8 @@ const getCustomerById = async (
             orderCount: orders.length,
             visitCount,
             totalSpent,
-            favoriteBranch: branches[0] || null,
+            favoriteBranch:
+                branches[0] || null,
             branches
         },
         orders
@@ -401,42 +566,37 @@ const getStatistics = async ({
     value
 } = {}) => {
     const restaurantId = getRestaurantId(user);
-    const { from, to } = getDateRange(period, year, value);
+    const branchId = await getBranchId(user);
 
-    const totalCustomers = await prisma.customer.count({
-        where: {
-            restaurantId,
-            isGuest: false,
-            createdAt: { lt: to }
-        }
-    });
+    const { from, to } = getDateRange(
+        period,
+        year,
+        value
+    );
 
     const orders = await prisma.order.findMany({
-        where: {
+        where: getOrderWhere({
             restaurantId,
-            createdAt: { gte: from, lt: to },
-            orderMembers: {
-                some: {
-                    customer: {
-                        restaurantId,
-                        isGuest: false
-                    }
-                }
-            }
-        },
+            branchId,
+            from,
+            to
+        }),
         include: {
             orderMembers: {
                 include: {
                     customer: true
                 }
             },
+            createdByCustomer: true,
             branch: true,
             session: {
                 include: {
                     table: {
                         include: {
                             floor: {
-                                include: { branch: true }
+                                include: {
+                                    branch: true
+                                }
                             }
                         }
                     }
@@ -445,15 +605,45 @@ const getStatistics = async ({
         }
     });
 
-    const customerIds = new Set();
+    const registeredCustomerIds = new Set();
+    const guestCustomerIds = new Set();
 
     orders.forEach(order => {
-        order.orderMembers.forEach(member => {
-            if (
-                member.customer?.restaurantId === restaurantId &&
-                !member.customer?.isGuest
+        const createdCustomer =
+            order.createdByCustomer;
+
+        if (createdCustomer) {
+            if (createdCustomer.isGuest) {
+                guestCustomerIds.add(
+                    createdCustomer.id
+                );
+            } else if (
+                Number(
+                    createdCustomer.restaurantId
+                ) === restaurantId
             ) {
-                customerIds.add(member.customer.id);
+                registeredCustomerIds.add(
+                    createdCustomer.id
+                );
+            }
+        }
+
+        order.orderMembers.forEach(member => {
+            const customer = member.customer;
+
+            if (!customer) return;
+
+            if (customer.isGuest) {
+                guestCustomerIds.add(
+                    customer.id
+                );
+            } else if (
+                Number(customer.restaurantId) ===
+                restaurantId
+            ) {
+                registeredCustomerIds.add(
+                    customer.id
+                );
             }
         });
     });
@@ -461,7 +651,10 @@ const getStatistics = async ({
     const branchMap = new Map();
 
     orders.forEach(order => {
-        const branch = order.branch || order.session?.table?.floor?.branch;
+        const branch =
+            order.branch ||
+            order.session?.table?.floor?.branch;
+
         if (!branch) return;
 
         if (!branchMap.has(branch.id)) {
@@ -475,26 +668,41 @@ const getStatistics = async ({
 
         const branchData = branchMap.get(branch.id);
 
-        branchData.visits += 1;
-        branchData.totalSpent += Number(order.totalAmount || 0);
+        branchData.visits++;
+        branchData.totalSpent += Number(
+            order.totalAmount || 0
+        );
     });
 
-    const branches = Array.from(branchMap.values()).sort(
+    const branches = Array.from(
+        branchMap.values()
+    ).sort(
         (a, b) => b.visits - a.visits
+    );
+
+    const totalRevenue = orders.reduce(
+        (sum, order) =>
+            sum + Number(order.totalAmount || 0),
+        0
     );
 
     return {
         period,
-        year: Number(year) || new Date().getFullYear(),
+        year:
+            Number(year) ||
+            new Date().getFullYear(),
+        value: value ? Number(value) : null,
         from,
         to,
-        totalCustomers,
-        activeCustomers: customerIds.size,
+        totalCustomers:
+            registeredCustomerIds.size +
+            guestCustomerIds.size,
+        activeCustomers:
+            registeredCustomerIds.size,
+        guestCustomers:
+            guestCustomerIds.size,
         totalOrders: orders.length,
-        totalRevenue: orders.reduce(
-            (sum, order) => sum + Number(order.totalAmount || 0),
-            0
-        ),
+        totalRevenue,
         branches
     };
 };

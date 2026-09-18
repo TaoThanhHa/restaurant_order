@@ -14,11 +14,9 @@ export default function FoodManagement({ restaurantMode = "SINGLE" }) {
     const [foods, setFoods] = useState([]);
     const [categories, setCategories] = useState([]);
     const [branches, setBranches] = useState([]);
-
     const [loading, setLoading] = useState(false);
     const [selectedFood, setSelectedFood] = useState(null);
     const [openModal, setOpenModal] = useState(false);
-
     const [selectedCategory, setSelectedCategory] = useState(null);
     const [selectedBranch, setSelectedBranch] = useState("");
     const [statusTab, setStatusTab] = useState("active");
@@ -32,43 +30,6 @@ export default function FoodManagement({ restaurantMode = "SINGLE" }) {
     });
 
     const isMulti = restaurantMode === "MULTI";
-
-    useEffect(() => {
-        loadData();
-    }, [restaurantMode]);
-
-    const loadData = async () => {
-        setLoading(true);
-
-        try {
-            const requests = [
-                foodService.getAll(),
-                categoryService.getAll(),
-            ];
-
-            if (isMulti) {
-                requests.push(branchService.getAll());
-            }
-
-            const [foodRes, categoryRes, branchRes] =
-                await Promise.all(requests);
-
-            setFoods(foodRes.data.data);
-            setCategories(categoryRes.data.data);
-            setBranches(isMulti ? branchRes?.data || [] : []);
-        } catch (err) {
-            showNotification({
-                type: "error",
-                title: "Không thể tải dữ liệu",
-                message:
-                    err.response?.data?.message ||
-                    err.message ||
-                    "Đã xảy ra lỗi khi tải danh sách món.",
-            });
-        } finally {
-            setLoading(false);
-        }
-    };
 
     const showNotification = ({
         type = "success",
@@ -92,6 +53,59 @@ export default function FoodManagement({ restaurantMode = "SINGLE" }) {
         });
     };
 
+    const loadData = async () => {
+        setLoading(true);
+
+        try {
+            const [foodRes, categoryRes, branchRes] = await Promise.all([
+                foodService.getAll(),
+                categoryService.getAll(),
+                branchService.getAll(),
+            ]);
+
+            const foodData =
+                foodRes?.data?.data ??
+                foodRes?.data ??
+                foodRes ??
+                [];
+
+            const categoryData =
+                categoryRes?.data?.data ??
+                categoryRes?.data ??
+                categoryRes ??
+                [];
+
+            const branchData =
+                branchRes?.data?.data ??
+                branchRes?.data ??
+                branchRes ??
+                [];
+
+            setFoods(Array.isArray(foodData) ? foodData : []);
+            setCategories(Array.isArray(categoryData) ? categoryData : []);
+            setBranches(Array.isArray(branchData) ? branchData : []);
+        } catch (err) {
+            setFoods([]);
+            setCategories([]);
+            setBranches([]);
+
+            showNotification({
+                type: "error",
+                title: "Không thể tải dữ liệu",
+                message:
+                    err.response?.data?.message ||
+                    err.message ||
+                    "Đã xảy ra lỗi khi tải danh sách món.",
+            });
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    useEffect(() => {
+        loadData();
+    }, [restaurantMode]);
+
     const handleCreate = () => {
         setSelectedFood(null);
         setOpenModal(true);
@@ -103,8 +117,24 @@ export default function FoodManagement({ restaurantMode = "SINGLE" }) {
     };
 
     const handleSave = async data => {
-        if (selectedFood) {
-            await foodService.update(selectedFood.id, data);
+        try {
+            if (selectedFood) {
+                await foodService.update(selectedFood.id, data);
+
+                setOpenModal(false);
+                setSelectedFood(null);
+                await loadData();
+
+                showNotification({
+                    type: "success",
+                    title: "Cập nhật thành công",
+                    message: "Cập nhật món ăn thành công.",
+                });
+
+                return;
+            }
+
+            await foodService.create(data);
 
             setOpenModal(false);
             setSelectedFood(null);
@@ -112,76 +142,88 @@ export default function FoodManagement({ restaurantMode = "SINGLE" }) {
 
             showNotification({
                 type: "success",
-                title: "Cập nhật thành công",
-                message: "Cập nhật món ăn thành công.",
-            });
-
-            return;
-        }
-
-        await foodService.create(data);
-
-        setOpenModal(false);
-        setSelectedFood(null);
-        await loadData();
-
-        showNotification({
-            type: "success",
-            title: "Tạo món thành công",
-            message: "Món ăn đã được thêm vào danh sách.",
-        });
-    };
-
-    const handleInactive = async food => {
-        if (!window.confirm(`Ngừng kinh doanh "${food.name}"?`)) return;
-
-        try {
-            await foodService.update(food.id, {
-                status: "INACTIVE",
-            });
-
-            await loadData();
-
-            showNotification({
-                type: "success",
-                title: "Cập nhật thành công",
-                message: `Đã ngừng kinh doanh "${food.name}".`,
+                title: "Tạo món thành công",
+                message: "Món ăn đã được thêm vào danh sách.",
             });
         } catch (err) {
             showNotification({
                 type: "error",
-                title: "Không thể cập nhật",
+                title: "Không thể lưu món ăn",
                 message:
                     err.response?.data?.message ||
                     err.message ||
-                    "Đã xảy ra lỗi khi cập nhật món.",
+                    "Đã xảy ra lỗi khi lưu món ăn.",
             });
         }
     };
 
-    const getBranchFood = food => {
-        if (!selectedBranch) return null;
+const handleInactive = async food => {
+    try {
+        const branchFoods = food.branchFoods?.map(item => ({
+            branchId: item.branchId,
+            status:
+                !isMulti ||
+                !selectedBranch ||
+                Number(item.branchId) === Number(selectedBranch)
+                    ? "INACTIVE"
+                    : item.status,
+        })) || [];
 
+        if (branchFoods.length === 0 && !isMulti && branches[0]) {
+            branchFoods.push({
+                branchId: branches[0].id,
+                status: "INACTIVE",
+            });
+        }
+
+        await foodService.update(food.id, {
+            branchFoods,
+        });
+
+        await loadData();
+
+        showNotification({
+            type: "success",
+            title: "Cập nhật thành công",
+            message: `Đã ngừng kinh doanh "${food.name}".`,
+        });
+    } catch (err) {
+        showNotification({
+            type: "error",
+            title: "Không thể cập nhật",
+            message:
+                err.response?.data?.message ||
+                err.message ||
+                "Đã xảy ra lỗi khi cập nhật món.",
+        });
+    }
+};
+
+    const getBranchFood = (food, branchId) => {
         return food.branchFoods?.find(
-            item => item.branchId === Number(selectedBranch)
+            item => Number(item.branchId) === Number(branchId)
         );
     };
 
     const isFoodActive = food => {
         if (!isMulti) {
-            return food.status !== "INACTIVE";
+            const branch = branches[0];
+
+            if (!branch) return false;
+
+            return getBranchFood(food, branch.id)?.status === "AVAILABLE";
         }
 
         if (selectedBranch) {
-            const branchFood = getBranchFood(food);
-            return branchFood
-                ? branchFood.status !== "INACTIVE"
-                : false;
+            return (
+                getBranchFood(food, selectedBranch)?.status ===
+                "AVAILABLE"
+            );
         }
 
         return (
             food.branchFoods?.some(
-                item => item.status !== "INACTIVE"
+                item => item.status === "AVAILABLE"
             ) ?? false
         );
     };
@@ -192,21 +234,18 @@ export default function FoodManagement({ restaurantMode = "SINGLE" }) {
         return foods.filter(food => {
             const matchCategory =
                 !selectedCategory ||
-                food.categoryId === selectedCategory;
+                Number(food.categoryId) === Number(selectedCategory);
 
             const matchKeyword =
+                !text ||
                 food.name?.toLowerCase().includes(text);
 
-            const matchStatus =
-                statusTab === "active"
-                    ? isFoodActive(food)
-                    : !isFoodActive(food);
+            const active = isFoodActive(food);
 
-            return (
-                matchCategory &&
-                matchKeyword &&
-                matchStatus
-            );
+            const matchStatus =
+                statusTab === "active" ? active : !active;
+
+            return matchCategory && matchKeyword && matchStatus;
         });
     }, [
         foods,
@@ -240,9 +279,7 @@ export default function FoodManagement({ restaurantMode = "SINGLE" }) {
 
                             <input
                                 value={keyword}
-                                onChange={e =>
-                                    setKeyword(e.target.value)
-                                }
+                                onChange={e => setKeyword(e.target.value)}
                                 placeholder="Tìm theo tên món..."
                                 className="w-full rounded-lg border py-2 pl-10 pr-3 outline-none focus:border-[var(--color-primary)]"
                             />
@@ -252,16 +289,12 @@ export default function FoodManagement({ restaurantMode = "SINGLE" }) {
                             <select
                                 value={selectedBranch}
                                 onChange={e => {
-                                    setSelectedBranch(
-                                        e.target.value
-                                    );
+                                    setSelectedBranch(e.target.value);
                                     setStatusTab("active");
                                 }}
                                 className="h-9 w-60 rounded-lg border px-3 outline-none focus:border-[var(--color-primary)]"
                             >
-                                <option value="">
-                                    Tất cả cơ sở
-                                </option>
+                                <option value="">Tất cả cơ sở</option>
 
                                 {branches.map(branch => (
                                     <option
@@ -323,9 +356,7 @@ export default function FoodManagement({ restaurantMode = "SINGLE" }) {
                     {categories.map(category => (
                         <button
                             key={category.id}
-                            onClick={() =>
-                                setSelectedCategory(category.id)
-                            }
+                            onClick={() => setSelectedCategory(category.id)}
                             className={`rounded-full px-4 py-2 ${
                                 selectedCategory === category.id
                                     ? "bg-[var(--color-primary)] text-white"

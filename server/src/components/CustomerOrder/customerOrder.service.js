@@ -236,6 +236,14 @@ const create = async (customerId, tableId, items, options = {}) => {
                 Number(item.quantity);
         }
 
+        await tx.cartItem.deleteMany({
+            where: {
+                cart: {
+                    customerId
+                }
+            }
+        });
+
         return tx.order.update({
             where: { id: order.id },
             data: {

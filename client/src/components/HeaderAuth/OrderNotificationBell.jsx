@@ -77,10 +77,7 @@ export default function OrderNotificationBell() {
 
     useEffect(() => {
         loadOrders();
-        const interval = setInterval(
-            loadOrders,
-            3000
-        );
+        const interval = setInterval( loadOrders, 3000);
 
         return () => clearInterval(interval);
     }, []);
@@ -145,8 +142,7 @@ export default function OrderNotificationBell() {
                                 </h3>
 
                                 <p className="text-xs text-gray-500">
-                                    {notificationCount >
-                                    0
+                                    {notificationCount > 0
                                         ? `${notificationCount} thông báo`
                                         : "Không có thông báo mới"}
                                 </p>

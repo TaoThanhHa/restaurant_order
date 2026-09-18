@@ -37,10 +37,6 @@ const checkBranchAccess = async (branchId, user) => {
   return branch;
 };
 
-// ======================================================
-// CHECK FLOOR ACCESS
-// ======================================================
-
 const checkFloorAccess = async (floorId, user) => {
   const floor = await prisma.floor.findUnique({
     where: {
@@ -87,9 +83,6 @@ const getAll = async (user) => {
           },
         };
 
-  console.log("GET FLOORS USER:", user);
-  console.log("GET FLOORS WHERE:", where);
-
   const floors = await prisma.floor.findMany({
     where,
     include: {
@@ -104,8 +97,6 @@ const getAll = async (user) => {
       floorNumber: "asc",
     },
   });
-
-  console.log("GET FLOORS RESULT:", floors);
 
   return floors;
 };

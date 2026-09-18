@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { Utensils } from "lucide-react";
 
-import restaurantService from "../../services/restaurant.service";
+import restaurantService from "../../../services/restaurant.service";
 
 export default function HomeHeader({
     profile,

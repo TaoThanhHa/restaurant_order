@@ -3,7 +3,7 @@ import { useParams } from "react-router-dom";
 
 import customerAuthService from "../../../services/customerAuth.service";
 
-import HomeHeader from "../../../components/Customer/HomeHeader";
+import HomeHeader from "../components/HomeHeader";
 import FoodPanel from "../../cashier/Tables/TableDetail/FoodPanel";
 import CartModal from "./CartModal";
 

@@ -1,5 +1,7 @@
 import { useEffect, useState } from "react";
 import { Plus, AlertTriangle, X } from "lucide-react";
+import { io } from "socket.io-client";
+
 import Button from "../../../components/Button/Button";
 import NotiModal from "../../../components/NotiModal/NotiModal";
 import FloorCard from "./FloorCard";
@@ -72,7 +74,10 @@ export default function FloorManagement({ mode = "admin" }) {
             showNotification({
                 type: "error",
                 title: "Không thể tải dữ liệu",
-                message: getErrorMessage(error, "Không thể lấy danh sách chi nhánh.")
+                message: getErrorMessage(
+                    error,
+                    "Không thể lấy danh sách chi nhánh."
+                )
             });
         }
     };
@@ -97,7 +102,10 @@ export default function FloorManagement({ mode = "admin" }) {
             showNotification({
                 type: "error",
                 title: "Không thể tải dữ liệu",
-                message: getErrorMessage(error, "Không thể lấy chi nhánh mặc định.")
+                message: getErrorMessage(
+                    error,
+                    "Không thể lấy chi nhánh mặc định."
+                )
             });
         }
     };
@@ -116,7 +124,10 @@ export default function FloorManagement({ mode = "admin" }) {
             showNotification({
                 type: "error",
                 title: "Không thể tải dữ liệu",
-                message: getErrorMessage(error, "Không thể lấy thông tin chi nhánh.")
+                message: getErrorMessage(
+                    error,
+                    "Không thể lấy thông tin chi nhánh."
+                )
             });
         }
     };
@@ -139,7 +150,10 @@ export default function FloorManagement({ mode = "admin" }) {
             showNotification({
                 type: "error",
                 title: "Không thể tải dữ liệu",
-                message: getErrorMessage(error, "Không thể lấy danh sách tầng.")
+                message: getErrorMessage(
+                    error,
+                    "Không thể lấy danh sách tầng."
+                )
             });
         } finally {
             setLoading(false);
@@ -164,6 +178,65 @@ export default function FloorManagement({ mode = "admin" }) {
         } else {
             setFloors([]);
         }
+    }, [branchId]);
+
+    useEffect(() => {
+        const token = localStorage.getItem("token");
+        if (!token) return;
+
+        const socket = io(import.meta.env.VITE_API_URL, {
+            auth: {
+                token
+            }
+        });
+
+        const reload = data => {
+            loadFloors();
+
+            const tableNumber =
+                data?.tableNumber ||
+                data?.table?.tableNumber;
+
+            if (tableNumber) {
+                showNotification({
+                    type: "success",
+                    title: "Bàn vừa được cập nhật",
+                    message: `Bàn ${tableNumber} vừa thay đổi trạng thái.`
+                });
+            }
+        };
+
+        socket.on("connect", () => {
+            console.log(
+                "WebSocket connected:",
+                socket.id
+            );
+        });
+
+        socket.on("table.updated", reload);
+        socket.on("order.updated", reload);
+        socket.on("reservation.updated", reload);
+
+        socket.on("connect_error", error => {
+            console.error(
+                "WebSocket error:",
+                error.message
+            );
+        });
+
+        socket.on("disconnect", reason => {
+            console.log(
+                "WebSocket disconnected:",
+                reason
+            );
+        });
+
+        return () => {
+            socket.off("table.updated", reload);
+            socket.off("order.updated", reload);
+            socket.off("reservation.updated", reload);
+            socket.disconnect();
+        };
     }, [branchId]);
 
     const openCreateFloorModal = () => {
@@ -226,7 +299,10 @@ export default function FloorManagement({ mode = "admin" }) {
                 title: selectedFloor
                     ? "Không thể cập nhật tầng"
                     : "Không thể thêm tầng",
-                message: getErrorMessage(error, "Đã xảy ra lỗi khi lưu thông tin tầng.")
+                message: getErrorMessage(
+                    error,
+                    "Đã xảy ra lỗi khi lưu thông tin tầng."
+                )
             });
         }
     };
@@ -262,7 +338,10 @@ export default function FloorManagement({ mode = "admin" }) {
             showNotification({
                 type: "error",
                 title: "Không thể xóa tầng",
-                message: getErrorMessage(error, "Đã xảy ra lỗi khi xóa tầng.")
+                message: getErrorMessage(
+                    error,
+                    "Đã xảy ra lỗi khi xóa tầng."
+                )
             });
         } finally {
             setDeletingFloor(false);
@@ -285,7 +364,10 @@ export default function FloorManagement({ mode = "admin" }) {
     };
 
     const branchName = isAdmin
-        ? branches.find(branch => Number(branch.id) === Number(selectedBranch))?.name
+        ? branches.find(
+            branch =>
+                Number(branch.id) === Number(selectedBranch)
+        )?.name
         : currentBranch?.name || "Chi nhánh của bạn";
 
     return (
@@ -293,7 +375,9 @@ export default function FloorManagement({ mode = "admin" }) {
             <div className="border-b bg-white p-5">
                 <div className="flex items-center justify-between gap-4">
                     <div>
-                        <h2 className="text-2xl font-bold">Quản lý bàn</h2>
+                        <h2 className="text-2xl font-bold">
+                            Quản lý bàn
+                        </h2>
 
                         {!isAdmin && (
                             <p className="mt-1 text-sm text-gray-500">
@@ -306,11 +390,18 @@ export default function FloorManagement({ mode = "admin" }) {
                         {isAdmin && (
                             <select
                                 value={selectedBranch}
-                                onChange={e => setSelectedBranch(Number(e.target.value))}
+                                onChange={e =>
+                                    setSelectedBranch(
+                                        Number(e.target.value)
+                                    )
+                                }
                                 className="rounded-lg border border-gray-300 px-4 py-2 outline-none focus:border-[var(--color-primary)]"
                             >
                                 {branches.map(branch => (
-                                    <option key={branch.id} value={branch.id}>
+                                    <option
+                                        key={branch.id}
+                                        value={branch.id}
+                                    >
                                         {branch.name}
                                     </option>
                                 ))}
@@ -355,8 +446,12 @@ export default function FloorManagement({ mode = "admin" }) {
                             <FloorCard
                                 key={floor.id}
                                 floor={floor}
-                                onEdit={() => openEditFloorModal(floor)}
-                                onDelete={() => requestDeleteFloor(floor)}
+                                onEdit={() =>
+                                    openEditFloorModal(floor)
+                                }
+                                onDelete={() =>
+                                    requestDeleteFloor(floor)
+                                }
                                 onEditTable={openEditTableModal}
                                 reload={loadFloors}
                             />
@@ -391,7 +486,10 @@ export default function FloorManagement({ mode = "admin" }) {
                         onClick={e => e.stopPropagation()}
                     >
                         <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-yellow-50">
-                            <AlertTriangle size={34} className="text-yellow-500" />
+                            <AlertTriangle
+                                size={34}
+                                className="text-yellow-500"
+                            />
                         </div>
 
                         <div className="mt-4 text-center">
@@ -428,7 +526,9 @@ export default function FloorManagement({ mode = "admin" }) {
                                 disabled={deletingFloor}
                                 className="flex-1 rounded-xl bg-red-500 px-4 py-3 font-semibold text-white transition hover:bg-red-600 disabled:cursor-not-allowed disabled:opacity-50"
                             >
-                                {deletingFloor ? "Đang xóa..." : "Xác nhận"}
+                                {deletingFloor
+                                    ? "Đang xóa..."
+                                    : "Xác nhận"}
                             </button>
                         </div>
 

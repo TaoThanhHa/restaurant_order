@@ -30,6 +30,7 @@ model Branch {
   floors          Floor[]
   orders          Order[]
   serviceRequests ServiceRequest[]
+  reservations    Reservation[]
   users           User[]
 
   @@map("branches")
@@ -44,12 +45,12 @@ model Restaurant {
   createdAt DateTime       @default(now()) @map("created_at")
   updatedAt DateTime       @updatedAt @map("updated_at")
 
-  branches  Branch[]
-  admin     User       @relation("RestaurantAdmin", fields: [adminId], references: [id])
-  users     User[]     @relation("RestaurantUsers")
-  customers Customer[]
-  categories Category[]
-  foods Food[]
+  branches     Branch[]
+  admin        User          @relation("RestaurantAdmin", fields: [adminId], references: [id])
+  users        User[]        @relation("RestaurantUsers")
+  customers    Customer[]
+  categories   Category[]
+  foods        Food[]
   reservations Reservation[]
 
   @@map("restaurants")
@@ -74,6 +75,7 @@ model User {
   emailChangeOtps        EmailChangeOtp[]
   createdOrders          Order[]          @relation("UserCreatedOrders")
   handledServiceRequests ServiceRequest[]
+  createdReservations    Reservation[]
 
   restaurant      Restaurant? @relation("RestaurantUsers", fields: [restaurantId], references: [id])
   restaurantAdmin Restaurant? @relation("RestaurantAdmin")
@@ -118,21 +120,40 @@ model Table {
 }
 
 model Reservation {
-  id              Int                @id @default(autoincrement())
-  restaurantId    Int                @map("restaurant_id")
-  customerName    String             @map("customer_name")
-  customerPhone   String             @map("customer_phone")
-  numberOfGuests  Int                @map("number_of_guests")
-  reservationTime DateTime           @map("reservation_time")
-  status          ReservationStatus  @default(PENDING)
-  note            String?
-  createdAt       DateTime           @default(now()) @map("created_at")
-  updatedAt       DateTime           @updatedAt @map("updated_at")
-  restaurant      Restaurant         @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
-  sessions        DiningSession[]
-  tables          ReservationTable[]
+  id           Int @id @default(autoincrement())
+  restaurantId Int @map("restaurant_id")
+  branchId     Int @map("branch_id")
+  createdById  Int @map("created_by_id")
+
+  customerName   String @map("customer_name")
+  customerPhone  String @map("customer_phone")
+  numberOfGuests Int    @map("number_of_guests")
+
+  reservationTime DateTime @map("reservation_time")
+  durationMinutes Int      @default(90) @map("duration_minutes")
+
+  status ReservationStatus @default(PENDING)
+  note   String?
+
+  reminderCalledAt DateTime? @map("reminder_called_at")
+  checkedInAt      DateTime? @map("checked_in_at")
+  cancelledAt      DateTime? @map("cancelled_at")
+  completedAt      DateTime? @map("completed_at")
+  noShowAt         DateTime? @map("no_show_at")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  restaurant Restaurant @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
+  branch     Branch     @relation(fields: [branchId], references: [id], onDelete: Cascade)
+  createdBy  User       @relation(fields: [createdById], references: [id])
+
+  sessions DiningSession[]
+  tables   ReservationTable[]
 
   @@index([restaurantId])
+  @@index([branchId])
+  @@index([createdById])
   @@index([reservationTime])
   @@index([status])
   @@map("reservations")

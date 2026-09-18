@@ -3,17 +3,10 @@ const response = require("../../utils/response");
 
 const getAll = async (req, res) => {
     try {
-        const branchId = req.user?.branchId;
-
-        if (!branchId) {
-            return response.error(
-                res,
-                "Tài khoản chưa được gán chi nhánh.",
-                403
-            );
-        }
-
-        const data = await staffService.getAll(branchId);
+        const data = await staffService.getAll(
+            req.query.branchId,
+            req.user
+        );
 
         return response.success(
             res,
@@ -22,31 +15,16 @@ const getAll = async (req, res) => {
         );
     } catch (error) {
         console.error("GET ALL STAFF ERROR:", error);
-
-        return response.error(
-            res,
-            error.message,
-            400
-        );
+        return response.error(res, error.message, 400);
     }
 };
 
 const getById = async (req, res) => {
     try {
-        const branchId = req.user?.branchId;
-        const userId = req.params.userId;
-
-        if (!branchId) {
-            return response.error(
-                res,
-                "Tài khoản chưa được gán chi nhánh.",
-                403
-            );
-        }
-
         const staff = await staffService.getById(
-            branchId,
-            userId
+            req.query.branchId,
+            req.params.userId,
+            req.user
         );
 
         return response.success(
@@ -56,30 +34,16 @@ const getById = async (req, res) => {
         );
     } catch (error) {
         console.error("GET STAFF BY ID ERROR:", error);
-
-        return response.error(
-            res,
-            error.message,
-            400
-        );
+        return response.error(res, error.message, 400);
     }
 };
 
 const create = async (req, res) => {
     try {
-        const branchId = req.user?.branchId;
-
-        if (!branchId) {
-            return response.error(
-                res,
-                "Tài khoản chưa được gán chi nhánh.",
-                403
-            );
-        }
-
         const staff = await staffService.create(
-            branchId,
-            req.body
+            req.query.branchId,
+            req.body,
+            req.user
         );
 
         return response.success(
@@ -90,32 +54,17 @@ const create = async (req, res) => {
         );
     } catch (error) {
         console.error("CREATE STAFF ERROR:", error);
-
-        return response.error(
-            res,
-            error.message,
-            400
-        );
+        return response.error(res, error.message, 400);
     }
 };
 
 const update = async (req, res) => {
     try {
-        const branchId = req.user?.branchId;
-        const userId = req.params.userId;
-
-        if (!branchId) {
-            return response.error(
-                res,
-                "Tài khoản chưa được gán chi nhánh.",
-                403
-            );
-        }
-
         const staff = await staffService.update(
-            branchId,
-            userId,
-            req.body
+            req.query.branchId,
+            req.params.userId,
+            req.body,
+            req.user
         );
 
         return response.success(
@@ -125,31 +74,16 @@ const update = async (req, res) => {
         );
     } catch (error) {
         console.error("UPDATE STAFF ERROR:", error);
-
-        return response.error(
-            res,
-            error.message,
-            400
-        );
+        return response.error(res, error.message, 400);
     }
 };
 
 const toggleStatus = async (req, res) => {
     try {
-        const branchId = req.user?.branchId;
-        const userId = req.params.userId;
-
-        if (!branchId) {
-            return response.error(
-                res,
-                "Tài khoản chưa được gán chi nhánh.",
-                403
-            );
-        }
-
         const staff = await staffService.toggleStatus(
-            branchId,
-            userId
+            req.query.branchId,
+            req.params.userId,
+            req.user
         );
 
         return response.success(
@@ -158,18 +92,11 @@ const toggleStatus = async (req, res) => {
             staff
         );
     } catch (error) {
-        console.error(
-            "TOGGLE STAFF STATUS ERROR:",
-            error
-        );
-
-        return response.error(
-            res,
-            error.message,
-            400
-        );
+        console.error("TOGGLE STAFF STATUS ERROR:", error);
+        return response.error(res, error.message, 400);
     }
 };
+
 module.exports = {
     getAll,
     getById,

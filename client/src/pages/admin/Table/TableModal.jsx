@@ -267,14 +267,8 @@ export default function TableModal({
                     Number(form.capacity),
             };
 
-            console.log(
-                "TABLE SAVE DATA:",
-                data
-            );
+            console.log("TABLE SAVE DATA:",data);
 
-            /*
-             * UPDATE
-             */
             if (table) {
                 await tableService.update(
                     table.id,

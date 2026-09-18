@@ -29,21 +29,18 @@ const checkBranchAccess = async (branchId, user) => {
 };
 
 const getAll = async user => {
-    const restaurantId = Number(user.restaurantId);
-    if (!restaurantId) throw new Error("Tài khoản chưa thuộc nhà hàng.");
+    if (!user) throw new Error("Chưa xác thực người dùng.");
+    if (!user.restaurantId) {
+        throw new Error("Tài khoản chưa được gán nhà hàng.");
+    }
 
     return await prisma.branch.findMany({
-        where: { restaurantId },
-        select: {
-            id: true,
-            name: true,
-            address: true,
-            phone: true,
-            email: true,
-            isActive: true,
-            createdAt: true
+        where: {
+            restaurantId: Number(user.restaurantId),
         },
-        orderBy: { id: "asc" }
+        orderBy: {
+            id: "asc",
+        },
     });
 };
 

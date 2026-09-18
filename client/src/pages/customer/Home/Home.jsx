@@ -11,10 +11,10 @@ import {
 import customerAuthService from "../../../services/customerAuth.service";
 import serviceRequestService from "../../../services/serviceRequest.service";
 
-import HomeHeader from "../../../components/Customer/HomeHeader";
-import ActionCard from "../../../components/Customer/ActionCard";
-import CurrentOrderCard from "../../../components/Customer/CurrentOrderCard";
-import ServiceRequestModal from "../../../components/Customer/ServiceRequestModal";
+import HomeHeader from "../components/HomeHeader";
+import ActionCard from "../components/ActionCard";
+import CurrentOrderCard from "../components/CurrentOrderCard";
+import ServiceRequestModal from "../components/ServiceRequestModal";
 
 
 export default function Home() {

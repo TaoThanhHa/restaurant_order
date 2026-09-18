@@ -6,17 +6,6 @@ const checkRestaurant = user => {
     return Number(user.restaurantId);
 };
 
-const getRestaurant = async (restaurantId, tx = prisma) => {
-    const restaurant = await tx.restaurant.findUnique({
-        where: { id: restaurantId },
-        select: { id: true, mode: true },
-    });
-
-    if (!restaurant) throw new Error("Nhà hàng không tồn tại.");
-
-    return restaurant;
-};
-
 const checkBranchAccess = async (branchId, user, tx = prisma) => {
     if (!user) throw new Error("Chưa xác thực người dùng.");
 
@@ -70,7 +59,6 @@ const getAll = async user => {
 
 const getById = async (id, user) => {
     const restaurantId = checkRestaurant(user);
-
     const food = await getFoodByRestaurant(id, restaurantId);
 
     if (!food) throw new Error("Món ăn không tồn tại.");
@@ -80,7 +68,6 @@ const getById = async (id, user) => {
 
 const create = async (data, user) => {
     const restaurantId = checkRestaurant(user);
-    const restaurant = await getRestaurant(restaurantId);
 
     const categoryId = Number(data.categoryId);
     const name = data.name?.trim();
@@ -90,6 +77,7 @@ const create = async (data, user) => {
 
     if (!name) throw new Error("Tên món ăn không được để trống.");
     if (!data.categoryId) throw new Error("Danh mục không được để trống.");
+
     if (price === undefined || Number(price) <= 0) {
         throw new Error("Giá phải lớn hơn 0.");
     }
@@ -107,26 +95,20 @@ const create = async (data, user) => {
         ...new Set((data.branchIds || []).map(Number)),
     ];
 
-    if (restaurant.mode === "MULTI" && branchIds.length === 0) {
-        throw new Error("Vui lòng chọn ít nhất một chi nhánh.");
+    if (branchIds.length === 0) {
+        throw new Error("Món ăn phải thuộc ít nhất một chi nhánh.");
     }
 
-    if (restaurant.mode === "SINGLE" && branchIds.length > 0) {
-        throw new Error("Nhà hàng đơn chi nhánh không cần chọn chi nhánh.");
-    }
+    const branches = await prisma.branch.findMany({
+        where: {
+            id: { in: branchIds },
+            restaurantId,
+        },
+        select: { id: true },
+    });
 
-    if (branchIds.length > 0) {
-        const branches = await prisma.branch.findMany({
-            where: {
-                id: { in: branchIds },
-                restaurantId,
-            },
-            select: { id: true },
-        });
-
-        if (branches.length !== branchIds.length) {
-            throw new Error("Có chi nhánh không thuộc nhà hàng của bạn.");
-        }
+    if (branches.length !== branchIds.length) {
+        throw new Error("Có chi nhánh không thuộc nhà hàng của bạn.");
     }
 
     const existed = await prisma.food.findFirst({
@@ -151,15 +133,19 @@ const create = async (data, user) => {
             },
         });
 
-        if (branchIds.length > 0) {
-            await tx.branchFood.createMany({
-                data: branchIds.map(branchId => ({
+        await tx.branchFood.createMany({
+            data: branchIds.map(branchId => {
+                const branchFood = data.branchFoods?.find(
+                    item => Number(item.branchId) === branchId
+                );
+
+                return {
                     branchId,
                     foodId: food.id,
-                    status: "AVAILABLE",
-                })),
-            });
-        }
+                    status: branchFood?.status || "AVAILABLE",
+                };
+            }),
+        });
 
         return await tx.food.findUnique({
             where: { id: food.id },
@@ -175,7 +161,6 @@ const create = async (data, user) => {
 
 const update = async (id, data, user) => {
     const restaurantId = checkRestaurant(user);
-    const restaurant = await getRestaurant(restaurantId);
 
     const food = await prisma.food.findFirst({
         where: {
@@ -219,20 +204,36 @@ const update = async (id, data, user) => {
     }
 
     return await prisma.$transaction(async tx => {
-        if (restaurant.mode === "MULTI" && Array.isArray(data.branchFoods)) {
+        if (Array.isArray(data.branchFoods)) {
             const branchFoods = data.branchFoods
-                .filter(item => item?.branchId)
+                .filter(
+                    item =>
+                        item?.branchId !== undefined &&
+                        item?.branchId !== null
+                )
                 .map(item => ({
                     branchId: Number(item.branchId),
                     status: item.status || "AVAILABLE",
                 }));
 
+            if (
+                branchFoods.some(
+                    item => !Number.isInteger(item.branchId)
+                )
+            ) {
+                throw new Error("ID chi nhánh không hợp lệ.");
+            }
+
             const newBranchIds = [
-                ...new Set(branchFoods.map(item => item.branchId)),
+                ...new Set(
+                    branchFoods.map(item => item.branchId)
+                ),
             ];
 
             if (newBranchIds.length === 0) {
-                throw new Error("Vui lòng chọn ít nhất một chi nhánh.");
+                throw new Error(
+                    "Món ăn phải thuộc ít nhất một chi nhánh."
+                );
             }
 
             const branches = await tx.branch.findMany({
@@ -240,12 +241,23 @@ const update = async (id, data, user) => {
                     id: { in: newBranchIds },
                     restaurantId,
                 },
-                select: { id: true },
+                select: {
+                    id: true,
+                    restaurantId: true,
+                },
             });
+
+            console.log("===== DEBUG UPDATE FOOD =====");
+            console.log("user.restaurantId:", user.restaurantId);
+            console.log("restaurantId:", restaurantId);
+            console.log("newBranchIds:", newBranchIds);
+            console.log("branches:", branches);
+            console.log("=============================");
 
             if (branches.length !== newBranchIds.length) {
                 throw new Error("Có chi nhánh không thuộc nhà hàng của bạn.");
             }
+
 
             const oldBranchIds = food.branchFoods.map(
                 item => item.branchId
@@ -340,7 +352,9 @@ const remove = async (id, user) => {
     if (!food) throw new Error("Món ăn không tồn tại.");
 
     if (food.orderItems.length > 0) {
-        throw new Error("Món ăn đã có trong đơn hàng, không thể xóa.");
+        throw new Error(
+            "Món ăn đã có trong đơn hàng, không thể xóa."
+        );
     }
 
     await prisma.$transaction(async tx => {
@@ -357,14 +371,37 @@ const remove = async (id, user) => {
 };
 
 const getByBranch = async (branchId, user) => {
+    const restaurantId = checkRestaurant(user);
+
+    if (user?.role === "ADMIN" && !branchId) {
+        const branches = await prisma.branch.findMany({
+            where: { restaurantId },
+            select: { id: true },
+            orderBy: { id: "asc" },
+        });
+
+        if (!branches.length) {
+            throw new Error("Nhà hàng chưa có chi nhánh.");
+        }
+
+        if (branches.length > 1) {
+            throw new Error("Vui lòng chọn chi nhánh.");
+        }
+
+        branchId = branches[0].id;
+    }
+
     if (!branchId) throw new Error("Chi nhánh không hợp lệ.");
 
-    await checkBranchAccess(branchId, user);
+    const branch = await checkBranchAccess(branchId, user);
 
     return await prisma.branchFood.findMany({
         where: {
-            branchId: Number(branchId),
+            branchId: branch.id,
             status: { not: "INACTIVE" },
+            food: {
+                restaurantId,
+            },
         },
         include: {
             food: {
@@ -391,11 +428,6 @@ const getByQrCode = async qrCode => {
                         select: {
                             id: true,
                             restaurantId: true,
-                            restaurant: {
-                                select: {
-                                    mode: true,
-                                },
-                            },
                         },
                     },
                 },
@@ -406,26 +438,11 @@ const getByQrCode = async qrCode => {
     if (!table) throw new Error("Bàn không tồn tại.");
 
     const branch = table.floor.branch;
-    const restaurantId = branch.restaurantId;
-
-    if (branch.restaurant?.mode === "SINGLE") {
-        return await prisma.food.findMany({
-            where: {
-                restaurantId,
-            },
-            include: {
-                category: true,
-            },
-            orderBy: {
-                name: "asc",
-            },
-        });
-    }
 
     return await prisma.branchFood.findMany({
         where: {
             branchId: branch.id,
-            status: { not: "INACTIVE" },
+            status: "AVAILABLE",
         },
         include: {
             food: {
@@ -451,4 +468,3 @@ module.exports = {
     getByBranch,
     getByQrCode,
 };
-

@@ -25,7 +25,7 @@ const checkBranchAccess = async (branchId, user) => {
     }
 
     // BRANCH chỉ được thao tác trên branch của mình
-    if (user?.role === "BRANCH") {
+    if (["BRANCH", "CASHIER"].includes(user?.role)) {
         if (Number(user.branchId) !== branch.id) {
             throw new Error(
                 "Bạn không có quyền thực hiện trên chi nhánh này."
@@ -97,31 +97,33 @@ const getAll = async (user) => {
     });
 };
 
-// ======================================================
-// NOTIFY ORDER CUSTOMERS
-// ======================================================
-
 const notifyOrderCustomers = async (
     orderId,
     event = "order.updated"
 ) => {
-    const members =
-        await prisma.orderMember.findMany({
-            where: {
-                orderId: Number(orderId),
+    const order = await prisma.order.findUnique({
+        where: { id: Number(orderId) },
+        select: {
+            id: true,
+            session: {
+                select: {
+                    tableId: true,
+                },
             },
-            select: {
-                customerId: true,
+            orderMembers: {
+                select: {
+                    customerId: true,
+                },
             },
-        });
+        },
+    });
+
+    if (!order) return;
 
     const customerIds = [
         ...new Set(
-            members
-                .map(
-                    (item) =>
-                        item.customerId
-                )
+            order.orderMembers
+                .map(item => item.customerId)
                 .filter(Boolean)
         ),
     ];
@@ -131,7 +133,8 @@ const notifyOrderCustomers = async (
             customerId,
             event,
             {
-                orderId: Number(orderId),
+                orderId: order.id,
+                tableId: order.session?.tableId || null,
             }
         );
     }
@@ -282,8 +285,6 @@ const getById = async (
         );
     }
 
-    // Table → Floor → Branch
-    // kiểm tra Branch thuộc user
     await checkBranchAccess(
         table.floor.branchId,
         user
@@ -657,94 +658,273 @@ const scanQr = async (
     };
 };
 
-// ======================================================
-// OPEN TABLE
-// ======================================================
-
-const open = async (
-    tableId,
-    data
-) => {
-    const {
-        name,
-        phone,
-    } = data;
+const open = async (tableId, data, user) => {
+    const { name, phone } = data;
 
     if (!name?.trim()) {
-        throw new Error(
-            "Vui lòng nhập tên khách."
-        );
+        throw new Error("Vui lòng nhập tên khách.");
     }
 
-    const table =
-        await prisma.table.findUnique({
-            where: {
-                id: Number(tableId),
-            },
-            include: {
-                floor: true,
-            },
-        });
+    const table = await prisma.table.findUnique({
+        where: { id: Number(tableId) },
+        include: { floor: true },
+    });
 
     if (!table) {
-        throw new Error(
-            "Bàn không tồn tại."
-        );
+        throw new Error("Bàn không tồn tại.");
     }
 
-    let session =
-        await prisma.diningSession.findFirst({
-            where: {
-                tableId: Number(
-                    tableId
-                ),
+    await checkBranchAccess(table.floor.branchId, user);
+
+    let session = await prisma.diningSession.findFirst({
+        where: {
+            tableId: Number(tableId),
+            status: "ACTIVE",
+        },
+    });
+
+    if (!session) {
+        session = await prisma.diningSession.create({
+            data: {
+                tableId: Number(tableId),
                 status: "ACTIVE",
             },
         });
-
-    if (!session) {
-        session =
-            await prisma.diningSession.create({
-                data: {
-                    tableId: Number(
-                        tableId
-                    ),
-                    status: "ACTIVE",
-                },
-            });
     }
 
-    const customer =
-        await prisma.customer.create({
-            data: {
-                sessionId:
-                    session.id,
-                name: name.trim(),
-                phone:
-                    phone || null,
-            },
-        });
+    const customer = await prisma.customer.create({
+        data: {
+            sessionId: session.id,
+            name: name.trim(),
+            phone: phone || null,
+        },
+    });
 
     await prisma.table.update({
-        where: {
-            id: Number(tableId),
-        },
-        data: {
-            status: "OCCUPIED",
-        },
+        where: { id: Number(tableId) },
+        data: { status: "OCCUPIED" },
     });
 
     sseService.sendToBranch(
         table.floor.branchId,
         "table.updated",
-        {
-            tableId: table.id,
-        }
+        { tableId: table.id }
     );
 
     return {
         session,
         customer,
+    };
+};
+
+const transferTable = async (sourceTableId, targetTableId, user) => {
+    if (!sourceTableId || !targetTableId) {
+        throw new Error("Thiếu thông tin bàn.");
+    }
+
+    if (sourceTableId === targetTableId) {
+        throw new Error("Bàn mới phải khác bàn hiện tại.");
+    }
+
+    const [source, target] = await Promise.all([
+        prisma.table.findUnique({
+            where: { id: sourceTableId },
+            include: {
+                floor: true,
+                sessions: {
+                    where: { status: "ACTIVE" },
+                    include: {
+                        orders: {
+                            where: {
+                                status: {
+                                    in: ACTIVE_ORDER_STATUSES,
+                                },
+                            },
+                            select: { id: true },
+                        },
+                    },
+                },
+            },
+        }),
+        prisma.table.findUnique({
+            where: { id: targetTableId },
+            include: {
+                floor: true,
+                sessions: {
+                    where: { status: "ACTIVE" },
+                    select: { id: true },
+                },
+            },
+        }),
+    ]);
+
+    if (!source) throw new Error("Bàn hiện tại không tồn tại.");
+    if (!target) throw new Error("Bàn mới không tồn tại.");
+
+    await checkBranchAccess(source.floor.branchId, user);
+    await checkBranchAccess(target.floor.branchId, user);
+
+    if (Number(source.floor.branchId) !== Number(target.floor.branchId)) {
+        throw new Error("Không thể chuyển bàn giữa các chi nhánh.");
+    }
+
+    if (target.status !== "AVAILABLE") {
+        throw new Error("Bàn mới phải đang trống.");
+    }
+
+    if (target.sessions.length > 0) {
+        throw new Error("Bàn mới đang có phiên phục vụ.");
+    }
+
+    const sourceSession = source.sessions[0];
+
+    if (!sourceSession) {
+        throw new Error("Bàn hiện tại chưa có phiên phục vụ.");
+    }
+
+    if (sourceSession.orders.length === 0) {
+        throw new Error("Bàn hiện tại không có đơn đang hoạt động.");
+    }
+
+    const result = await prisma.$transaction(async tx => {
+        const session = await tx.diningSession.update({
+            where: { id: sourceSession.id },
+            data: { tableId: targetTableId },
+        });
+
+        await tx.table.update({
+            where: { id: sourceTableId },
+            data: { status: "AVAILABLE" },
+        });
+
+        await tx.table.update({
+            where: { id: targetTableId },
+            data: { status: "OCCUPIED" },
+        });
+
+        return session;
+    });
+
+    await notifyOrderCustomers(sourceSession.orders.map(order => order.id));
+
+    return {
+        sessionId: result.id,
+        sourceTableId,
+        targetTableId,
+    };
+};
+
+const mergeTables = async (sourceTableId, targetTableId, user) => {
+    if (!sourceTableId || !targetTableId) {
+        throw new Error("Thiếu thông tin bàn.");
+    }
+
+    if (sourceTableId === targetTableId) {
+        throw new Error("Không thể gộp bàn với chính nó.");
+    }
+
+    const [source, target] = await Promise.all([
+        prisma.table.findUnique({
+            where: { id: sourceTableId },
+            include: {
+                floor: true,
+                sessions: {
+                    where: { status: "ACTIVE" },
+                    include: {
+                        orders: {
+                            where: {
+                                status: {
+                                    in: ACTIVE_ORDER_STATUSES,
+                                },
+                            },
+                            select: { id: true },
+                        },
+                    },
+                },
+            },
+        }),
+        prisma.table.findUnique({
+            where: { id: targetTableId },
+            include: {
+                floor: true,
+                sessions: {
+                    where: { status: "ACTIVE" },
+                    select: { id: true },
+                },
+            },
+        }),
+    ]);
+
+    if (!source) throw new Error("Bàn nguồn không tồn tại.");
+    if (!target) throw new Error("Bàn đích không tồn tại.");
+
+    await checkBranchAccess(source.floor.branchId, user);
+    await checkBranchAccess(target.floor.branchId, user);
+
+    if (Number(source.floor.branchId) !== Number(target.floor.branchId)) {
+        throw new Error("Không thể gộp bàn giữa các chi nhánh.");
+    }
+
+    const sourceSession = source.sessions[0];
+    const targetSession = target.sessions[0];
+
+    if (!sourceSession) {
+        throw new Error("Bàn nguồn chưa có phiên phục vụ.");
+    }
+
+    if (!targetSession) {
+        throw new Error("Bàn đích chưa có phiên phục vụ.");
+    }
+
+    if (sourceSession.orders.length === 0) {
+        throw new Error("Bàn nguồn không có đơn đang hoạt động.");
+    }
+
+    const sourceOrderIds = sourceSession.orders.map(order => order.id);
+
+    await prisma.$transaction(async tx => {
+        await tx.order.updateMany({
+            where: {
+                id: { in: sourceOrderIds },
+            },
+            data: {
+                sessionId: targetSession.id,
+            },
+        });
+
+        await tx.customer.updateMany({
+            where: {
+                sessionId: sourceSession.id,
+            },
+            data: {
+                sessionId: targetSession.id,
+            },
+        });
+
+        await tx.diningSession.update({
+            where: { id: sourceSession.id },
+            data: {
+                status: "CLOSED",
+                closedAt: new Date(),
+            },
+        });
+
+        await tx.table.update({
+            where: { id: sourceTableId },
+            data: { status: "AVAILABLE" },
+        });
+
+        await tx.table.update({
+            where: { id: targetTableId },
+            data: { status: "OCCUPIED" },
+        });
+    });
+
+    return {
+        sourceTableId,
+        targetTableId,
+        targetSessionId: targetSession.id,
+        movedOrderIds: sourceOrderIds,
     };
 };
 
@@ -758,4 +938,6 @@ module.exports = {
     remove,
     scanQr,
     open,
+    transferTable,
+    mergeTables,
 };

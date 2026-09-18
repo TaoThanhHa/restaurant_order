@@ -23,7 +23,6 @@ export default function FoodFormModal({
         price: "",
         description: "",
         image: "",
-        status: "AVAILABLE",
         branchFoods: [],
     };
 
@@ -59,20 +58,33 @@ export default function FoodFormModal({
     useEffect(() => {
         if (!open) return;
 
+        const singleBranch = branches[0];
+        const allowedBranchIds = new Set(
+            branches.map(branch => Number(branch.id))
+        );
+
         if (food) {
+            const branchFoods = food.branchFoods
+                ?.filter(item => allowedBranchIds.has(Number(item.branchId)))
+                .map(item => ({
+                    branchId: Number(item.branchId),
+                    status: item.status || "AVAILABLE",
+                })) || [];
+
+            if (!isMulti && !branchFoods.length && singleBranch) {
+                branchFoods.push({
+                    branchId: Number(singleBranch.id),
+                    status: "AVAILABLE",
+                });
+            }
+
             setForm({
                 name: food.name || "",
                 categoryId: food.categoryId || "",
                 price: Number(food.price) || "",
                 description: food.description || "",
                 image: food.image || "",
-                status: food.status || "AVAILABLE",
-                branchFoods: isMulti
-                    ? food.branchFoods?.map(item => ({
-                          branchId: item.branchId,
-                          status: item.status,
-                      })) || []
-                    : [],
+                branchFoods,
             });
 
             setPreview(
@@ -81,12 +93,22 @@ export default function FoodFormModal({
                     : ""
             );
         } else {
-            setForm(emptyForm);
+            setForm({
+                ...emptyForm,
+                branchFoods:
+                    !isMulti && singleBranch
+                        ? [{
+                            branchId: Number(singleBranch.id),
+                            status: "AVAILABLE",
+                        }]
+                        : [],
+            });
+
             setPreview("");
         }
 
         setSaving(false);
-    }, [food, open, restaurantMode]);
+    }, [food, open, restaurantMode, branches]);
 
     if (!open) return null;
 
@@ -111,7 +133,7 @@ export default function FoodFormModal({
 
             setForm(prev => ({
                 ...prev,
-                image: res.data.data,
+                image: res.data?.data ?? res.data,
             }));
         } catch (err) {
             console.error("UPLOAD FOOD IMAGE ERROR:", err);
@@ -201,13 +223,28 @@ export default function FoodFormModal({
             return;
         }
 
+        if (!isMulti && !branches[0]) {
+            showNotification({
+                type: "warning",
+                title: "Thiếu chi nhánh",
+                message: "Nhà hàng chưa có chi nhánh.",
+            });
+            return;
+        }
+
         const data = {
-            ...form,
+            name: form.name.trim(),
+            categoryId: form.categoryId,
             price: Number(form.price),
-            branchIds: isMulti
-                ? form.branchFoods.map(item => item.branchId)
-                : [],
-            branchFoods: isMulti ? form.branchFoods : [],
+            description: form.description,
+            image: form.image,
+            branchIds: form.branchFoods.map(
+                item => Number(item.branchId)
+            ),
+            branchFoods: form.branchFoods.map(item => ({
+                branchId: Number(item.branchId),
+                status: item.status || "AVAILABLE",
+            })),
         };
 
         try {
@@ -228,6 +265,12 @@ export default function FoodFormModal({
             setSaving(false);
         }
     };
+
+    const singleBranch = branches[0];
+
+    const singleBranchFood = form.branchFoods.find(
+        item => Number(item.branchId) === Number(singleBranch?.id)
+    );
 
     return (
         <>
@@ -355,7 +398,7 @@ export default function FoodFormModal({
                                 />
                             </div>
 
-                            {isMulti && (
+                            {isMulti ? (
                                 <div>
                                     <label className="mb-3 block font-semibold">
                                         Chi nhánh
@@ -383,9 +426,7 @@ export default function FoodFormModal({
                                                         <label className="flex items-center gap-2">
                                                             <input
                                                                 type="checkbox"
-                                                                checked={
-                                                                    checked
-                                                                }
+                                                                checked={checked}
                                                                 disabled={saving}
                                                                 onChange={() =>
                                                                     toggleBranch(
@@ -405,8 +446,7 @@ export default function FoodFormModal({
                                                                 onChange={e =>
                                                                     handleBranchStatusChange(
                                                                         branch.id,
-                                                                        e.target
-                                                                            .value
+                                                                        e.target.value
                                                                     )
                                                                 }
                                                                 className="rounded border px-2 py-1"
@@ -423,6 +463,39 @@ export default function FoodFormModal({
                                                 </div>
                                             );
                                         })}
+                                    </div>
+                                </div>
+                            ) : (
+                                <div>
+                                    <label className="mb-2 block font-semibold">
+                                        Trạng thái kinh doanh
+                                    </label>
+
+                                    <div className="flex items-center justify-between rounded-lg border p-3">
+
+                                        <select
+                                            value={
+                                                singleBranchFood?.status ||
+                                                "AVAILABLE"
+                                            }
+                                            disabled={saving}
+                                            onChange={e => {
+                                                if (!singleBranch) return;
+
+                                                handleBranchStatusChange(
+                                                    singleBranch.id,
+                                                    e.target.value
+                                                );
+                                            }}
+                                            className="rounded-lg border px-3 py-2 outline-none focus:border-blue-500"
+                                        >
+                                            <option value="AVAILABLE">
+                                                Còn kinh doanh
+                                            </option>
+                                            <option value="INACTIVE">
+                                                Ngừng kinh doanh
+                                            </option>
+                                        </select>
                                     </div>
                                 </div>
                             )}

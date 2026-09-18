@@ -5,6 +5,7 @@ import FoodCard from "../../../../components/FoodCard/FoodCard";
 import AddFoodModal from "../../../../components/AddFoodModal/AddFoodModal";
 import foodService from "../../../../services/food.service";
 import categoryService from "../../../../services/category.service";
+import cartService from "../../../../services/cart.service";
 
 export default function FoodPanel({
     title,
@@ -42,9 +43,37 @@ export default function FoodPanel({
         }
     };
 
+    const loadCart = async () => {
+        if (mode !== "customer") return;
+
+        try {
+            const res = await cartService.getCart();
+            const items = res?.data?.items || res?.items || [];
+
+            setCart(
+                items.map(item => ({
+                    id: item.food?.id || item.foodId,
+                    name: item.food?.name,
+                    price: item.food?.price,
+                    quantity: item.quantity,
+                    note: item.note || null,
+                }))
+            );
+        } catch (err) {
+            console.error(
+                "LOAD CART ERROR:",
+                err.response?.data || err
+            );
+        }
+    };
+
     useEffect(() => {
         loadData();
     }, [mode, qrCode]);
+
+    useEffect(() => {
+        loadCart();
+    }, [mode]);
 
     const displayFoods = useMemo(() => {
         return foods.filter(item => {
@@ -58,7 +87,7 @@ export default function FoodPanel({
         });
     }, [foods, selectedCategory, keyword]);
 
-    const handleAddFood = (food) => {
+    const handleAddFood = food => {
         setSelectedFood(food);
         setOpenModal(true);
     };
@@ -162,6 +191,7 @@ export default function FoodPanel({
                 food={selectedFood}
                 cart={cart}
                 setCart={setCart}
+                mode={mode}
                 onClose={() => {
                     setOpenModal(false);
                     setSelectedFood(null);

@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { ArrowRightLeft, Merge } from "lucide-react";
 import "./TableCard.css";
 import TableQRModal from "./TableQRModal";
 
@@ -7,50 +8,34 @@ const statusConfig = {
         color: "bg-gray-100",
         text: "Trống",
     },
-
     OCCUPIED: {
         color: "bg-green-100",
         text: "Đang phục vụ",
     },
-
     RESERVED: {
-        color: "bg-bluelight-100",
+        color: "bg-blue-100",
         text: "Đã đặt",
     },
-
     DISABLED: {
         color: "bg-gray-200",
         text: "Ngưng sử dụng",
     },
 };
 
-const STATUS = {
-    PENDING: {
-        text: "Chờ xác nhận",
-        color: "#EAB308",
-    },
-    PREPARING: {
-        text: "Đang chế biến",
-        color: "#F97316",
-    },
-    SERVED: {
-        text: "Đã phục vụ",
-        color: "#22C55E",
-    },
-    COMPLETED: {
-        text: "Hoàn thành",
-        color: "#6B7280",
-    },
-};
-
 export default function TableCard({
     table,
     onClick,
+    onMerge,
+    onTransfer,
 }) {
-    const [qrTable, setQrTable] =  useState(null);
-    const status = statusConfig[table.status] || statusConfig.AVAILABLE;
-    const orders = table.orders || [];
-    const handleShowQR = (e) => {
+    const [qrTable, setQrTable] = useState(null);
+
+    const status =
+        statusConfig[table.status] || statusConfig.AVAILABLE;
+
+    const isOccupied = table.status === "OCCUPIED";
+
+    const handleShowQR = e => {
         e.stopPropagation();
         setQrTable(table);
     };
@@ -59,9 +44,9 @@ export default function TableCard({
         <>
             <div
                 onClick={onClick}
-                className={`${status.color} flex rounded-xl p-5 shadow hover:shadow-lg transition mx-auto w-70 h-40 cursor-pointe`}
+                className={`${status.color} mx-auto flex h-40 w-70 cursor-pointer rounded-xl p-5 shadow transition hover:shadow-lg`}
             >
-                <div>
+                <div className="flex min-w-30 flex-col">
                     <button
                         type="button"
                         className="mb-3 w-30 rounded-lg bg-white px-3 py-2 text-sm shadow"
@@ -79,27 +64,33 @@ export default function TableCard({
                     </p>
                 </div>
 
-                {orders.length > 0 && (
-                    <div className="pl-3 flex-1 overflow-y-auto no-scrollbar space-y-2">
-                        {orders.map(order => {const statusInfo = STATUS[order.status];
-                            return (
-                                <div
-                                    key={order.id}
-                                    className="rounded-md bg-white p-2 text-left shadow-sm"
-                                >
-                                    <div className="text-sm font-semibold">
-                                        🧾 Đơn #{order.id}
-                                    </div>
+                {isOccupied && (
+                    <div className="m-2 gap-1">
+                        <button
+                            type="button"
+                            title="Đổi bàn"
+                            className="mb-2 flex items-center gap-1 rounded-lg bg-white p-2 shadow hover:bg-gray-50"
+                            onClick={e => {
+                                e.stopPropagation();
+                                onTransfer?.(table);
+                            }}
+                        >
+                            <ArrowRightLeft size={16} />
+                            Đổi bàn
+                        </button>
 
-                                    <span
-                                        className=" mt-1 inline-block rounded-full px-2 py-1 text-xs font-semibold"
-                                        style={{ backgroundColor: statusInfo?.color,}}
-                                    >
-                                        {statusInfo?.text}
-                                    </span>
-                                </div>
-                            );
-                        })}
+                        <button
+                            type="button"
+                            title="Gộp bàn"
+                            className="flex items-center gap-1 rounded-lg bg-white p-2 shadow hover:bg-gray-50"
+                            onClick={e => {
+                                e.stopPropagation();
+                                onMerge?.(table);
+                            }}
+                        >
+                            <Merge size={16} />
+                            Gộp bàn
+                        </button>
                     </div>
                 )}
             </div>
@@ -107,7 +98,7 @@ export default function TableCard({
             <TableQRModal
                 open={!!qrTable}
                 table={qrTable}
-                onClose={() => {setQrTable(null);}}
+                onClose={() => setQrTable(null)}
             />
         </>
     );

@@ -1,30 +1,36 @@
 import api from "../api/axiosClient";
 
-const getAll = () => {
-    return api.get("/foods");
+const getAll = async () => {
+    const res = await api.get("/foods");
+    return res.data;
 };
 
-const getById = (id) => {
-    return api.get(`/foods/${id}`);
+const getById = async id => {
+    const res = await api.get(`/foods/${id}`);
+    return res.data;
 };
 
-const create = (data) => {
-    return api.post("/foods", data);
+const create = async data => {
+    const res = await api.post("/foods", data);
+    return res.data;
 };
 
-const update = (id, data) => {
-    return api.put(`/foods/${id}`, data);
+const update = async (id, data) => {
+    const res = await api.put(`/foods/${id}`, data);
+    return res.data;
 };
 
-const remove = (id) => {
-    return api.delete(`/foods/${id}`);
+const remove = async id => {
+    const res = await api.delete(`/foods/${id}`);
+    return res.data;
 };
 
-const getByBranch = () => {
-    return api.get("/foods/branch");
+const getByBranch = async () => {
+    const res = await api.get("/foods/branch");
+    return res.data;
 };
 
-const getByQrCode = async (qrCode) => {
+const getByQrCode = async qrCode => {
     const res = await api.get(`/foods/qr/${qrCode}`);
     return res.data;
 };

@@ -1,5 +1,5 @@
 const prisma = require("../../config/prisma");
-const sseService = require("../../services/sse.service");
+const socketService = require("../../services/socket.service");
 
 const ACTIVE_ORDER_STATUSES = ["PENDING", "PREPARING", "SERVED"];
 
@@ -13,6 +13,30 @@ const getBranchScope = user => {
 
     if (!user.branchId) throw new Error("Tài khoản chưa được gán chi nhánh.");
     return { id: Number(user.branchId) };
+};
+
+const getAdminBranchId = async user => {
+    if (!user?.restaurantId) {
+        throw new Error("Tài khoản chưa được gán nhà hàng.");
+    }
+
+    const branches = await prisma.branch.findMany({
+        where: {
+            restaurantId: Number(user.restaurantId),
+        },
+        select: { id: true },
+        orderBy: { id: "asc" },
+    });
+
+    if (branches.length === 0) {
+        throw new Error("Nhà hàng chưa có chi nhánh.");
+    }
+
+    if (branches.length > 1) {
+        throw new Error("Vui lòng chọn chi nhánh.");
+    }
+
+    return branches[0].id;
 };
 
 const checkBranchAccess = async (branchId, user) => {
@@ -63,32 +87,12 @@ const notifyOrderCustomers = async (orderId, event = "order.updated") => {
 
     if (!order) return;
 
-    const payload = { orderId: order.id, tableId: order.session?.tableId || null };
-    const customerIds = [...new Set(order.orderMembers.map(x => x.customerId).filter(Boolean))];
+    const payload = {
+        orderId: order.id,
+        tableId: order.session?.tableId || null,
+    };
 
-    for (const customerId of customerIds) {
-        sseService.sendToCustomer(customerId, event, payload);
-    }
-
-    sseService.sendToBranch(order.branchId, event, payload);
-};
-
-const updateTableStatus = async tableId => {
-    if (!tableId) return;
-
-    const session = await prisma.diningSession.findFirst({
-        where: { tableId: Number(tableId), status: "ACTIVE" },
-        include: {
-            orders: {
-                where: { status: { in: ACTIVE_ORDER_STATUSES } },
-            },
-        },
-    });
-
-    await prisma.table.update({
-        where: { id: Number(tableId) },
-        data: { status: session?.orders.length ? "OCCUPIED" : "AVAILABLE" },
-    });
+    socketService.sendToBranch(order.branchId, event, payload);
 };
 
 const deleteOrder = async (orderId, user) => {
@@ -138,10 +142,10 @@ const deleteOrder = async (orderId, user) => {
     const payload = { orderId: id, tableId };
 
     for (const customerId of customerIds) {
-        sseService.sendToCustomer(customerId, "order.deleted", payload);
+        socketService.sendToCustomer(customerId, "order.deleted", payload);
     }
 
-    sseService.sendToBranch(branchId, "order.deleted", payload);
+    socketService.sendToBranch(branchId, "order.deleted", payload);
 
     return { id, deleted: true };
 };
@@ -156,7 +160,11 @@ const create = async (data, user) => {
         include: {
             session: {
                 include: {
-                    table: { include: { floor: true } },
+                    table: {
+                        include: {
+                            floor: true,
+                        },
+                    },
                 },
             },
         },
@@ -165,7 +173,15 @@ const create = async (data, user) => {
     if (!customer) throw new Error("Khách hàng không tồn tại.");
     if (!customer.session) throw new Error("Khách chưa thuộc phiên phục vụ.");
 
-    const branchId = customer.session.table.floor.branchId;
+    const table = customer.session.table;
+    if (!table) throw new Error("Phiên phục vụ chưa có bàn.");
+
+    const floor = table.floor;
+    if (!floor) throw new Error("Bàn chưa thuộc tầng.");
+
+    const branchId = Number(floor.branchId);
+    if (!branchId) throw new Error("Bàn chưa thuộc chi nhánh.");
+
     await checkBranchAccess(branchId, user);
 
     if (joinOrderId) {
@@ -183,7 +199,10 @@ const create = async (data, user) => {
 
         if (!order.orderMembers.some(x => x.customerId === customer.id)) {
             await prisma.orderMember.create({
-                data: { customerId: customer.id, orderId: order.id },
+                data: {
+                    customerId: customer.id,
+                    orderId: order.id,
+                },
             });
         }
 
@@ -206,15 +225,18 @@ const create = async (data, user) => {
     });
 
     await prisma.orderMember.create({
-        data: { customerId: customer.id, orderId: order.id },
+        data: {
+            customerId: customer.id,
+            orderId: order.id,
+        },
     });
 
     await updateTableStatus(session.tableId);
 
-    await prisma.table.update({
+    /* await prisma.table.update({
         where: { id: session.tableId },
         data: { status: "OCCUPIED" },
-    });
+    }); */
 
     await notifyOrderCustomers(order.id);
 
@@ -359,7 +381,7 @@ const confirmItems = async (orderId, user) => {
 
     await notifyOrderCustomers(id);
 
-    sseService.sendToBranch(order.branchId, "kitchen.updated", {
+    socketService.sendToBranch(order.branchId, "kitchen.updated", {
         type: "ORDER_SENT_TO_KITCHEN",
         orderId: id,
     });
@@ -536,7 +558,7 @@ const updateStatus = async (orderId, status, user) => {
 
     await notifyOrderCustomers(id);
 
-    sseService.sendToBranch(order.branchId, "order.updated", {
+    socketService.sendToBranch(order.branchId, "order.updated", {
         orderId: id,
         status,
     });
@@ -544,10 +566,57 @@ const updateStatus = async (orderId, status, user) => {
     return updatedOrder;
 };
 
+const updateTableStatus = async tableId => {
+    if (!tableId) return;
+
+    const session = await prisma.diningSession.findFirst({
+        where: {
+            tableId: Number(tableId),
+            status: "ACTIVE",
+        },
+        include: {
+            orders: {
+                where: {
+                    status: {
+                        in: ACTIVE_ORDER_STATUSES,
+                    },
+                },
+            },
+        },
+    });
+
+    const status = session?.orders.length
+        ? "OCCUPIED"
+        : "AVAILABLE";
+
+    const table = await prisma.table.update({
+        where: { id: Number(tableId) },
+        data: { status },
+        include: {
+            floor: {
+                select: {
+                    branchId: true,
+                },
+            },
+        },
+    });
+
+    socketService.sendToBranch(
+        table.floor.branchId,
+        "table.updated",
+        {
+            tableId: table.id,
+            tableNumber: table.tableNumber,
+            status: table.status,
+        }
+    );
+
+    return table;
+};
 
 const payment = async (orderId, data, user) => {
     const id = Number(orderId);
-    const { paymentMethod } = data;
+    const { paymentMethod, phone } = data;
 
     if (!Number.isInteger(id)) throw new Error("Order ID không hợp lệ.");
     if (!["CASH", "BANKING"].includes(paymentMethod)) {
@@ -560,30 +629,75 @@ const payment = async (orderId, data, user) => {
             session: { include: { table: true } },
             orderItems: { where: { status: { not: "CANCELLED" } } },
             payment: true,
+            createdByCustomer: {
+                select: {
+                    id: true,
+                    name: true,
+                    phone: true,
+                    isGuest: true,
+                },
+            },
         },
     });
 
     if (!order) throw new Error("Đơn hàng không tồn tại.");
+
     await checkBranchAccess(order.branchId, user);
 
     if (["COMPLETED", "CANCELLED"].includes(order.status)) {
         throw new Error("Đơn hàng đã đóng.");
     }
 
-    if (order.orderItems.length === 0) throw new Error("Đơn hàng chưa có món.");
+    if (order.orderItems.length === 0) {
+        throw new Error("Đơn hàng chưa có món.");
+    }
 
-    const unfinished = order.orderItems.find(item => item.status !== "SERVED");
-    if (unfinished) throw new Error("Vẫn còn món chưa phục vụ.");
+    const unfinished = order.orderItems.find(
+        item => item.status !== "SERVED"
+    );
+
+    if (unfinished) {
+        throw new Error("Vẫn còn món chưa phục vụ.");
+    }
 
     const totalAmount = order.orderItems.reduce(
-        (sum, item) => sum + Number(item.price) * Number(item.quantity),
+        (sum, item) =>
+            sum + Number(item.price) * Number(item.quantity),
         0
     );
 
+    let customer = null;
+
+    // Đơn đã gắn tài khoản khách hàng từ QR
+    if (order.createdByCustomerId) {
+        customer = order.createdByCustomer;
+    }
+    // Đơn khách vãng lai: tìm tài khoản theo số điện thoại
+    else if (phone?.trim()) {
+        customer = await prisma.customer.findFirst({
+            where: {
+                phone: phone.trim(),
+                isGuest: false,
+            },
+            select: {
+                id: true,
+                name: true,
+                phone: true,
+                isGuest: true,
+            },
+        });
+    }
+
     const paymentData = {
         paymentMethod,
-        cashAmount: paymentMethod === "CASH" ? totalAmount : null,
-        bankAmount: paymentMethod === "BANKING" ? totalAmount : null,
+        cashAmount:
+            paymentMethod === "CASH"
+                ? totalAmount
+                : null,
+        bankAmount:
+            paymentMethod === "BANKING"
+                ? totalAmount
+                : null,
         totalAmount,
         paymentStatus: "PAID",
         paidAt: new Date(),
@@ -597,14 +711,35 @@ const payment = async (orderId, data, user) => {
             });
         } else {
             await tx.payment.create({
-                data: { orderId: id, ...paymentData },
+                data: {
+                    orderId: id,
+                    ...paymentData,
+                },
             });
         }
 
         await tx.order.update({
             where: { id },
-            data: { totalAmount, status: "COMPLETED" },
+            data: {
+                totalAmount,
+                status: "COMPLETED",
+                ...(customer && !order.createdByCustomerId
+                    ? {
+                          createdByCustomerId: customer.id,
+                      }
+                    : {}),
+            },
         });
+
+        // Chỉ thêm customer mới nếu đơn trước đó chưa có tài khoản
+        if (customer && !order.createdByCustomerId) {
+            await tx.orderMember.create({
+                data: {
+                    customerId: customer.id,
+                    orderId: id,
+                },
+            });
+        }
 
         if (!order.sessionId) return;
 
@@ -618,7 +753,10 @@ const payment = async (orderId, data, user) => {
         if (openOrders === 0) {
             await tx.diningSession.update({
                 where: { id: order.sessionId },
-                data: { status: "CLOSED", closedAt: new Date() },
+                data: {
+                    status: "CLOSED",
+                    closedAt: new Date(),
+                },
             });
 
             if (order.session?.tableId) {
@@ -630,6 +768,9 @@ const payment = async (orderId, data, user) => {
         }
     });
 
+    if (order.session?.tableId) {
+        await updateTableStatus(order.session.tableId);
+    }
     await notifyOrderCustomers(id);
 
     return {
@@ -638,30 +779,54 @@ const payment = async (orderId, data, user) => {
         totalAmount,
         paymentMethod,
         paymentStatus: "PAID",
+        customer: customer
+            ? {
+                  id: customer.id,
+                  name: customer.name,
+                  phone: customer.phone,
+              }
+            : null,
     };
 };
 
 const createTakeAway = async (data, user) => {
     if (!user) throw new Error("Chưa xác thực người dùng.");
-    if (user.role !== "ADMIN" && !user.branchId) {
-        throw new Error("Tài khoản chưa được gán chi nhánh.");
+
+    let branchId;
+
+    if (user.role === "ADMIN") {
+        branchId = data.branchId
+            ? Number(data.branchId)
+            : await getAdminBranchId(user);
+    } else {
+        if (!user.branchId) {
+            throw new Error("Tài khoản chưa được gán chi nhánh.");
+        }
+
+        branchId = Number(user.branchId);
     }
 
-    const branchId = data.branchId ? Number(data.branchId) : Number(user.branchId);
     if (!branchId) throw new Error("Vui lòng chọn chi nhánh.");
 
     await checkBranchAccess(branchId, user);
 
-    if (!data.items?.length) throw new Error("Đơn hàng chưa có món.");
+    if (!data.items?.length) {
+        throw new Error("Đơn hàng chưa có món.");
+    }
 
     const paymentMethod = data.paymentMethod || "CASH";
+
     if (!["CASH", "BANKING"].includes(paymentMethod)) {
         throw new Error("Phương thức thanh toán không hợp lệ.");
     }
 
     const foodIds = data.items.map(item => Number(item.foodId));
+
     const foods = await prisma.food.findMany({
-        where: { id: { in: foodIds } },
+        where: {
+            id: { in: foodIds },
+            restaurantId: Number(user.restaurantId || 0),
+        },
     });
 
     if (foods.length !== new Set(foodIds).size) {
@@ -677,14 +842,21 @@ const createTakeAway = async (data, user) => {
         }
 
         const branchFood = await prisma.branchFood.findUnique({
-            where: { branchId_foodId: { branchId, foodId } },
+            where: {
+                branchId_foodId: {
+                    branchId,
+                    foodId,
+                },
+            },
         });
 
-        if (!branchFood) throw new Error("Chi nhánh chưa có món này.");
+        if (!branchFood) {
+            throw new Error("Chi nhánh chưa có món này.");
+        }
 
-        if (branchFood.status === "OUT_OF_STOCK") {
+        if (branchFood.status !== "AVAILABLE") {
             const food = foods.find(food => food.id === foodId);
-            throw new Error(`Món ${food?.name || ""} đã hết.`);
+            throw new Error(`Món ${food?.name || ""} hiện không khả dụng.`);
         }
     }
 
@@ -692,7 +864,10 @@ const createTakeAway = async (data, user) => {
 
     if (data.phone?.trim()) {
         customer = await prisma.customer.findFirst({
-            where: { phone: data.phone.trim(), isGuest: false },
+            where: {
+                phone: data.phone.trim(),
+                isGuest: false,
+            },
         });
     }
 
@@ -704,7 +879,10 @@ const createTakeAway = async (data, user) => {
         const orderItems = [];
 
         for (const item of data.items) {
-            const food = foods.find(food => food.id === Number(item.foodId));
+            const food = foods.find(
+                food => food.id === Number(item.foodId)
+            );
+
             const price = Number(food.price);
             const quantity = Number(item.quantity);
 
@@ -730,14 +908,21 @@ const createTakeAway = async (data, user) => {
                 note: data.note || null,
                 totalAmount,
                 createdByUserId: Number(user.id),
-                ...(customer ? { createdByCustomerId: customer.id } : {}),
-                orderItems: { create: orderItems },
+                ...(customer
+                    ? { createdByCustomerId: customer.id }
+                    : {}),
+                orderItems: {
+                    create: orderItems,
+                },
             },
         });
 
         if (customer) {
             await tx.orderMember.create({
-                data: { customerId: customer.id, orderId: newOrder.id },
+                data: {
+                    customerId: customer.id,
+                    orderId: newOrder.id,
+                },
             });
         }
 
@@ -745,8 +930,14 @@ const createTakeAway = async (data, user) => {
             data: {
                 orderId: newOrder.id,
                 paymentMethod,
-                cashAmount: paymentMethod === "CASH" ? totalAmount : null,
-                bankAmount: paymentMethod === "BANKING" ? totalAmount : null,
+                cashAmount:
+                    paymentMethod === "CASH"
+                        ? totalAmount
+                        : null,
+                bankAmount:
+                    paymentMethod === "BANKING"
+                        ? totalAmount
+                        : null,
                 totalAmount,
                 paymentStatus: "PAID",
                 paidAt: now,
@@ -756,19 +947,42 @@ const createTakeAway = async (data, user) => {
         return tx.order.findUnique({
             where: { id: newOrder.id },
             include: {
-                createdByUser: { select: { id: true, username: true } },
-                createdByCustomer: { select: { id: true, name: true, phone: true } },
-                orderMembers: { include: { customer: true } },
-                orderItems: { include: { food: true } },
+                createdByUser: {
+                    select: {
+                        id: true,
+                        username: true,
+                    },
+                },
+                createdByCustomer: {
+                    select: {
+                        id: true,
+                        name: true,
+                        phone: true,
+                    },
+                },
+                orderMembers: {
+                    include: {
+                        customer: true,
+                    },
+                },
+                orderItems: {
+                    include: {
+                        food: true,
+                    },
+                },
                 payment: true,
             },
         });
     });
 
-    sseService.sendToBranch(branchId, "kitchen.updated", {
-        type: "TAKE_AWAY_CREATED",
-        orderId: order.id,
-    });
+    socketService.sendToBranch(
+        branchId,
+        "kitchen.updated",
+        {
+            type: "TAKE_AWAY_CREATED",
+            orderId: order.id,
+        }
+    );
 
     return order;
 };
@@ -779,12 +993,19 @@ const getTakeAway = async (user, branchIdParam) => {
     let branchId;
 
     if (user.role === "ADMIN") {
-        if (!user.restaurantId) throw new Error("Tài khoản chưa được gán nhà hàng.");
-        if (!branchIdParam) throw new Error("Vui lòng chọn chi nhánh.");
-        branchId = Number(branchIdParam);
+        branchId = branchIdParam
+            ? Number(branchIdParam)
+            : await getAdminBranchId(user);
     } else {
-        if (!user.branchId) throw new Error("Tài khoản chưa được gán chi nhánh.");
+        if (!user.branchId) {
+            throw new Error("Tài khoản chưa được gán chi nhánh.");
+        }
+
         branchId = Number(user.branchId);
+    }
+
+    if (!branchId) {
+        throw new Error("Chi nhánh không hợp lệ.");
     }
 
     await checkBranchAccess(branchId, user);
@@ -794,19 +1015,44 @@ const getTakeAway = async (user, branchIdParam) => {
             branchId,
             orderType: "TAKE_AWAY",
             status: "PREPARING",
-            payment: { paymentStatus: "PAID" },
+            payment: {
+                paymentStatus: "PAID",
+            },
         },
         include: {
-            createdByUser: { select: { id: true, username: true } },
-            createdByCustomer: { select: { id: true, name: true, phone: true } },
-            orderMembers: { include: { customer: true } },
+            createdByUser: {
+                select: {
+                    id: true,
+                    username: true,
+                },
+            },
+            createdByCustomer: {
+                select: {
+                    id: true,
+                    name: true,
+                    phone: true,
+                },
+            },
+            orderMembers: {
+                include: {
+                    customer: true,
+                },
+            },
             orderItems: {
-                where: { status: { not: "CANCELLED" } },
-                include: { food: true },
+                where: {
+                    status: {
+                        not: "CANCELLED",
+                    },
+                },
+                include: {
+                    food: true,
+                },
             },
             payment: true,
         },
-        orderBy: { createdAt: "desc" },
+        orderBy: {
+            createdAt: "desc",
+        },
     });
 };
 
@@ -1094,8 +1340,21 @@ const getCompletedKitchenOrders = async user => {
     });
 };
 
+const clearCustomerCart = async (customerId, tx = prisma) => {
+    if (!customerId) return;
+
+    await tx.cartItem.deleteMany({
+        where: {
+            cart: {
+                customerId: Number(customerId)
+            }
+        }
+    });
+};
+
 module.exports = {
     getBranchScope,
+    getAdminBranchId,
     create,
     updateTableStatus,
     notifyOrderCustomers,
@@ -1113,4 +1372,5 @@ module.exports = {
     getActiveOrderByTable,
     getPendingOrders,
     getCompletedKitchenOrders,
+    clearCustomerCart,
 };

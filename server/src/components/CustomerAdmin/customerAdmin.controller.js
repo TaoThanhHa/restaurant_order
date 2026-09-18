@@ -6,6 +6,7 @@ const getCustomers = async (req, res) => {
         const { search, period, year, value, sort } = req.query;
 
         const result = await customerAdminService.getCustomers({
+            user: req.user,
             search,
             period: period || "month",
             year: year ? Number(year) : undefined,
@@ -13,7 +14,11 @@ const getCustomers = async (req, res) => {
             sort: sort || "visits_desc"
         });
 
-        return response.success(res, "Lấy danh sách khách hàng thành công.", result);
+        return response.success(
+            res,
+            "Lấy danh sách khách hàng thành công.",
+            result
+        );
     } catch (error) {
         console.error("CustomerAdmin getCustomers:", error);
         return response.error(res, error.message, 400);
@@ -27,13 +32,18 @@ const getCustomerById = async (req, res) => {
         const result = await customerAdminService.getCustomerById(
             Number(req.params.id),
             {
+                user: req.user,
                 period: period || "year",
                 year: year ? Number(year) : undefined,
                 value: value ? Number(value) : undefined
             }
         );
 
-        return response.success(res, "Lấy thông tin khách hàng thành công.", result);
+        return response.success(
+            res,
+            "Lấy thông tin khách hàng thành công.",
+            result
+        );
     } catch (error) {
         console.error("CustomerAdmin getCustomerById:", error);
         return response.error(res, error.message, 404);
@@ -45,12 +55,17 @@ const getStatistics = async (req, res) => {
         const { period, year, value } = req.query;
 
         const result = await customerAdminService.getStatistics({
+            user: req.user,
             period: period || "month",
             year: year ? Number(year) : undefined,
             value: value ? Number(value) : undefined
         });
 
-        return response.success(res, "Lấy thống kê khách hàng thành công.", result);
+        return response.success(
+            res,
+            "Lấy thống kê khách hàng thành công.",
+            result
+        );
     } catch (error) {
         console.error("CustomerAdmin getStatistics:", error);
         return response.error(res, error.message, 400);

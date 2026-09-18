@@ -129,6 +129,47 @@ const transferGuestData = async (tx, guestCustomer, customer) => {
         data: { customerId: customer.id }
     });
 
+    const guestCart = await tx.cart.findUnique({
+        where: { customerId: guestCustomer.id },
+        include: { items: true }
+    });
+
+    const customerCart = await tx.cart.findUnique({
+        where: { customerId: customer.id },
+        include: { items: true }
+    });
+
+    if (guestCart && customerCart) {
+        for (const guestItem of guestCart.items) {
+            const customerItem = customerCart.items.find(
+                item => item.foodId === guestItem.foodId
+            );
+
+            if (customerItem) {
+                await tx.cartItem.update({
+                    where: { id: customerItem.id },
+                    data: {
+                        quantity:
+                            customerItem.quantity +
+                            guestItem.quantity,
+                        note: guestItem.note || customerItem.note
+                    }
+                });
+
+                await tx.cartItem.delete({
+                    where: { id: guestItem.id }
+                });
+            } else {
+                await tx.cartItem.update({
+                    where: { id: guestItem.id },
+                    data: {
+                        cartId: customerCart.id
+                    }
+                });
+            }
+        }
+    }
+
     await tx.customer.update({
         where: { id: guestCustomer.id },
         data: {

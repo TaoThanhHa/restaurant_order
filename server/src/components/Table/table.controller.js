@@ -218,32 +218,62 @@ const scanQr = async (
     }
 };
 
-// ======================================================
-// OPEN TABLE
-// ======================================================
-
-const open = async (
-    req,
-    res
-) => {
+const open = async (req, res) => {
     try {
-        const result =
-            await tableService.open(
-                Number(req.params.id),
-                req.body
-            );
+        const data = await tableService.open(
+            req.params.id,
+            req.body,
+            req.user
+        );
 
         return response.success(
             res,
             "Mở bàn thành công.",
-            result
+            data
         );
     } catch (error) {
         return response.error(
             res,
-            error.message,
-            400
+            error.message
         );
+    }
+};
+
+const transferTable = async (req, res) => {
+    try {
+        const result = await tableService.transferTable(
+            Number(req.params.id),
+            Number(req.body.targetTableId),
+            req.user
+        );
+
+        return response.success(
+            res,
+            "Đổi bàn thành công.",
+            result
+        );
+    } catch (error) {
+        const statusCode = error.message.includes("quyền") ? 403 : 400;
+        return response.error(res, error.message, statusCode);
+    }
+};
+
+const mergeTables = async (req, res) => {
+    try {
+        const result = await tableService.mergeTables(
+            Number(req.params.id),
+            Number(req.body.targetTableId),
+            req.user
+        );
+
+        return response.success(
+            res,
+            "Gộp bàn thành công.",
+            result
+        );
+    } catch (error) {
+        const statusCode = error.message.includes("quyền") ? 403 : 400;
+        return response.error(res, error.message, statusCode);
     }
 };
 
@@ -256,4 +286,6 @@ module.exports = {
     remove,
     scanQr,
     open,
+    transferTable,
+    mergeTables,
 };

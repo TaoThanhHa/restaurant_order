@@ -1,8 +1,8 @@
 import { useState } from "react";
 import { X, BellRing } from "lucide-react";
 
-import serviceRequestService from "../../services/serviceRequest.service";
-import NotiModal from "../../components/NotiModal/NotiModal";
+import serviceRequestService from "../../../services/serviceRequest.service.js";
+import NotiModal from "../../../components/NotiModal/NotiModal.jsx";
 
 export default function ServiceRequestModal({
     open,

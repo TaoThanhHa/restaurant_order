@@ -1,34 +1,58 @@
 const prisma = require("../../config/prisma");
 
-const getCustomer = async (guestToken) => {
+const getCustomer = async customerId => {
     const customer = await prisma.customer.findUnique({
-        where: { guestToken },
+        where: { id: Number(customerId) },
         include: {
             cart: true,
+            table: {
+                include: {
+                    floor: true
+                }
+            },
             session: {
                 include: {
                     table: {
-                        include: { floor: true }
+                        include: {
+                            floor: true
+                        }
                     }
                 }
             }
         }
     });
 
-    if (!customer) 
+    if (!customer) {
         throw new Error("Khách hàng không tồn tại.");
-    if (!customer.cart) 
-        throw new Error("Giỏ hàng không tồn tại.");
+    }
+
+    if (!customer.isActive) {
+        throw new Error("Tài khoản không còn hoạt động.");
+    }
+
+    if (!customer.cart) {
+        await prisma.cart.create({
+            data: { customerId: customer.id }
+        });
+
+        customer.cart = await prisma.cart.findUnique({
+            where: { customerId: customer.id }
+        });
+    }
 
     return customer;
 };
 
-const calculateTotal = (items) => {
-    return items.reduce((total, item) => total + Number(item.food.price) * item.quantity, 0);
+const calculateTotal = items => {
+    return items.reduce(
+        (total, item) =>
+            total + Number(item.food.price) * Number(item.quantity),
+        0
+    );
 };
 
-const getCart = async (guestToken) => {
-    const customer = await getCustomer(guestToken);
+const getCart = async customerId => {
+    const customer = await getCustomer(customerId);
 
     const cart = await prisma.cart.findUnique({
         where: { id: customer.cart.id },
@@ -50,43 +74,33 @@ const getCart = async (guestToken) => {
     };
 };
 
-const addItem = async (data) => {
-    const { guestToken, foodId, quantity, note } = data;
+const addItem = async (customerId, data) => {
+    const { foodId, quantity, note } = data;
 
-    if (!guestToken) 
-        throw new Error("Guest token không hợp lệ.");
-    if (!foodId) 
+    if (!foodId) {
         throw new Error("Vui lòng chọn món.");
+    }
+
     if (quantity !== undefined && Number(quantity) <= 0) {
         throw new Error("Số lượng phải lớn hơn 0.");
     }
 
-    const customer = await getCustomer(guestToken);
+    const customer = await getCustomer(customerId);
 
-    if (!customer.session) {
-        throw new Error("Khách hàng chưa có phiên phục vụ.");
+    if (!customer.restaurantId) {
+        throw new Error("Khách hàng chưa thuộc nhà hàng.");
     }
 
-    const food = await prisma.food.findUnique({
-        where: { id: Number(foodId) }
-    });
-
-    if (!food) 
-        throw new Error("Món ăn không tồn tại.");
-
-    const branchFood = await prisma.branchFood.findUnique({
+    const food = await prisma.food.findFirst({
         where: {
-            branchId_foodId: {
-                branchId: customer.session.table.floor.branchId,
-                foodId: Number(foodId)
-            }
+            id: Number(foodId),
+            restaurantId: customer.restaurantId
         }
     });
 
-    if (!branchFood) 
-        throw new Error("Chi nhánh chưa có món này.");
-    if (branchFood.status === "OUT_OF_STOCK") 
-        throw new Error("Món ăn đã hết.");
+    if (!food) {
+        throw new Error("Món ăn không thuộc nhà hàng này.");
+    }
 
     const cartItem = await prisma.cartItem.findUnique({
         where: {
@@ -111,32 +125,33 @@ const addItem = async (data) => {
                 cartId: customer.cart.id,
                 foodId: Number(foodId),
                 quantity: Number(quantity || 1),
-                note
+                note: note || null
             }
         });
     }
 
-    return await getCart(guestToken);
+    return getCart(customer.id);
 };
 
-const removeItem = async (itemId) => {
-    const item = await prisma.cartItem.findUnique({
-        where: { id: Number(itemId) },
-        include: {
-            cart: {
-                include: { customer: true }
-            }
+const removeItem = async (customerId, itemId) => {
+    const customer = await getCustomer(customerId);
+
+    const item = await prisma.cartItem.findFirst({
+        where: {
+            id: Number(itemId),
+            cartId: customer.cart.id
         }
     });
 
-    if (!item) 
-        throw new Error("Món ăn không tồn tại.");
+    if (!item) {
+        throw new Error("Món ăn không tồn tại trong giỏ hàng.");
+    }
 
     await prisma.cartItem.delete({
-        where: { id: Number(itemId) }
+        where: { id: item.id }
     });
 
-    return await getCart(item.cart.customer.guestToken);
+    return getCart(customer.id);
 };
 
 module.exports = {

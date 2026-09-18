@@ -8,19 +8,12 @@ export default function FoodCard({
     onStatusChange,
 }) {
     const item = food.food ?? food;
-
-    const SERVER_URL =
-        import.meta.env.VITE_API_URL.replace("/api", "");
-
-    const image = item.image
-        ? `${SERVER_URL}${item.image}`
-        : "https://placehold.co/400x400?text=Food";
-
+    const SERVER_URL = import.meta.env.VITE_API_URL.replace("/api", "");
+    const image = item.image ? `${SERVER_URL}${item.image}` : "https://placehold.co/400x400?text=Food";
     const price = Number(item.price);
 
     return (
         <div className="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm transition duration-200 hover:-translate-y-1 hover:shadow-lg">
-            {/* IMAGE */}
             <div className="aspect-square bg-gray-100">
                 <img
                     src={image}
@@ -62,17 +55,9 @@ export default function FoodCard({
                             <input
                                 type="radio"
                                 name={`status-${food.foodId}`}
-                                checked={
-                                    food.status === "AVAILABLE"
-                                }
-                                onChange={() =>
-                                    onStatusChange?.(
-                                        food,
-                                        "AVAILABLE"
-                                    )
-                                }
+                                checked={food.status === "AVAILABLE"}
+                                onChange={() => onStatusChange?.(food, "AVAILABLE")}
                             />
-
                             <span className="font-medium text-green-600">
                                 Còn hàng
                             </span>
@@ -82,15 +67,8 @@ export default function FoodCard({
                             <input
                                 type="radio"
                                 name={`status-${food.foodId}`}
-                                checked={
-                                    food.status === "OUT_OF_STOCK"
-                                }
-                                onChange={() =>
-                                    onStatusChange?.(
-                                        food,
-                                        "OUT_OF_STOCK"
-                                    )
-                                }
+                                checked={food.status === "OUT_OF_STOCK"}
+                                onChange={() => onStatusChange?.(food, "OUT_OF_STOCK")}
                             />
 
                             <span className="font-medium text-red-500">

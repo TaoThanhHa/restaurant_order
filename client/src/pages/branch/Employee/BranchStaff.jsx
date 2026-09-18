@@ -6,6 +6,7 @@ import Input from "../../../components/Input/Input";
 import NotiModal from "../../../components/NotiModal/NotiModal";
 
 import useAuth from "../../../hooks/useAuth";
+import branchService from "../../../services/branch.service";
 import staffService from "../../../services/staff.service";
 import StaffFormModal from "./StaffFormModal";
 
@@ -13,18 +14,21 @@ const ROLE_LABELS = {
     CASHIER: "Thu ngân",
     ORDER: "Nhân viên order",
     KITCHEN: "Nhân viên bếp",
+    WAREHOUSE: "Nhân viên kho",
 };
 
 export default function BranchStaff() {
     const { user } = useAuth();
 
     const [staff, setStaff] = useState([]);
+    const [branches, setBranches] = useState([]);
+    const [branch, setBranch] = useState(null);
+    const [selectedBranchId, setSelectedBranchId] = useState(null);
     const [keyword, setKeyword] = useState("");
     const [loading, setLoading] = useState(true);
     const [activeTab, setActiveTab] = useState("active");
     const [openModal, setOpenModal] = useState(false);
     const [selectedStaff, setSelectedStaff] = useState(null);
-    const [branch, setBranch] = useState(null);
 
     const [noti, setNoti] = useState({
         open: false,
@@ -33,13 +37,57 @@ export default function BranchStaff() {
         message: "",
     });
 
-    const branchId = user?.branchId || user?.branch?.id || null;
+    const isAdmin = user?.role === "ADMIN";
+    const isBranch = user?.role === "BRANCH";
 
     const showNoti = (type, message, title = "") => {
         setNoti({ open: true, type, title, message });
     };
 
+    const loadBranches = async () => {
+        try {
+            if (isBranch) {
+                setSelectedBranchId(
+                    user?.branchId || user?.branch?.id || null
+                );
+                return;
+            }
+
+            if (!isAdmin) return;
+
+            const res = await branchService.getAll();
+            const data = res?.data || res || [];
+            const list = Array.isArray(data) ? data : [];
+
+            setBranches(list);
+
+            if (list.length === 1) {
+                setSelectedBranchId(list[0].id);
+            } else if (list.length > 1) {
+                setSelectedBranchId(prev =>
+                    prev && list.some(branch => branch.id === prev)
+                        ? prev
+                        : list[0]?.id || null
+                );
+            }
+        } catch (err) {
+            console.error("LOAD BRANCH ERROR:", err);
+            showNoti(
+                "error",
+                err.response?.data?.message ||
+                    err.message ||
+                    "Không thể tải danh sách chi nhánh."
+            );
+        }
+    };
+
     const loadData = async () => {
+        let branchId = selectedBranchId;
+
+        if (isBranch) {
+            branchId = user?.branchId || user?.branch?.id || null;
+        }
+
         if (!branchId) {
             setStaff([]);
             setBranch(null);
@@ -50,8 +98,8 @@ export default function BranchStaff() {
         try {
             setLoading(true);
 
-            const res = await staffService.getAll();
-            const data = res.data?.data || res.data || {};
+            const res = await staffService.getAll(branchId);
+            const data = res?.data || res || {};
 
             setBranch(data.branch || null);
             setStaff(Array.isArray(data.staff) ? data.staff : []);
@@ -71,16 +119,29 @@ export default function BranchStaff() {
     };
 
     useEffect(() => {
-        loadData();
-    }, [branchId]);
+        loadBranches();
+    }, [user?.id]);
+
+    useEffect(() => {
+        if (selectedBranchId) {
+            loadData();
+        }
+    }, [selectedBranchId]);
+
+    const handleBranchChange = e => {
+        setSelectedBranchId(Number(e.target.value));
+        setActiveTab("active");
+        setKeyword("");
+    };
 
     const filtered = useMemo(() => {
         const text = keyword.toLowerCase().trim();
 
         return staff.filter(user => {
-            const matchStatus = activeTab === "active"
-                ? user.isActive
-                : !user.isActive;
+            const matchStatus =
+                activeTab === "active"
+                    ? user.isActive
+                    : !user.isActive;
 
             if (!matchStatus) return false;
             if (!text) return true;
@@ -103,8 +164,8 @@ export default function BranchStaff() {
     const lockedCount = staff.filter(user => !user.isActive).length;
 
     const handleCreate = () => {
-        if (!branchId) {
-            showNoti("error", "Không xác định được chi nhánh của tài khoản.");
+        if (!selectedBranchId) {
+            showNoti("error", "Không xác định được chi nhánh.");
             return;
         }
 
@@ -138,7 +199,11 @@ export default function BranchStaff() {
         }
 
         try {
-            await staffService.toggleStatus(user.id);
+            await staffService.toggleStatus(
+                user.id,
+                selectedBranchId
+            );
+
             await loadData();
 
             showNoti(
@@ -160,16 +225,25 @@ export default function BranchStaff() {
         if (!date) return "-";
 
         const parsedDate = new Date(date);
+
         return Number.isNaN(parsedDate.getTime())
             ? "-"
             : parsedDate.toLocaleDateString("vi-VN");
     };
 
-    if (!branchId) {
+    if (loading && !branch && !selectedBranchId) {
+        return (
+            <div className="rounded-xl bg-white p-10 text-center shadow">
+                <p className="text-gray-500">Đang tải...</p>
+            </div>
+        );
+    }
+
+    if (!selectedBranchId) {
         return (
             <div className="rounded-xl bg-white p-10 text-center shadow">
                 <p className="text-gray-500">
-                    Tài khoản chưa được gán chi nhánh.
+                    Nhà hàng chưa có chi nhánh.
                 </p>
             </div>
         );
@@ -179,7 +253,9 @@ export default function BranchStaff() {
         <div className="space-y-5">
             <div className="flex items-center justify-between gap-4">
                 <div>
-                    <h1 className="text-2xl font-bold">Quản lý nhân viên</h1>
+                    <h1 className="text-2xl font-bold">
+                        Quản lý nhân viên
+                    </h1>
 
                     <p className="mt-1 text-sm text-gray-500">
                         Chi nhánh:{" "}
@@ -190,17 +266,36 @@ export default function BranchStaff() {
 
                     {!branch?.isActive && (
                         <p className="mt-1 text-sm text-red-500">
-                            Chi nhánh đang bị khóa. Bạn không thể thêm hoặc chỉnh sửa nhân viên.
+                            Chi nhánh đang bị khóa. Bạn không thể thêm
+                            hoặc chỉnh sửa nhân viên.
                         </p>
                     )}
                 </div>
 
                 <div className="flex items-center gap-3">
+                    {isAdmin && branches.length > 1 && (
+                        <select
+                            value={selectedBranchId || ""}
+                            onChange={handleBranchChange}
+                            className="rounded-lg border bg-white px-3 py-2.5 outline-none focus:border-[var(--color-primary)]"
+                        >
+                            {branches.map(branch => (
+                                <option
+                                    key={branch.id}
+                                    value={branch.id}
+                                >
+                                    {branch.name}
+                                </option>
+                            ))}
+                        </select>
+                    )}
+
                     <div className="relative w-full max-w-sm">
                         <Search
                             size={18}
                             className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
                         />
+
                         <Input
                             value={keyword}
                             onChange={e => setKeyword(e.target.value)}
@@ -260,13 +355,19 @@ export default function BranchStaff() {
                     <tbody>
                         {loading ? (
                             <tr>
-                                <td colSpan={6} className="p-10 text-center text-gray-500">
+                                <td
+                                    colSpan={6}
+                                    className="p-10 text-center text-gray-500"
+                                >
                                     Đang tải...
                                 </td>
                             </tr>
                         ) : filtered.length === 0 ? (
                             <tr>
-                                <td colSpan={6} className="p-10 text-center text-gray-400">
+                                <td
+                                    colSpan={6}
+                                    className="p-10 text-center text-gray-400"
+                                >
                                     {keyword
                                         ? "Không tìm thấy nhân viên phù hợp."
                                         : activeTab === "locked"
@@ -276,12 +377,22 @@ export default function BranchStaff() {
                             </tr>
                         ) : (
                             filtered.map(user => (
-                                <tr key={user.id} className="border-t hover:bg-gray-50">
-                                    <td className="p-3 font-medium">{user.username}</td>
-                                    <td className="p-3">{user.email}</td>
+                                <tr
+                                    key={user.id}
+                                    className="border-t hover:bg-gray-50"
+                                >
+                                    <td className="p-3 font-medium">
+                                        {user.username}
+                                    </td>
+
+                                    <td className="p-3">
+                                        {user.email}
+                                    </td>
 
                                     <td className="p-3 text-center">
-                                        {ROLE_LABELS[user.role?.name] || user.role?.name || "-"}
+                                        {ROLE_LABELS[user.role?.name] ||
+                                            user.role?.name ||
+                                            "-"}
                                     </td>
 
                                     <td className="p-3 text-center">
@@ -296,7 +407,9 @@ export default function BranchStaff() {
                                                     : "bg-red-100 text-red-600"
                                             }`}
                                         >
-                                            {user.isActive ? "Hoạt động" : "Đã khóa"}
+                                            {user.isActive
+                                                ? "Hoạt động"
+                                                : "Đã khóa"}
                                         </span>
                                     </td>
 
@@ -306,20 +419,28 @@ export default function BranchStaff() {
                                                 disabled={!branch?.isActive}
                                                 title="Sửa nhân viên"
                                                 className="!bg-[var(--color-warning)] disabled:cursor-not-allowed disabled:opacity-40"
-                                                onClick={() => handleEdit(user)}
+                                                onClick={() =>
+                                                    handleEdit(user)
+                                                }
                                             >
                                                 <Pencil size={16} />
                                             </Button>
 
                                             <Button
                                                 disabled={!branch?.isActive}
-                                                title={user.isActive ? "Khóa tài khoản" : "Mở khóa tài khoản"}
+                                                title={
+                                                    user.isActive
+                                                        ? "Khóa tài khoản"
+                                                        : "Mở khóa tài khoản"
+                                                }
                                                 className={`disabled:cursor-not-allowed disabled:opacity-40 ${
                                                     user.isActive
                                                         ? "!bg-[var(--color-danger)]"
                                                         : "!bg-[var(--color-success)]"
                                                 }`}
-                                                onClick={() => handleToggleStatus(user)}
+                                                onClick={() =>
+                                                    handleToggleStatus(user)
+                                                }
                                             >
                                                 {user.isActive ? (
                                                     <Lock size={16} />
@@ -338,7 +459,7 @@ export default function BranchStaff() {
 
             <StaffFormModal
                 open={openModal}
-                branchId={branchId}
+                branchId={selectedBranchId}
                 staff={selectedStaff}
                 onClose={handleCloseModal}
                 reload={loadData}
@@ -349,7 +470,12 @@ export default function BranchStaff() {
                 type={noti.type}
                 title={noti.title}
                 message={noti.message}
-                onClose={() => setNoti(prev => ({ ...prev, open: false }))}
+                onClose={() =>
+                    setNoti(prev => ({
+                        ...prev,
+                        open: false,
+                    }))
+                }
             />
         </div>
     );

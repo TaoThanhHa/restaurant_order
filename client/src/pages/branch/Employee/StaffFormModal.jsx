@@ -88,10 +88,7 @@ export default function StaffFormModal({
         e.preventDefault();
 
         if (!branchId) {
-            showNotification(
-                "error",
-                "Không xác định được chi nhánh."
-            );
+            showNotification("error", "Không xác định được chi nhánh.");
             return;
         }
 
@@ -115,7 +112,8 @@ export default function StaffFormModal({
                     {
                         username,
                         role,
-                    }
+                    },
+                    branchId
                 );
 
                 await reload();
@@ -129,8 +127,7 @@ export default function StaffFormModal({
                 return;
             }
 
-            const email =
-                form.email.trim().toLowerCase();
+            const email = form.email.trim().toLowerCase();
 
             if (!email) {
                 showNotification(
@@ -140,11 +137,14 @@ export default function StaffFormModal({
                 return;
             }
 
-            await staffService.create({
-                username,
-                email,
-                role,
-            });
+            await staffService.create(
+                {
+                    username,
+                    email,
+                    role,
+                },
+                branchId
+            );
 
             await reload();
             onClose();
@@ -153,11 +153,10 @@ export default function StaffFormModal({
                 "success",
                 "Tạo nhân viên thành công. Thông tin đăng nhập đã được gửi qua email."
             );
-
         } catch (err) {
             console.error(
                 "STAFF SUBMIT ERROR:",
-                err
+                err.response?.data || err
             );
 
             showNotification(
