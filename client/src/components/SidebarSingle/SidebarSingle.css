@@ -1,0 +1,193 @@
+.sidebar_single {
+    width: 200px;
+    height: 100vh;
+
+    background: var(--color-primary);
+    color: var(--color-secondary);
+
+    display: flex;
+    flex-direction: column;
+
+    border-right: 1px solid rgba(255, 255, 255, 0.08);
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.15);
+
+    box-sizing: border-box;
+}
+
+
+/* =========================
+   HEADER
+========================= */
+
+.sidebar_single-top {
+    width: 100%;
+
+    padding: 24px 20px;
+
+    box-sizing: border-box;
+
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+
+    gap: 8px;
+}
+
+
+.sidebar_single-top h2 {
+    margin: 0;
+
+    color: var(--color-secondary);
+
+    font-size: 22px;
+    letter-spacing: 1px;
+
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+
+/* =========================
+   LOGO
+========================= */
+
+.sidebar_single-logo {
+    width: 40px;
+    height: 40px;
+
+    padding: 4px;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    box-sizing: border-box;
+
+    flex-shrink: 0;
+}
+
+.sidebar_single-logo img {
+    width: 100%;
+    height: 100%;
+
+    object-fit: cover;
+
+    border-radius: 8px;
+}
+
+
+/* =========================
+   MENU
+========================= */
+
+.sidebar_single-menu {
+    flex: 1;
+
+    width: 100%;
+
+    padding: 14px;
+
+    box-sizing: border-box;
+
+    overflow-y: auto;
+}
+
+
+/* =========================
+   MENU ITEM
+========================= */
+
+.menu_single {
+    display: flex;
+
+    align-items: center;
+    justify-content: flex-start;
+
+    width: 100%;
+    min-height: 48px;
+
+    padding: 0 16px;
+    margin-bottom: 10px;
+
+    box-sizing: border-box;
+
+    border-radius: 12px;
+    border: 1px solid transparent;
+
+    text-decoration: none;
+    text-align: left;
+
+    color: var(--color-secondary);
+
+    gap: 12px;
+
+    transition: all .25s ease;
+}
+
+
+/* =========================
+   ICON
+========================= */
+
+.menu_single-icon {
+    width: 22px;
+    min-width: 22px;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+
+/* =========================
+   TEXT
+========================= */
+
+.menu_single-text {
+    flex: 1;
+
+    text-align: left;
+
+    line-height: 1.3;
+}
+
+
+/* =========================
+   HOVER
+========================= */
+
+.menu_single:hover {
+    background: var(--color-secondary-hover);
+    color: var(--color-primary);
+
+    transform: translateX(4px);
+}
+
+
+/* =========================
+   ACTIVE
+========================= */
+
+.menu_single_active {
+    background: var(--color-secondary);
+    color: var(--color-primary);
+}
+
+
+/* =========================
+   SCROLLBAR
+========================= */
+
+.sidebar_single-menu::-webkit-scrollbar {
+    width: 4px;
+}
+
+.sidebar_single-menu::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.sidebar_single-menu::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.25);
+    border-radius: 10px;
+}
