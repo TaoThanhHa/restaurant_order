@@ -179,9 +179,7 @@ function AccountSection() {
                             <input
                                 type="email"
                                 value={newEmail}
-                                onChange={(e) =>
-                                    setNewEmail(e.target.value)
-                                }
+                                onChange={(e) => setNewEmail(e.target.value)}
                                 placeholder="Nhập email mới"
                                 className="flex-1 rounded-lg border px-4 py-3 outline-none"
                             />

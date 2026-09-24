@@ -79,20 +79,8 @@ export default function FoodPanel({
     ]);
 
     const handleAddFood = food => {
-        if (mode !== "customer" && !order?.id) {
-            console.error(
-                "FOOD PANEL: Không xác định được order."
-            );
-            return;
-        }
-
         setSelectedFood(food);
         setOpenModal(true);
-    };
-
-    const handleCloseModal = () => {
-        setOpenModal(false);
-        setSelectedFood(null);
     };
 
     return (
@@ -129,11 +117,7 @@ export default function FoodPanel({
 
                         <input
                             value={keyword}
-                            onChange={e =>
-                                setKeyword(
-                                    e.target.value
-                                )
-                            }
+                            onChange={e => setKeyword( e.target.value )}
                             placeholder="Tìm món ăn..."
                             className="w-full rounded-lg border py-2 pl-10 pr-3"
                         />
@@ -159,11 +143,7 @@ export default function FoodPanel({
                         <button
                             type="button"
                             key={category.id}
-                            onClick={() =>
-                                setSelectedCategory(
-                                    category.id
-                                )
-                            }
+                            onClick={() => setSelectedCategory( category.id ) }
                             className={`rounded-full px-3 py-2 ${
                                 selectedCategory ===
                                 category.id

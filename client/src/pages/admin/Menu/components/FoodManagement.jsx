@@ -50,8 +50,7 @@ export default function FoodManagement({ restaurantMode = "SINGLE" }) {
                 requests.push(branchService.getAll());
             }
 
-            const [foodRes, categoryRes, branchRes] =
-                await Promise.all(requests);
+            const [foodRes, categoryRes, branchRes] = await Promise.all(requests);
 
             setFoods(foodRes.data.data);
             setCategories(categoryRes.data.data);
@@ -174,9 +173,7 @@ export default function FoodManagement({ restaurantMode = "SINGLE" }) {
 
         if (selectedBranch) {
             const branchFood = getBranchFood(food);
-            return branchFood
-                ? branchFood.status !== "INACTIVE"
-                : false;
+            return branchFood ? branchFood.status !== "INACTIVE" : false;
         }
 
         return (
@@ -190,17 +187,9 @@ export default function FoodManagement({ restaurantMode = "SINGLE" }) {
         const text = keyword.toLowerCase().trim();
 
         return foods.filter(food => {
-            const matchCategory =
-                !selectedCategory ||
-                food.categoryId === selectedCategory;
-
-            const matchKeyword =
-                food.name?.toLowerCase().includes(text);
-
-            const matchStatus =
-                statusTab === "active"
-                    ? isFoodActive(food)
-                    : !isFoodActive(food);
+            const matchCategory = !selectedCategory || food.categoryId === selectedCategory;
+            const matchKeyword = food.name?.toLowerCase().includes(text);
+            const matchStatus = statusTab === "active" ? isFoodActive(food) : !isFoodActive(food);
 
             return (
                 matchCategory &&
@@ -240,9 +229,7 @@ export default function FoodManagement({ restaurantMode = "SINGLE" }) {
 
                             <input
                                 value={keyword}
-                                onChange={e =>
-                                    setKeyword(e.target.value)
-                                }
+                                onChange={e => setKeyword(e.target.value)}
                                 placeholder="Tìm theo tên món..."
                                 className="w-full rounded-lg border py-2 pl-10 pr-3 outline-none focus:border-[var(--color-primary)]"
                             />
@@ -252,9 +239,7 @@ export default function FoodManagement({ restaurantMode = "SINGLE" }) {
                             <select
                                 value={selectedBranch}
                                 onChange={e => {
-                                    setSelectedBranch(
-                                        e.target.value
-                                    );
+                                    setSelectedBranch( e.target.value );
                                     setStatusTab("active");
                                 }}
                                 className="h-9 w-60 rounded-lg border px-3 outline-none focus:border-[var(--color-primary)]"
@@ -264,10 +249,7 @@ export default function FoodManagement({ restaurantMode = "SINGLE" }) {
                                 </option>
 
                                 {branches.map(branch => (
-                                    <option
-                                        key={branch.id}
-                                        value={branch.id}
-                                    >
+                                    <option key={branch.id} value={branch.id}>
                                         {branch.name}
                                     </option>
                                 ))}

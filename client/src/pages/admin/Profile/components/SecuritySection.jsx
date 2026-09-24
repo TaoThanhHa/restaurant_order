@@ -129,26 +129,21 @@ function SecuritySection() {
                     </p>
                 </div>
 
-                <form
-                    onSubmit={handleSubmit}
-                    className="max-w-xl mx-auto"
-                >
+                <form onSubmit={handleSubmit} className="max-w-xl mx-auto">
                     <div className="mb-5">
                         <label className="mb-2 block font-medium">
                             Mật khẩu hiện tại
                         </label>
 
                         <div className="relative">
-                            <Lock
-                                size={18}
-                                className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
-                            />
+                            <Lock size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"/>
 
                             <input
                                 type="password"
                                 name="currentPassword"
                                 value={form.currentPassword}
                                 onChange={handleChange}
+                                placeholder="Nhập mật khẩu cũ"
                                 className="w-full rounded-lg border py-3 pl-10 pr-4"
                             />
                         </div>
@@ -179,20 +174,15 @@ function SecuritySection() {
                             name="confirmPassword"
                             value={form.confirmPassword}
                             onChange={handleChange}
+                            placeholder="Xác nhận mật khẩu mới"
                             className="w-full rounded-lg border px-4 py-3"
                         />
                     </div>
 
-                    <Button
-                        type="submit"
-                        disabled={loading}
-                        className="mx-auto"
-                    >
+                    <Button type="submit" disabled={loading} className="mx-auto">
                         <Save size={18} />
 
-                        {loading
-                            ? "Đang cập nhật..."
-                            : "Đổi mật khẩu"}
+                        {loading ? "Đang cập nhật..." : "Đổi mật khẩu"}
                     </Button>
                 </form>
             </section>

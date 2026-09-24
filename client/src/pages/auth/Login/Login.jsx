@@ -27,28 +27,20 @@ export default function Login() {
 
         switch (user.role) {
             case "ADMIN":
-                navigate("/admin/dashboard", {
-                    replace: true,
-                });
+                navigate("/admin/dashboard", {replace: true, });
                 break;
 
             case "BRANCH":
-                navigate("/branch/dashboard", {
-                    replace: true,
-                });
+                navigate("/branch/dashboard", {replace: true, });
                 break;
 
             case "CASHIER":
             case "ORDER":
-                navigate("/branch/tables", {
-                    replace: true,
-                });
+                navigate("/branch/tables", {replace: true, });
                 break;
 
             case "KITCHEN":
-                navigate("/kitchen", {
-                    replace: true,
-                });
+                navigate("/kitchen", {replace: true, });
                 break;
 
             default:
@@ -100,9 +92,7 @@ export default function Login() {
     };
 
     return (
-        <section
-            className={`flex flex-col justify-center items-center ${styles.bg}`}
-        >
+        <section className={`flex flex-col justify-center items-center ${styles.bg}`} >
             <div className="flex flex-col">
                 <div className={styles.loginCard}>
                     <h2 className={styles.loginTitle}>
@@ -147,9 +137,7 @@ export default function Login() {
                         <div className="flex justify-end mb-5 mr-2">
                             <button
                                 type="button"
-                                onClick={() =>
-                                    navigate("/forgot-password")
-                                }
+                                onClick={() => navigate("/forgot-password")}
                                 className="text-sm text-blue-600 hover:underline"
                             >
                                 Quên mật khẩu?
@@ -163,13 +151,8 @@ export default function Login() {
                         )}
 
                         <div className="flex justify-center">
-                            <Button
-                                className={styles.btnLogin}
-                                disabled={loading}
-                            >
-                                {loading
-                                    ? "Đang đăng nhập..."
-                                    : "Đăng nhập"}
+                            <Button className={styles.btnLogin} disabled={loading} >
+                                {loading ? "Đang đăng nhập..." : "Đăng nhập"}
                             </Button>
                         </div>
                     </form>

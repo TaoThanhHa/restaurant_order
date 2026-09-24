@@ -3,7 +3,6 @@ import { useParams } from "react-router-dom";
 
 import tableService from "../../../../services/table.service";
 import orderService from "../../../../services/order.service";
-
 import OrderList from "./OrderList";
 import InvoicePanel from "./InvoicePanel";
 import FoodPanel from "./FoodPanel";
@@ -13,214 +12,128 @@ import NotiModal from "../../../../components/NotiModal/NotiModal";
 
 export default function TableDetail() {
     const { tableId } = useParams();
-
     const [loading, setLoading] = useState(true);
     const [table, setTable] = useState(null);
     const [selectedOrder, setSelectedOrder] = useState(null);
     const [showFoodPanel, setShowFoodPanel] = useState(false);
     const [cart, setCart] = useState([]);
     const [openMerge, setOpenMerge] = useState(false);
+    const [noti, setNoti] = useState({ open: false, type: "error", message: "" });
 
-    const [noti, setNoti] = useState({
-        open: false,
-        type: "error",
-        message: "",
-    });
+    const loadTable = useCallback(async (showLoading = false) => {
+        try {
+            if (showLoading) setLoading(true);
 
-    const loadTable = useCallback(
-        async (showLoading = false) => {
-            try {
-                if (showLoading) setLoading(true);
+            const res = await tableService.getById(tableId);
+            const newTable = res?.data;
 
-                const res = await tableService.getById(tableId);
-                const newTable = res?.data;
+            if (!newTable) return;
 
-                if (!newTable) return;
+            setTable(newTable);
 
-                setTable(newTable);
+            setSelectedOrder(prevSelected => {
+                const newOrders = newTable.orders || [];
 
-                setSelectedOrder(prevSelected => {
-                    const newOrders = newTable.orders || [];
+                if (!prevSelected) return newOrders.length ? newOrders[0] : null;
 
-                    if (!prevSelected) {
-                        return newOrders.length
-                            ? newOrders[0]
-                            : null;
-                    }
-
-                    const updatedOrder = newOrders.find(
-                        order =>
-                            Number(order.id) ===
-                            Number(prevSelected.id)
-                    );
-
-                    if (!updatedOrder) {
-                        return newOrders.length
-                            ? newOrders[0]
-                            : null;
-                    }
-
-                    return updatedOrder;
-                });
-            } catch (err) {
-                console.error(
-                    "LOAD TABLE DETAIL ERROR:",
-                    err
+                const updatedOrder = newOrders.find(
+                    order => Number(order.id) === Number(prevSelected.id)
                 );
-            } finally {
-                if (showLoading) setLoading(false);
-            }
-        },
-        [tableId]
-    );
+
+                return updatedOrder || (newOrders.length ? newOrders[0] : null);
+            });
+        } catch (err) {
+            console.error("LOAD TABLE DETAIL ERROR:", err);
+        } finally {
+            if (showLoading) setLoading(false);
+        }
+    }, [tableId]);
 
     useEffect(() => {
         if (!tableId) return;
-
         loadTable(true);
     }, [tableId, loadTable]);
 
     useEffect(() => {
         const token = localStorage.getItem("token");
-
         if (!token) return;
 
         const eventSource = new EventSource(
-            `${import.meta.env.VITE_API_URL}/events/branch?token=${encodeURIComponent(
-                token
-            )}`
+            import.meta.env.VITE_API_URL +
+            "/events/branch?token=" +
+            encodeURIComponent(token)
         );
 
-        eventSource.addEventListener(
-            "connected",
-            (event) => {
-                try {
-                    console.log(
-                        "SSE TABLE CONNECTED:",
-                        JSON.parse(event.data)
-                    );
-                } catch {
-                    console.log(
-                        "SSE TABLE CONNECTED"
-                    );
-                }
+        eventSource.addEventListener("connected", event => {
+            try {
+                console.log("SSE TABLE CONNECTED:", JSON.parse(event.data));
+            } catch {
+                console.log("SSE TABLE CONNECTED");
             }
-        );
+        });
 
-        eventSource.addEventListener(
-            "order.updated",
-            (event) => {
-                try {
-                    const data = JSON.parse(event.data);
+        eventSource.addEventListener("order.updated", event => {
+            try {
+                const data = JSON.parse(event.data);
 
-                    console.log(
-                        "TABLE ORDER UPDATED:",
-                        data
-                    );
+                if (data?.tableId && Number(data.tableId) !== Number(tableId)) return;
 
-                    if (
-                        data?.tableId &&
-                        Number(data.tableId) !==
-                            Number(tableId)
-                    ) {
-                        return;
-                    }
-
-                    loadTable(false);
-                } catch (error) {
-                    console.error(
-                        "SSE ORDER ERROR:",
-                        error
-                    );
-                }
+                loadTable(false);
+            } catch (error) {
+                console.error("SSE ORDER ERROR:", error);
             }
-        );
+        });
 
-        eventSource.addEventListener(
-            "order.deleted",
-            (event) => {
-                try {
-                    const data = JSON.parse(event.data);
+        eventSource.addEventListener("order.deleted", event => {
+            try {
+                const data = JSON.parse(event.data);
 
-                    if (
-                        data?.tableId &&
-                        Number(data.tableId) !==
-                            Number(tableId)
-                    ) {
-                        return;
-                    }
+                if (data?.tableId && Number(data.tableId) !== Number(tableId)) return;
 
-                    loadTable(false);
-                } catch (error) {
-                    console.error(
-                        "SSE ORDER DELETE ERROR:",
-                        error
-                    );
-                }
+                loadTable(false);
+            } catch (error) {
+                console.error("SSE ORDER DELETE ERROR:", error);
             }
-        );
+        });
 
-        eventSource.addEventListener(
-            "table.updated",
-            (event) => {
-                try {
-                    const data = JSON.parse(event.data);
+        eventSource.addEventListener("table.updated", event => {
+            try {
+                const data = JSON.parse(event.data);
 
-                    if (
-                        data?.tableId &&
-                        Number(data.tableId) !==
-                            Number(tableId)
-                    ) {
-                        return;
-                    }
+                if (data?.tableId && Number(data.tableId) !== Number(tableId)) return;
 
-                    loadTable(false);
-                } catch (error) {
-                    console.error(
-                        "SSE TABLE UPDATE ERROR:",
-                        error
-                    );
-                }
+                loadTable(false);
+            } catch (error) {
+                console.error("SSE TABLE UPDATE ERROR:", error);
             }
-        );
+        });
 
-        eventSource.onerror = (error) => {
+        eventSource.onerror = error => {
             console.error("SSE ERROR:", error);
         };
 
-        return () => {
-            eventSource.close();
-        };
+        return () => eventSource.close();
     }, [tableId, loadTable]);
 
-    const handleOrderUpdated = (updatedOrder) => {
+    const handleOrderUpdated = updatedOrder => {
         if (!updatedOrder) return;
 
         setSelectedOrder(updatedOrder);
 
-        setTable((prev) => {
+        setTable(prev => {
             if (!prev) return prev;
 
             const orders = prev.orders || [];
-
             const exists = orders.some(
-                (order) =>
-                    Number(order.id) ===
-                    Number(updatedOrder.id)
+                order => Number(order.id) === Number(updatedOrder.id)
             );
 
-            if (!exists) {
-                return {
-                    ...prev,
-                    orders: [...orders, updatedOrder],
-                };
-            }
+            if (!exists) return { ...prev, orders: [...orders, updatedOrder] };
 
             return {
                 ...prev,
-                orders: orders.map((order) =>
-                    Number(order.id) ===
-                    Number(updatedOrder.id)
+                orders: orders.map(order =>
+                    Number(order.id) === Number(updatedOrder.id)
                         ? updatedOrder
                         : order
                 ),
@@ -230,48 +143,23 @@ export default function TableDetail() {
 
     const handleCreateOrder = async () => {
         try {
-            if (!table?.id) {
-                throw new Error(
-                    "Không xác định được bàn."
-                );
-            }
+            if (!table?.id) throw new Error("Không xác định được bàn.");
 
-            const customerRes = await tableService.open(
-                table.id,
-                {
-                    name: `Khách bàn ${table.tableNumber}`,
-                }
-            );
+            const customerRes = await tableService.open(table.id, {
+                name: "Khách bàn " + table.tableNumber,
+            });
 
-            const customer =
-                customerRes?.data?.customer;
-
+            const customer = customerRes?.data?.customer;
             if (!customer?.id) {
-                throw new Error(
-                    "Không xác định được khách hàng của bàn."
-                );
+                throw new Error("Không xác định được khách hàng của bàn.");
             }
 
-            const orderRes =
-                await orderService.create({
-                    customerId: customer.id,
-                });
-
-            const createdOrder =
-                orderRes?.data?.data ||
-                orderRes?.data ||
-                null;
+            const orderRes = await orderService.create({ customerId: customer.id });
+            const createdOrder = orderRes?.data?.data || orderRes?.data || null;
 
             if (!createdOrder?.id) {
-                throw new Error(
-                    "Không lấy được đơn hàng vừa tạo."
-                );
+                throw new Error("Không lấy được đơn hàng vừa tạo.");
             }
-
-            console.log(
-                "NEW ORDER CREATED:",
-                createdOrder
-            );
 
             setSelectedOrder(createdOrder);
             setCart([]);
@@ -279,66 +167,42 @@ export default function TableDetail() {
 
             await loadTable(false);
 
-            setSelectedOrder((currentOrder) => {
-                const freshOrders =
-                    table?.orders || [];
-
-                const newOrder =
-                    freshOrders.find(
-                        (order) =>
-                            Number(order.id) ===
-                            Number(createdOrder.id)
-                    );
+            setSelectedOrder(currentOrder => {
+                const freshOrders = table?.orders || [];
+                const newOrder = freshOrders.find(
+                    order => Number(order.id) === Number(createdOrder.id)
+                );
 
                 return newOrder || createdOrder;
             });
         } catch (err) {
-            console.error(
-                "CREATE ORDER ERROR:",
-                err
-            );
+            console.error("CREATE ORDER ERROR:", err);
 
             setNoti({
                 open: true,
                 type: "error",
-                message:
-                    err.response?.data?.message ||
-                    err.message ||
-                    "Không thể tạo đơn.",
+                message: err.response?.data?.message || err.message || "Không thể tạo đơn.",
             });
         }
     };
 
-    const handleSelectOrder = (order) => {
+    const handleSelectOrder = order => {
         if (!order?.id) return;
-
-        console.log(
-            "SELECT ORDER:",
-            order.id,
-            order.orderCode
-        );
 
         setSelectedOrder(order);
         setCart([]);
         setShowFoodPanel(false);
     };
 
-    const handleAddFood = (order) => {
+    const handleAddFood = order => {
         if (!order?.id) {
             setNoti({
                 open: true,
                 type: "error",
-                message:
-                    "Không xác định được đơn hàng.",
+                message: "Không xác định được đơn hàng.",
             });
             return;
         }
-
-        console.log(
-            "ADD FOOD TO ORDER:",
-            order.id,
-            order.orderCode
-        );
 
         setSelectedOrder(order);
         setCart([]);
@@ -376,19 +240,11 @@ export default function TableDetail() {
                             table={table}
                             orders={table.orders || []}
                             selectedOrder={selectedOrder}
-                            onSelectOrder={
-                                handleSelectOrder
-                            }
-                            onCreateOrder={
-                                handleCreateOrder
-                            }
+                            onSelectOrder={handleSelectOrder}
+                            onCreateOrder={handleCreateOrder}
                             reload={loadTable}
-                            onMergeOrders={() =>
-                                setOpenMerge(true)
-                            }
-                            onOrderUpdated={
-                                handleOrderUpdated
-                            }
+                            onMergeOrders={() => setOpenMerge(true)}
+                            onOrderUpdated={handleOrderUpdated}
                         />
                     </div>
 
@@ -396,13 +252,9 @@ export default function TableDetail() {
                         <InvoicePanel
                             order={selectedOrder}
                             reload={loadTable}
-                            onAddFood={
-                                handleAddFood
-                            }
+                            onAddFood={handleAddFood}
                             table={table}
-                            onOrderUpdated={
-                                handleOrderUpdated
-                            }
+                            onOrderUpdated={handleOrderUpdated}
                         />
                     </div>
                 </div>
@@ -416,9 +268,7 @@ export default function TableDetail() {
                             cart={cart}
                             setCart={setCart}
                             reload={loadTable}
-                            onBack={
-                                handleBackFoodPanel
-                            }
+                            onBack={handleBackFoodPanel}
                             showBack
                         />
                     </div>
@@ -430,9 +280,7 @@ export default function TableDetail() {
                             table={table}
                             order={selectedOrder}
                             reload={loadTable}
-                            onBack={
-                                handleBackFoodPanel
-                            }
+                            onBack={handleBackFoodPanel}
                         />
                     </div>
                 </div>
@@ -450,12 +298,7 @@ export default function TableDetail() {
                 open={noti.open}
                 type={noti.type}
                 message={noti.message}
-                onClose={() =>
-                    setNoti((prev) => ({
-                        ...prev,
-                        open: false,
-                    }))
-                }
+                onClose={() => setNoti(prev => ({ ...prev, open: false }))}
             />
         </>
     );

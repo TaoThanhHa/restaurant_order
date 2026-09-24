@@ -17,9 +17,7 @@ export default function MergeTableModal({
     if (!open || !table) return null;
 
     const occupiedTables = tables.filter(
-        item =>
-            item.id !== table.id &&
-            item.status === "OCCUPIED"
+        item => item.id !== table.id && item.status === "OCCUPIED"
     );
 
     const handleMerge = async () => {
@@ -32,10 +30,7 @@ export default function MergeTableModal({
             setLoading(true);
             setError("");
 
-            await tableService.mergeTables(
-                table.id,
-                Number(targetTableId)
-            );
+            await tableService.mergeTables(table.id, Number(targetTableId));
 
             setTargetTableId("");
             onClose();
@@ -129,21 +124,13 @@ export default function MergeTableModal({
                     )}
 
                     <div className="flex justify-end gap-2 pt-2">
-                        <Button
-                            type="button"
-                            onClick={onClose}
-                            className="bg-gray-100 text-gray-700"
-                        >
+                        <Button type="button" onClick={onClose} >
                             Hủy
                         </Button>
 
                         <Button
                             type="button"
-                            disabled={
-                                loading ||
-                                !targetTableId ||
-                                occupiedTables.length === 0
-                            }
+                            disabled={loading || !targetTableId || occupiedTables.length === 0 }
                             onClick={handleMerge}
                         >
                             {loading ? "Đang xử lý..." : "Gộp bàn"}

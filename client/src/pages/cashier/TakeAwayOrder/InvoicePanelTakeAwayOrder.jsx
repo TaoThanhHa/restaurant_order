@@ -46,9 +46,7 @@ export default function InvoicePanelTakeAwayOrder({
             item => item.status !== "CANCELLED"
         );
 
-    const customer =
-        order.orderMembers?.[0]?.customer;
-
+    const customer = order.orderMembers?.[0]?.customer;
     const total =
         orderItems.reduce(
             (sum, item) =>
@@ -58,10 +56,8 @@ export default function InvoicePanelTakeAwayOrder({
             0
         );
 
-    const status =
-        STATUS[order.status] ||
-        STATUS.PREPARING;
-
+    const status = STATUS[order.status] || STATUS.PREPARING;
+    
     const showNoti = (
         message,
         type = "error"

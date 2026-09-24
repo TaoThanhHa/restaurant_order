@@ -149,41 +149,61 @@ const deleteOrder = async (orderId, user) => {
 const create = async (data, user) => {
     const { customerId, joinOrderId, userId } = data;
 
-    if (!customerId) throw new Error("Vui lòng chọn khách hàng.");
+    if (!customerId) {
+        throw new Error("Vui lòng chọn khách hàng.");
+    }
 
     const customer = await prisma.customer.findUnique({
         where: { id: Number(customerId) },
         include: {
             session: {
                 include: {
-                    table: { include: { floor: true } },
+                    table: {
+                        include: {
+                            floor: true,
+                        },
+                    },
                 },
             },
         },
     });
 
-    if (!customer) throw new Error("Khách hàng không tồn tại.");
-    if (!customer.session) throw new Error("Khách chưa thuộc phiên phục vụ.");
+    if (!customer) {
+        throw new Error("Khách hàng không tồn tại.");
+    }
+
+    if (!customer.session) {
+        throw new Error("Khách chưa thuộc phiên phục vụ.");
+    }
 
     const branchId = customer.session.table.floor.branchId;
+
     await checkBranchAccess(branchId, user);
 
     if (joinOrderId) {
         const order = await prisma.order.findUnique({
             where: { id: Number(joinOrderId) },
-            include: { orderMembers: true },
+            include: {
+                orderMembers: true,
+            },
         });
 
-        if (!order) throw new Error("Không tìm thấy hóa đơn.");
+        if (!order) {
+            throw new Error("Không tìm thấy hóa đơn.");
+        }
+
         await checkBranchAccess(order.branchId, user);
 
         if (["COMPLETED", "CANCELLED"].includes(order.status)) {
             throw new Error("Hóa đơn đã đóng.");
         }
 
-        if (!order.orderMembers.some(x => x.customerId === customer.id)) {
+        if (!order.orderMembers.some(item => item.customerId === customer.id)) {
             await prisma.orderMember.create({
-                data: { customerId: customer.id, orderId: order.id },
+                data: {
+                    customerId: customer.id,
+                    orderId: order.id,
+                },
             });
         }
 
@@ -206,7 +226,10 @@ const create = async (data, user) => {
     });
 
     await prisma.orderMember.create({
-        data: { customerId: customer.id, orderId: order.id },
+        data: {
+            customerId: customer.id,
+            orderId: order.id,
+        },
     });
 
     await updateTableStatus(session.tableId);
@@ -559,7 +582,11 @@ const payment = async (orderId, data, user) => {
     const order = await prisma.order.findUnique({
         where: { id },
         include: {
-            session: { include: { table: true } },
+            session: {
+                include: {
+                    table: true,
+                },
+            },
             createdByCustomer: {
                 select: {
                     id: true,
@@ -607,21 +634,16 @@ const payment = async (orderId, data, user) => {
 
     let customerId = null;
 
-    // Nếu order đã có tài khoản khách hàng thì giữ nguyên,
-    // không cho thay đổi bằng số điện thoại khác.
-    if (
-        order.createdByCustomer &&
-        !order.createdByCustomer.isGuest
-    ) {
+    if (order.createdByCustomer && !order.createdByCustomer.isGuest) {
         customerId = order.createdByCustomer.id;
-    } else if (
-        !order.createdByCustomer &&
-        phone?.trim()
-    ) {
+    } else if (phone?.trim()) {
         const customer = await prisma.customer.findFirst({
             where: {
                 phone: phone.trim(),
                 isGuest: false,
+                restaurantId: user.restaurantId
+                    ? Number(user.restaurantId)
+                    : undefined,
             },
             select: {
                 id: true,
@@ -665,12 +687,7 @@ const payment = async (orderId, data, user) => {
             });
         }
 
-        // Chỉ lưu tài khoản khách nếu tìm thấy tài khoản hợp lệ
-        if (
-            customerId &&
-            (!order.createdByCustomer ||
-                order.createdByCustomer.isGuest)
-        ) {
+        if (customerId) {
             await tx.order.update({
                 where: { id },
                 data: {
@@ -680,13 +697,12 @@ const payment = async (orderId, data, user) => {
                 },
             });
 
-            const memberExists =
-                await tx.orderMember.findFirst({
-                    where: {
-                        orderId: id,
-                        customerId,
-                    },
-                });
+            const memberExists = await tx.orderMember.findFirst({
+                where: {
+                    orderId: id,
+                    customerId,
+                },
+            });
 
             if (!memberExists) {
                 await tx.orderMember.create({
@@ -706,7 +722,9 @@ const payment = async (orderId, data, user) => {
             });
         }
 
-        if (!order.sessionId) return;
+        if (!order.sessionId) {
+            return;
+        }
 
         const openOrders = await tx.order.count({
             where: {
@@ -754,26 +772,42 @@ const payment = async (orderId, data, user) => {
 };
 
 const createTakeAway = async (data, user) => {
-    if (!user) throw new Error("Chưa xác thực người dùng.");
+    if (!user) {
+        throw new Error("Chưa xác thực người dùng.");
+    }
+
     if (user.role !== "ADMIN" && !user.branchId) {
         throw new Error("Tài khoản chưa được gán chi nhánh.");
     }
 
-    const branchId = data.branchId ? Number(data.branchId) : Number(user.branchId);
-    if (!branchId) throw new Error("Vui lòng chọn chi nhánh.");
+    const branchId = data.branchId
+        ? Number(data.branchId)
+        : Number(user.branchId);
 
-    await checkBranchAccess(branchId, user);
+    if (!branchId) {
+        throw new Error("Vui lòng chọn chi nhánh.");
+    }
 
-    if (!data.items?.length) throw new Error("Đơn hàng chưa có món.");
+    const branch = await checkBranchAccess(branchId, user);
+
+    if (!data.items?.length) {
+        throw new Error("Đơn hàng chưa có món.");
+    }
 
     const paymentMethod = data.paymentMethod || "CASH";
+
     if (!["CASH", "BANKING"].includes(paymentMethod)) {
         throw new Error("Phương thức thanh toán không hợp lệ.");
     }
 
     const foodIds = data.items.map(item => Number(item.foodId));
+
     const foods = await prisma.food.findMany({
-        where: { id: { in: foodIds } },
+        where: {
+            id: {
+                in: foodIds,
+            },
+        },
     });
 
     if (foods.length !== new Set(foodIds).size) {
@@ -789,10 +823,17 @@ const createTakeAway = async (data, user) => {
         }
 
         const branchFood = await prisma.branchFood.findUnique({
-            where: { branchId_foodId: { branchId, foodId } },
+            where: {
+                branchId_foodId: {
+                    branchId,
+                    foodId,
+                },
+            },
         });
 
-        if (!branchFood) throw new Error("Chi nhánh chưa có món này.");
+        if (!branchFood) {
+            throw new Error("Chi nhánh chưa có món này.");
+        }
 
         if (branchFood.status === "OUT_OF_STOCK") {
             const food = foods.find(food => food.id === foodId);
@@ -800,11 +841,17 @@ const createTakeAway = async (data, user) => {
         }
     }
 
+    const restaurantId = Number(branch.restaurantId);
+
     let customer = null;
 
     if (data.phone?.trim()) {
         customer = await prisma.customer.findFirst({
-            where: { phone: data.phone.trim(), isGuest: false },
+            where: {
+                phone: data.phone.trim(),
+                isGuest: false,
+                restaurantId,
+            },
         });
     }
 
@@ -812,11 +859,15 @@ const createTakeAway = async (data, user) => {
 
     const order = await prisma.$transaction(async tx => {
         const now = new Date();
+
         let totalAmount = 0;
         const orderItems = [];
 
         for (const item of data.items) {
-            const food = foods.find(food => food.id === Number(item.foodId));
+            const food = foods.find(
+                food => food.id === Number(item.foodId)
+            );
+
             const price = Number(food.price);
             const quantity = Number(item.quantity);
 
@@ -833,6 +884,20 @@ const createTakeAway = async (data, user) => {
             });
         }
 
+        let customerId = customer?.id || null;
+
+        if (!customerId) {
+            const guestCustomer = await tx.customer.create({
+                data: {
+                    name: "Khách vãng lai",
+                    isGuest: true,
+                    restaurantId,
+                },
+            });
+
+            customerId = guestCustomer.id;
+        }
+
         const newOrder = await tx.order.create({
             data: {
                 orderCode,
@@ -842,23 +907,32 @@ const createTakeAway = async (data, user) => {
                 note: data.note || null,
                 totalAmount,
                 createdByUserId: Number(user.id),
-                ...(customer ? { createdByCustomerId: customer.id } : {}),
-                orderItems: { create: orderItems },
+                createdByCustomerId: customerId,
+                orderItems: {
+                    create: orderItems,
+                },
             },
         });
 
-        if (customer) {
-            await tx.orderMember.create({
-                data: { customerId: customer.id, orderId: newOrder.id },
-            });
-        }
+        await tx.orderMember.create({
+            data: {
+                customerId,
+                orderId: newOrder.id,
+            },
+        });
 
         await tx.payment.create({
             data: {
                 orderId: newOrder.id,
                 paymentMethod,
-                cashAmount: paymentMethod === "CASH" ? totalAmount : null,
-                bankAmount: paymentMethod === "BANKING" ? totalAmount : null,
+                cashAmount:
+                    paymentMethod === "CASH"
+                        ? totalAmount
+                        : null,
+                bankAmount:
+                    paymentMethod === "BANKING"
+                        ? totalAmount
+                        : null,
                 totalAmount,
                 paymentStatus: "PAID",
                 paidAt: now,
@@ -866,12 +940,34 @@ const createTakeAway = async (data, user) => {
         });
 
         return tx.order.findUnique({
-            where: { id: newOrder.id },
+            where: {
+                id: newOrder.id,
+            },
             include: {
-                createdByUser: { select: { id: true, username: true } },
-                createdByCustomer: { select: { id: true, name: true, phone: true } },
-                orderMembers: { include: { customer: true } },
-                orderItems: { include: { food: true } },
+                createdByUser: {
+                    select: {
+                        id: true,
+                        username: true,
+                    },
+                },
+                createdByCustomer: {
+                    select: {
+                        id: true,
+                        name: true,
+                        phone: true,
+                        isGuest: true,
+                    },
+                },
+                orderMembers: {
+                    include: {
+                        customer: true,
+                    },
+                },
+                orderItems: {
+                    include: {
+                        food: true,
+                    },
+                },
                 payment: true,
             },
         });

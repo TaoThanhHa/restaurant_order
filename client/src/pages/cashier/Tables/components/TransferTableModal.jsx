@@ -32,10 +32,7 @@ export default function TransferTableModal({
             setLoading(true);
             setError("");
 
-            await tableService.transferTable(
-                table.id,
-                Number(targetTableId)
-            );
+            await tableService.transferTable( table.id, Number(targetTableId) );
 
             setTargetTableId("");
             onClose();
@@ -97,9 +94,7 @@ export default function TransferTableModal({
                                     <button
                                         key={item.id}
                                         type="button"
-                                        onClick={() =>
-                                            setTargetTableId(item.id)
-                                        }
+                                        onClick={() => setTargetTableId(item.id) }
                                         className={`rounded-xl border p-3 text-left transition ${
                                             Number(targetTableId) === item.id
                                                 ? "border-[var(--color-primary)] bg-[var(--color-primary)]/10"
@@ -135,11 +130,7 @@ export default function TransferTableModal({
 
                         <Button
                             type="button"
-                            disabled={
-                                loading ||
-                                !targetTableId ||
-                                availableTables.length === 0
-                            }
+                            disabled={ loading || !targetTableId || availableTables.length === 0}
                             onClick={handleTransfer}
                         >
                             {loading ? "Đang xử lý..." : "Đổi bàn"}

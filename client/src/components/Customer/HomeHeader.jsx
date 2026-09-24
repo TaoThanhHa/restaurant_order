@@ -16,9 +16,7 @@ export default function HomeHeader({
         logo: "",
     });
 
-    const API_URL =
-        import.meta.env.VITE_API_URL ||
-        "http://localhost:5000/api";
+    const API_URL = import.meta.env.VITE_API_URL || "http://localhost:5000/api";
 
     const SERVER_URL = API_URL.replace(/\/api\/?$/, "");
 
@@ -34,8 +32,6 @@ export default function HomeHeader({
         return `${SERVER_URL}${url}`;
     };
 
-    
-    // AVATAR URL
     const getAvatarUrl = (avatar) => {
         if (!avatar) {
             return null;
@@ -69,7 +65,6 @@ export default function HomeHeader({
         loadRestaurant();
     }, []);
 
-    // CUSTOMER
     const displayName = profile?.name || "Khách hàng";
     const avatarLetter = displayName.charAt(0).toUpperCase();
 
@@ -80,7 +75,6 @@ export default function HomeHeader({
         [profile?.avatar]
     );
 
-    // ACCOUNT
     const handleAccount = () => {
         if (!table?.qrCode) {
             return;
@@ -97,10 +91,8 @@ export default function HomeHeader({
         <header className="bg-[var(--color-primary)] px-5 py-2 shadow-sm">
             <div className="mt-3 flex items-center justify-between">
 
-                {/*RESTAURANT + TABLE */}
                 <div>
-                    <Link
-                        to={`/customer/home/${table?.qrCode || ""}`}
+                    <Link to={"/customer/home/" + (table?.qrCode || "")}
                         className="flex items-center gap-3 text-white"
                     >
                         <div className="flex h-10 w-10 items-center justify-center overflow-hidden rounded-lg bg-white/20">
@@ -148,10 +140,6 @@ export default function HomeHeader({
                     <div className="text-right">
                         <p className="text-sm font-semibold text-white">
                             {displayName}
-                        </p>
-
-                        <p className="text-xs text-white/80">
-                            Tài khoản
                         </p>
                     </div>
 

@@ -42,9 +42,7 @@ export default function Foods() {
 
             <div className="flex-1">
                 {tab === "food" ? (
-                    <FoodManagement
-                        restaurantMode={user?.restaurantMode}
-                    />
+                    <FoodManagement restaurantMode={user?.restaurantMode} />
                 ) : (
                     <CategoryManagement />
                 )}

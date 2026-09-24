@@ -1,9 +1,29 @@
 const staffService = require("./staff.service");
 const response = require("../../utils/response");
 
+const getBranchId = async user => {
+    if (user?.branchId) {
+        return Number(user.branchId);
+    }
+
+    if (
+        user?.role === "ADMIN" &&
+        user?.restaurantMode === "SINGLE" &&
+        user?.restaurantId
+    ) {
+        const branch = await staffService.getSingleBranch(
+            user.restaurantId
+        );
+
+        return branch?.id || null;
+    }
+
+    return null;
+};
+
 const getAll = async (req, res) => {
     try {
-        const branchId = req.user?.branchId;
+        const branchId = await getBranchId(req.user);
 
         if (!branchId) {
             return response.error(
@@ -13,7 +33,10 @@ const getAll = async (req, res) => {
             );
         }
 
-        const data = await staffService.getAll(branchId);
+        const data = await staffService.getAll(
+            branchId,
+            req.user
+        );
 
         return response.success(
             res,
@@ -21,7 +44,10 @@ const getAll = async (req, res) => {
             data
         );
     } catch (error) {
-        console.error("GET ALL STAFF ERROR:", error);
+        console.error(
+            "GET ALL STAFF ERROR:",
+            error
+        );
 
         return response.error(
             res,
@@ -33,8 +59,7 @@ const getAll = async (req, res) => {
 
 const getById = async (req, res) => {
     try {
-        const branchId = req.user?.branchId;
-        const userId = req.params.userId;
+        const branchId = await getBranchId(req.user);
 
         if (!branchId) {
             return response.error(
@@ -46,7 +71,8 @@ const getById = async (req, res) => {
 
         const staff = await staffService.getById(
             branchId,
-            userId
+            req.params.userId,
+            req.user
         );
 
         return response.success(
@@ -55,7 +81,10 @@ const getById = async (req, res) => {
             staff
         );
     } catch (error) {
-        console.error("GET STAFF BY ID ERROR:", error);
+        console.error(
+            "GET STAFF BY ID ERROR:",
+            error
+        );
 
         return response.error(
             res,
@@ -67,7 +96,7 @@ const getById = async (req, res) => {
 
 const create = async (req, res) => {
     try {
-        const branchId = req.user?.branchId;
+        const branchId = await getBranchId(req.user);
 
         if (!branchId) {
             return response.error(
@@ -79,7 +108,8 @@ const create = async (req, res) => {
 
         const staff = await staffService.create(
             branchId,
-            req.body
+            req.body,
+            req.user
         );
 
         return response.success(
@@ -89,7 +119,10 @@ const create = async (req, res) => {
             201
         );
     } catch (error) {
-        console.error("CREATE STAFF ERROR:", error);
+        console.error(
+            "CREATE STAFF ERROR:",
+            error
+        );
 
         return response.error(
             res,
@@ -101,8 +134,7 @@ const create = async (req, res) => {
 
 const update = async (req, res) => {
     try {
-        const branchId = req.user?.branchId;
-        const userId = req.params.userId;
+        const branchId = await getBranchId(req.user);
 
         if (!branchId) {
             return response.error(
@@ -114,8 +146,9 @@ const update = async (req, res) => {
 
         const staff = await staffService.update(
             branchId,
-            userId,
-            req.body
+            req.params.userId,
+            req.body,
+            req.user
         );
 
         return response.success(
@@ -124,7 +157,10 @@ const update = async (req, res) => {
             staff
         );
     } catch (error) {
-        console.error("UPDATE STAFF ERROR:", error);
+        console.error(
+            "UPDATE STAFF ERROR:",
+            error
+        );
 
         return response.error(
             res,
@@ -136,8 +172,7 @@ const update = async (req, res) => {
 
 const toggleStatus = async (req, res) => {
     try {
-        const branchId = req.user?.branchId;
-        const userId = req.params.userId;
+        const branchId = await getBranchId(req.user);
 
         if (!branchId) {
             return response.error(
@@ -147,10 +182,12 @@ const toggleStatus = async (req, res) => {
             );
         }
 
-        const staff = await staffService.toggleStatus(
-            branchId,
-            userId
-        );
+        const staff =
+            await staffService.toggleStatus(
+                branchId,
+                req.params.userId,
+                req.user
+            );
 
         return response.success(
             res,
@@ -170,6 +207,7 @@ const toggleStatus = async (req, res) => {
         );
     }
 };
+
 module.exports = {
     getAll,
     getById,

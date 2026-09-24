@@ -51,26 +51,28 @@ export default function Foods() {
     };
 
     const filterFoods = useMemo(() => {
-        return foods.filter(item =>
-            item.status === "AVAILABLE" || item.status === "OUT_OF_STOCK" &&
-            (categoryId === "ALL" ||
-                Number(item.food?.categoryId) === Number(categoryId)) &&
-            item.food?.name
-                ?.toLowerCase()
-                .includes(keyword.toLowerCase())
-        );
+        return foods.filter(item => {
+            const food = item.food;
+
+            return (
+                (item.status === "AVAILABLE" ||
+                    item.status === "OUT_OF_STOCK") &&
+                (categoryId === "ALL" ||
+                    Number(food?.categoryId) === Number(categoryId)) &&
+                food?.name
+                    ?.toLowerCase()
+                    .includes(keyword.toLowerCase())
+            );
+        });
     }, [foods, categoryId, keyword]);
 
     return (
-
         <div className="space-y-6">
-
             <h1 className="text-2xl font-bold text-[var(--color-text)]">
                 Quản lý món ăn
             </h1>
 
             <div className="flex flex-wrap gap-3">
-
                 <button
                     onClick={() => setCategoryId("ALL")}
                     className={`rounded-full px-4 py-2 transition
@@ -84,7 +86,6 @@ export default function Foods() {
                 </button>
 
                 {categories.map(category => (
-
                     <button
                         key={category.id}
                         onClick={() => setCategoryId(category.id)}
@@ -101,10 +102,7 @@ export default function Foods() {
                 ))}
             </div>
             <div className="relative mt-4 max-w-md">
-                    <Search
-                        size={18}
-                        className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
-                    />
+                    <Search size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"/>
 
                     <Input
                         type="text"
@@ -115,7 +113,6 @@ export default function Foods() {
                     />
                 </div>
 
-            {/* Foods */}
             <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-5 gap-5">
                 {filterFoods.map(food => (
                     <FoodCard

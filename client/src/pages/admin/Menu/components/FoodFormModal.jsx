@@ -253,10 +253,7 @@ export default function FoodFormModal({
                     <div className="grid grid-cols-3 gap-8 p-6">
                         <div>
                             <div
-                                onClick={() =>
-                                    !saving &&
-                                    fileInputRef.current?.click()
-                                }
+                                onClick={() => !saving && fileInputRef.current?.click()}
                                 className="flex aspect-square cursor-pointer flex-col items-center justify-center rounded-xl border-2 border-dashed border-gray-300 bg-gray-50 transition hover:border-blue-500 hover:bg-blue-50"
                             >
                                 {preview ? (
@@ -317,10 +314,7 @@ export default function FoodFormModal({
                                     </option>
 
                                     {categories.map(category => (
-                                        <option
-                                            key={category.id}
-                                            value={category.id}
-                                        >
+                                        <option key={category.id} value={category.id}>
                                             {category.name}
                                         </option>
                                     ))}
@@ -365,50 +359,29 @@ export default function FoodFormModal({
                                         {branches.map(branch => {
                                             const item =
                                                 form.branchFoods.find(
-                                                    branchFood =>
-                                                        Number(
-                                                            branchFood.branchId
-                                                        ) ===
-                                                        Number(branch.id)
+                                                    branchFood => Number( branchFood.branchId ) === Number(branch.id)
                                                 );
 
                                             const checked = Boolean(item);
 
                                             return (
-                                                <div
-                                                    key={branch.id}
-                                                    className="rounded-lg border p-3"
-                                                >
+                                                <div key={branch.id} className="rounded-lg border p-3">
                                                     <div className="flex items-center justify-between">
                                                         <label className="flex items-center gap-2">
                                                             <input
                                                                 type="checkbox"
-                                                                checked={
-                                                                    checked
-                                                                }
+                                                                checked={checked}
                                                                 disabled={saving}
-                                                                onChange={() =>
-                                                                    toggleBranch(
-                                                                        branch.id
-                                                                    )
-                                                                }
+                                                                onChange={() =>toggleBranch(branch.id)}
                                                             />
                                                             {branch.name}
                                                         </label>
 
                                                         {checked && (
                                                             <select
-                                                                value={
-                                                                    item.status
-                                                                }
+                                                                value={item.status}
                                                                 disabled={saving}
-                                                                onChange={e =>
-                                                                    handleBranchStatusChange(
-                                                                        branch.id,
-                                                                        e.target
-                                                                            .value
-                                                                    )
-                                                                }
+                                                                onChange={e => handleBranchStatusChange(branch.id, e.target.value)}
                                                                 className="rounded border px-2 py-1"
                                                             >
                                                                 <option value="AVAILABLE">

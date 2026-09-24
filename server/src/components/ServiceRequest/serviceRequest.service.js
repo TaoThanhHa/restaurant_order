@@ -112,31 +112,28 @@ if (customerId) {
     return request;
 };
 
-
 const getAll = async (branchId) => {
-
     return prisma.serviceRequest.findMany({
-
         where: {
             branchId,
             status: {
-                in: [
-                    "PENDING",
-                    "ACCEPTED",
-                ],
+                in: ["PENDING", "ACCEPTED"],
             },
         },
-
         include: {
-
             table: {
                 select: {
                     id: true,
                     tableNumber: true,
                     qrCode: true,
+                    floor: {
+                        select: {
+                            id: true,
+                            name: true,
+                        },
+                    },
                 },
             },
-
             customer: {
                 select: {
                     id: true,
@@ -144,22 +141,17 @@ const getAll = async (branchId) => {
                     phone: true,
                 },
             },
-
             handledBy: {
                 select: {
                     id: true,
                     username: true,
                 },
             },
-
         },
-
         orderBy: {
             createdAt: "asc",
         },
-
     });
-
 };
 
 

@@ -20,12 +20,19 @@ const getAll = async ({
     return res.data;
 };
 
-const getById = async (id, period = "month") => {
-    const res = await api.get(`/customer-admin/${id}`,
-        {
-            params: { period, },
-        }
-    );
+const getById = async (id, {
+    period = "month",
+    year,
+    value,
+} = {}) => {
+    const res = await api.get(`/customer-admin/${id}`, {
+        params: {
+            period,
+            year,
+            value,
+        },
+    });
+
     return res.data;
 };
 

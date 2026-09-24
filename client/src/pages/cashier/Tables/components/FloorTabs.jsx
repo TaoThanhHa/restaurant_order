@@ -11,11 +11,7 @@ export default function FloorTabs({
                     <button
                         key={floor.id}
                         onClick={() => onChange(floor.id)}
-                        className={`
-                            px-5
-                            py-2
-                            rounded-lg
-                            transition
+                        className={`px-5 py-2 rounded-lg transition
                             ${
                                 active === floor.id
                                     ? "bg-[var(--color-primary)] text-white"

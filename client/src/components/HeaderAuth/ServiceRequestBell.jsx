@@ -30,9 +30,50 @@ export default function ServiceRequestBell() {
     useEffect(() => {
         loadRequests();
 
-        const interval = setInterval(loadRequests, 5000);
+        const token = localStorage.getItem("token");
+        if (!token) return;
 
-        return () => clearInterval(interval);
+        const eventSource = new EventSource(
+            import.meta.env.VITE_API_URL +
+            "/events/branch?token=" +
+            encodeURIComponent(token)
+        );
+
+        eventSource.addEventListener("connected", event => {
+            try {
+                console.log("SSE SERVICE REQUEST CONNECTED:", JSON.parse(event.data));
+            } catch {
+                console.log("SSE SERVICE REQUEST CONNECTED");
+            }
+        });
+
+        const handleServiceRequestEvent = () => {
+            loadRequests();
+        };
+
+        eventSource.addEventListener(
+            "service.request.updated",
+            handleServiceRequestEvent
+        );
+
+        eventSource.addEventListener(
+            "service.request.created",
+            handleServiceRequestEvent
+        );
+
+        eventSource.addEventListener(
+            "service_request.updated",
+            handleServiceRequestEvent
+        );
+
+        eventSource.addEventListener(
+            "service_request.created",
+            handleServiceRequestEvent
+        );
+
+        return () => {
+            eventSource.close();
+        };
     }, []);
 
     const handleAction = async (id, action) => {
@@ -57,7 +98,7 @@ export default function ServiceRequestBell() {
         }
     };
 
-    const formatDate = (date) => {
+    const formatDate = date => {
         const value = new Date(date);
 
         return date && !Number.isNaN(value.getTime())
@@ -66,12 +107,11 @@ export default function ServiceRequestBell() {
     };
 
     const pendingCount = requests.filter(
-        (request) => request.status === "PENDING"
+        request => request.status === "PENDING"
     ).length;
 
     return (
         <div className="relative">
-            {/* BELL */}
             <button
                 type="button"
                 onClick={() => setOpen(!open)}
@@ -95,7 +135,6 @@ export default function ServiceRequestBell() {
                     />
 
                     <div className="absolute right-0 top-12 z-50 w-[380px] overflow-hidden rounded-2xl border bg-white shadow-2xl">
-                        {/* HEADER */}
                         <div className="flex items-center justify-between border-b px-4 py-3">
                             <div>
                                 <h3 className="font-bold text-gray-800">
@@ -104,7 +143,7 @@ export default function ServiceRequestBell() {
 
                                 <p className="text-xs text-gray-500">
                                     {pendingCount > 0
-                                        ? `${pendingCount} yêu cầu đang chờ`
+                                        ? pendingCount + " yêu cầu đang chờ"
                                         : "Không có yêu cầu mới"}
                                 </p>
                             </div>
@@ -118,7 +157,6 @@ export default function ServiceRequestBell() {
                             </button>
                         </div>
 
-                        {/* CONTENT */}
                         <div className="max-h-[500px] overflow-y-auto">
                             {requests.length === 0 ? (
                                 <div className="px-5 py-10 text-center text-gray-400">
@@ -130,32 +168,36 @@ export default function ServiceRequestBell() {
                                     <p>Chưa có yêu cầu nào</p>
                                 </div>
                             ) : (
-                                requests.map((request) => {
+                                requests.map(request => {
                                     const isPending = request.status === "PENDING";
                                     const isAccepted = request.status === "ACCEPTED";
 
                                     return (
-                                        <div key={request.id} className="border-b m-2 p-2 last:border-b-0 gap-1 bg-gray-100">
+                                        <div
+                                            key={request.id}
+                                            className="m-2 gap-1 border-b bg-gray-100 p-2 last:border-b-0"
+                                        >
                                             <div className="flex items-start justify-between gap-3 bg-gray-100">
                                                 <div>
-                                                    <p className="font-bold text-gray-800">
-                                                        Bàn{" "}
+                                                    <p className="text-gray-800">
+                                                        {request.table?.floor?.name || "Không rõ tầng"} · Bàn{" "}
                                                         {request.table?.tableNumber || "--"}
                                                     </p>
-
-                                                    <p className="mt-1 text-sm text-gray-700">
-                                                        {request.message}
-                                                    </p>
+                                                </div>
+                                                <div className="flex items-center gap-1 text-sm text-gray-400">
+                                                    <Clock size={13} className="mt-1"/>
+                                                    {formatDate(request.createdAt)}
                                                 </div>
 
                                                 <span
-                                                    className={`shrink-0 rounded-full px-2 py-1 text-xs font-semibold ${
-                                                        isPending
+                                                    className={
+                                                        "shrink-0 rounded-full px-2 py-1 text-xs font-semibold " +
+                                                        (isPending
                                                             ? "bg-orange-100 text-orange-600"
                                                             : isAccepted
                                                                 ? "bg-blue-100 text-blue-600"
-                                                                : "bg-green-100 text-green-600"
-                                                    }`}
+                                                                : "bg-green-100 text-green-600")
+                                                    }
                                                 >
                                                     {isPending
                                                         ? "Chờ xử lý"
@@ -165,16 +207,15 @@ export default function ServiceRequestBell() {
                                                 </span>
                                             </div>
 
-                                            <div className="mt-2 flex items-center gap-1 text-xs text-gray-400">
-                                                <Clock size={13} />
-                                                {formatDate(request.createdAt)}
+                                            <div className="mt-1 text-center text-l text-gray-700">
+                                                {request.message}
                                             </div>
 
-                                            {request.customer?.name && (
+                                            {/* {request.customer?.name && (
                                                 <p className="mt-1 text-xs text-gray-500">
                                                     Khách: {request.customer.name}
                                                 </p>
-                                            )}
+                                            )} */}
 
                                             {request.status !== "COMPLETED" && (
                                                 <button
@@ -188,11 +229,12 @@ export default function ServiceRequestBell() {
                                                                 : "complete"
                                                         )
                                                     }
-                                                    className={`mt-3 flex w-full items-center justify-center gap-2 rounded-lg py-2 text-sm font-semibold text-white disabled:opacity-50 ${
-                                                        isPending
+                                                    className={
+                                                        "mt-3 flex w-full items-center justify-center gap-2 rounded-lg py-2 text-sm font-semibold text-white disabled:opacity-50 " +
+                                                        (isPending
                                                             ? "bg-green-600 hover:bg-green-700"
-                                                            : "bg-blue-600 hover:bg-blue-700"
-                                                    }`}
+                                                            : "bg-blue-600 hover:bg-blue-700")
+                                                    }
                                                 >
                                                     <Check size={16} />
                                                     {isPending

@@ -1,9 +1,5 @@
 import { useEffect, useState } from "react";
-import {
-    X,
-    RefreshCw,
-    QrCode,
-} from "lucide-react";
+import { X, RefreshCw, QrCode, } from "lucide-react";
 import QRCode from "qrcode";
 
 import Button from "../../../components/Button/Button";

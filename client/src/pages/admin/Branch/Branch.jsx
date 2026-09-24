@@ -28,11 +28,7 @@ export default function Branch() {
             setBranches(res.data || []);
         } catch (err) {
             console.log(err);
-
-            alert(
-                err.response?.data?.message ||
-                err.message
-            );
+            alert(err.response?.data?.message || err.message);
         } finally {
             setLoading(false);
         }
@@ -163,10 +159,7 @@ export default function Branch() {
                             </tr>
                         ) : (
                             filtered.map(branch => (
-                                <tr
-                                    key={branch.id}
-                                    className="border-t hover:bg-gray-50"
-                                >
+                                <tr key={branch.id} className="border-t hover:bg-gray-50" >
                                     <td className="p-3 font-medium">{branch.name}</td>
                                     <td className="p-3">{branch.address || "-"}</td>
                                     <td className="p-3">{branch.email}</td>
@@ -199,16 +192,8 @@ export default function Branch() {
                                             </Button>
 
                                             <Button
-                                                title={
-                                                    branch.isActive
-                                                        ? "Khóa chi nhánh"
-                                                        : "Mở khóa chi nhánh"
-                                                }
-                                                className={
-                                                    branch.isActive
-                                                        ? "!bg-[var(--color-danger)]"
-                                                        : "!bg-[var(--color-success)]"
-                                                }
+                                                title={branch.isActive ? "Khóa chi nhánh" : "Mở khóa chi nhánh"}
+                                                className={ branch.isActive ? "!bg-[var(--color-danger)]" : "!bg-[var(--color-success)]"}
                                                 onClick={() => handleToggleStatus(branch)}
                                             >
                                                 {branch.isActive ? (

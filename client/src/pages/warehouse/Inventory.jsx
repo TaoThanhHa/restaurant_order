@@ -497,9 +497,6 @@ export default function Inventory() {
     );
 }
 
-/* ========================================
-   STAT CARD
-======================================== */
 
 function StatCard({
     icon: Icon,

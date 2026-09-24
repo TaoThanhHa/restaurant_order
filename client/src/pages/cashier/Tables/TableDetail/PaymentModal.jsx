@@ -92,12 +92,9 @@ export default function PaymentModal({
                             {order.orderCode || `#${order.id}`}
                         </h2>
 
-                        <button
-                            type="button"
-                            onClick={onClose}
-                        >
+                        <Button type="button" onClick={onClose} >
                             <X />
-                        </button>
+                        </Button>
                     </div>
 
                     <div className="p-5">
@@ -109,9 +106,7 @@ export default function PaymentModal({
 
                             <div>
                                 Ngày:{" "}
-                                {new Date(order.createdAt).toLocaleString(
-                                    "vi-VN"
-                                )}
+                                {new Date(order.createdAt).toLocaleString("vi-VN")}
                             </div>
                         </div>
 
@@ -137,16 +132,11 @@ export default function PaymentModal({
                                         </td>
 
                                         <td className="text-center">
-                                            {Number(
-                                                item.price
-                                            ).toLocaleString("vi-VN")}
+                                            {Number(item.price).toLocaleString("vi-VN")}
                                         </td>
 
                                         <td className="text-center">
-                                            {(
-                                                Number(item.price) *
-                                                Number(item.quantity)
-                                            ).toLocaleString("vi-VN")}
+                                            {(Number(item.price) * Number(item.quantity) ).toLocaleString("vi-VN")}
                                         </td>
                                     </tr>
                                 ))}
@@ -162,14 +152,8 @@ export default function PaymentModal({
                                 <input
                                     type="tel"
                                     value={phone}
-                                    onChange={e =>
-                                        setPhone(e.target.value)
-                                    }
-                                    placeholder={
-                                        canEditPhone
-                                            ? "Nhập số điện thoại"
-                                            : ""
-                                    }
+                                    onChange={e => setPhone(e.target.value)}
+                                    placeholder={canEditPhone ? "Nhập số điện thoại" : "" }
                                     readOnly={!canEditPhone}
                                     className={`w-full rounded-lg border px-3 py-2 outline-none ${
                                         canEditPhone
@@ -189,9 +173,7 @@ export default function PaymentModal({
                                         <input
                                             type="radio"
                                             checked={method === "CASH"}
-                                            onChange={() =>
-                                                setMethod("CASH")
-                                            }
+                                            onChange={() => setMethod("CASH") }
                                         />
                                         Tiền mặt
                                     </label>
@@ -200,9 +182,7 @@ export default function PaymentModal({
                                         <input
                                             type="radio"
                                             checked={method === "BANKING"}
-                                            onChange={() =>
-                                                setMethod("BANKING")
-                                            }
+                                            onChange={() => setMethod("BANKING")}
                                         />
                                         Chuyển khoản
                                     </label>

@@ -92,7 +92,6 @@ export default function FloorModal({
                         </button>
                     </div>
 
-                    {/* BODY */}
                     <div className="space-y-5 p-5">
                         <div>
                             <label className="mb-2 block text-sm font-semibold text-gray-700">

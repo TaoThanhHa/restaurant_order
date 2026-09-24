@@ -27,7 +27,6 @@ export default function BranchFormModal({
         message: "",
     });
 
-    // NOTIFICATION
     const showNotification = ({
         type = "success",
         title = "",
@@ -70,7 +69,6 @@ export default function BranchFormModal({
         }
     }, [branch, open]);
 
-    // INPUT
     const handleChange = (e) => {
         const { name, value } = e.target;
 
@@ -80,13 +78,10 @@ export default function BranchFormModal({
         }));
     };
 
-    // SAVE
     const handleSubmit = async (e) => {
         e.preventDefault();
-
         try {
             setLoading(true);
-
             if (branch) {
                 const emailChanged = branch.email !== form.email;
                 await branchService.update( branch.id, form);
@@ -136,7 +131,6 @@ export default function BranchFormModal({
         }
     };
 
-    // RENDER
     if (!open) {
         return (
             <NotiModal
@@ -153,7 +147,6 @@ export default function BranchFormModal({
         <>
             <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4">
                 <div className="w-full max-w-lg rounded-xl bg-white shadow-xl">
-                    {/* HEADER */}
                     <div className="flex items-center justify-between border-b p-5">
                         <h2 className="text-xl font-bold">
                             {branch
@@ -171,12 +164,10 @@ export default function BranchFormModal({
                         </button>
                     </div>
 
-                    {/* FORM */}
                     <form
                         onSubmit={handleSubmit}
                         className="space-y-5 p-5"
                     >
-                        {/* NAME */}
 
                         <div>
                             <label className="mb-1 block font-medium">
@@ -193,7 +184,6 @@ export default function BranchFormModal({
                             />
                         </div>
 
-                        {/* ADDRESS */}
                         <div>
                             <label className="mb-1 block font-medium">
                                 Địa chỉ
@@ -208,7 +198,6 @@ export default function BranchFormModal({
                             />
                         </div>
 
-                        {/* EMAIL */}
                         <div>
                             <label className="mb-1 block font-medium">
                                 Email *
@@ -225,7 +214,6 @@ export default function BranchFormModal({
                             />
                         </div>
 
-                        {/* PHONE */}
                         <div>
                             <label className="mb-1 block font-medium">
                                 Số điện thoại
@@ -240,7 +228,6 @@ export default function BranchFormModal({
                             />
                         </div>
 
-                        {/* BUTTON */}
                         <div className="flex justify-end gap-3">
                             <Button
                                 type="button"
@@ -266,7 +253,6 @@ export default function BranchFormModal({
                 </div>
             </div>
 
-            {/* NOTIFICATION */}
             <NotiModal
                 open={notification.open}
                 type={notification.type}

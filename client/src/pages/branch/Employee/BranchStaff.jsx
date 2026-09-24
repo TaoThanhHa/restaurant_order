@@ -13,6 +13,7 @@ const ROLE_LABELS = {
     CASHIER: "Thu ngân",
     ORDER: "Nhân viên order",
     KITCHEN: "Nhân viên bếp",
+    WAREHOUSE: "Nhân viên kho",
 };
 
 export default function BranchStaff() {
@@ -33,32 +34,58 @@ export default function BranchStaff() {
         message: "",
     });
 
-    const branchId = user?.branchId || user?.branch?.id || null;
+    const currentBranchId =
+        branch?.id ||
+        user?.branchId ||
+        user?.branch?.id ||
+        null;
 
-    const showNoti = (type, message, title = "") => {
-        setNoti({ open: true, type, title, message });
+    const branchLocked = branch?.isActive === false;
+
+    const showNoti = (
+        type,
+        message,
+        title = ""
+    ) => {
+        setNoti({
+            open: true,
+            type,
+            title,
+            message,
+        });
     };
 
     const loadData = async () => {
-        if (!branchId) {
-            setStaff([]);
-            setBranch(null);
-            setLoading(false);
-            return;
-        }
-
         try {
             setLoading(true);
 
             const res = await staffService.getAll();
-            const data = res.data?.data || res.data || {};
+            const data =
+                res.data?.data ||
+                res.data ||
+                {};
+
+            console.log(
+                "STAFF BRANCH:",
+                data.branch
+            );
 
             setBranch(data.branch || null);
-            setStaff(Array.isArray(data.staff) ? data.staff : []);
+
+            setStaff(
+                Array.isArray(data.staff)
+                    ? data.staff
+                    : []
+            );
         } catch (err) {
-            console.error("LOAD STAFF ERROR:", err);
+            console.error(
+                "LOAD STAFF ERROR:",
+                err
+            );
+
             setStaff([]);
             setBranch(null);
+
             showNoti(
                 "error",
                 err.response?.data?.message ||
@@ -72,39 +99,75 @@ export default function BranchStaff() {
 
     useEffect(() => {
         loadData();
-    }, [branchId]);
+    }, []);
 
     const filtered = useMemo(() => {
-        const text = keyword.toLowerCase().trim();
+        const text = keyword
+            .toLowerCase()
+            .trim();
 
         return staff.filter(user => {
-            const matchStatus = activeTab === "active"
-                ? user.isActive
-                : !user.isActive;
+            const matchStatus =
+                activeTab === "active"
+                    ? user.isActive
+                    : !user.isActive;
 
-            if (!matchStatus) return false;
-            if (!text) return true;
+            if (!matchStatus) {
+                return false;
+            }
 
-            const username = user.username?.toLowerCase() || "";
-            const email = user.email?.toLowerCase() || "";
-            const roleName = user.role?.name || "";
-            const roleLabel = ROLE_LABELS[roleName] || roleName;
+            if (!text) {
+                return true;
+            }
+
+            const username =
+                user.username?.toLowerCase() || "";
+
+            const email =
+                user.email?.toLowerCase() || "";
+
+            const roleName =
+                user.role?.name || "";
+
+            const roleLabel =
+                ROLE_LABELS[roleName] ||
+                roleName;
 
             return (
                 username.includes(text) ||
                 email.includes(text) ||
-                roleName.toLowerCase().includes(text) ||
-                roleLabel.toLowerCase().includes(text)
+                roleName
+                    .toLowerCase()
+                    .includes(text) ||
+                roleLabel
+                    .toLowerCase()
+                    .includes(text)
             );
         });
     }, [staff, keyword, activeTab]);
 
-    const activeCount = staff.filter(user => user.isActive).length;
-    const lockedCount = staff.filter(user => !user.isActive).length;
+    const activeCount = staff.filter(
+        user => user.isActive
+    ).length;
+
+    const lockedCount = staff.filter(
+        user => !user.isActive
+    ).length;
 
     const handleCreate = () => {
-        if (!branchId) {
-            showNoti("error", "Không xác định được chi nhánh của tài khoản.");
+        if (!currentBranchId) {
+            showNoti(
+                "error",
+                "Không xác định được chi nhánh."
+            );
+            return;
+        }
+
+        if (branchLocked) {
+            showNoti(
+                "warning",
+                "Chi nhánh đang bị khóa, không thể thêm nhân viên."
+            );
             return;
         }
 
@@ -113,6 +176,14 @@ export default function BranchStaff() {
     };
 
     const handleEdit = user => {
+        if (branchLocked) {
+            showNoti(
+                "warning",
+                "Chi nhánh đang bị khóa, không thể chỉnh sửa nhân viên."
+            );
+            return;
+        }
+
         setSelectedStaff(user);
         setOpenModal(true);
     };
@@ -123,7 +194,7 @@ export default function BranchStaff() {
     };
 
     const handleToggleStatus = async user => {
-        if (!branch?.isActive) {
+        if (branchLocked) {
             showNoti(
                 "warning",
                 "Chi nhánh đang bị khóa, không thể thay đổi trạng thái nhân viên."
@@ -131,22 +202,38 @@ export default function BranchStaff() {
             return;
         }
 
-        const action = user.isActive ? "khóa" : "mở khóa";
+        const action = user.isActive
+            ? "khóa"
+            : "mở khóa";
 
-        if (!window.confirm(`Bạn có chắc muốn ${action} tài khoản ${user.email}?`)) {
+        if (
+            !window.confirm(
+                `Bạn có chắc muốn ${action} tài khoản ${user.email}?`
+            )
+        ) {
             return;
         }
 
         try {
-            await staffService.toggleStatus(user.id);
+            await staffService.toggleStatus(
+                user.id
+            );
+
             await loadData();
 
             showNoti(
                 "success",
-                `${action.charAt(0).toUpperCase() + action.slice(1)} tài khoản thành công.`
+                `${
+                    action.charAt(0).toUpperCase() +
+                    action.slice(1)
+                } tài khoản thành công.`
             );
         } catch (err) {
-            console.error("TOGGLE STAFF STATUS ERROR:", err);
+            console.error(
+                "TOGGLE STAFF STATUS ERROR:",
+                err
+            );
+
             showNoti(
                 "error",
                 err.response?.data?.message ||
@@ -157,23 +244,20 @@ export default function BranchStaff() {
     };
 
     const formatDate = date => {
-        if (!date) return "-";
+        if (!date) {
+            return "-";
+        }
 
         const parsedDate = new Date(date);
-        return Number.isNaN(parsedDate.getTime())
-            ? "-"
-            : parsedDate.toLocaleDateString("vi-VN");
-    };
 
-    if (!branchId) {
-        return (
-            <div className="rounded-xl bg-white p-10 text-center shadow">
-                <p className="text-gray-500">
-                    Tài khoản chưa được gán chi nhánh.
-                </p>
-            </div>
-        );
-    } 
+        return Number.isNaN(
+            parsedDate.getTime()
+        )
+            ? "-"
+            : parsedDate.toLocaleDateString(
+                  "vi-VN"
+              );
+    };
 
     return (
         <div className="space-y-5">
@@ -184,13 +268,17 @@ export default function BranchStaff() {
                     <p className="mt-1 text-sm text-gray-500">
                         Chi nhánh:{" "}
                         <span className="font-medium text-[var(--color-primary)]">
-                            {branch?.name || "Chi nhánh"}
+                            {branch?.name ||
+                                user?.branch?.name ||
+                                "Chi nhánh"}
                         </span>
                     </p>
 
-                    {!branch?.isActive && (
+                    {branchLocked && (
                         <p className="mt-1 text-sm text-red-500">
-                            Chi nhánh đang bị khóa. Bạn không thể thêm hoặc chỉnh sửa nhân viên.
+                            Chi nhánh đang bị khóa.
+                            Bạn không thể thêm hoặc
+                            chỉnh sửa nhân viên.
                         </p>
                     )}
                 </div>
@@ -201,16 +289,25 @@ export default function BranchStaff() {
                             size={18}
                             className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
                         />
+
                         <Input
                             value={keyword}
-                            onChange={e => setKeyword(e.target.value)}
+                            onChange={e =>
+                                setKeyword(
+                                    e.target.value
+                                )
+                            }
                             placeholder="Tìm tên, email hoặc chức vụ..."
                             className="pl-10"
                         />
                     </div>
 
                     <Button
-                        disabled={!branch?.isActive || loading}
+                        disabled={
+                            branchLocked ||
+                            loading ||
+                            !currentBranchId
+                        }
                         onClick={handleCreate}
                         className="flex items-center gap-2 whitespace-nowrap disabled:cursor-not-allowed disabled:opacity-40"
                     >
@@ -222,7 +319,9 @@ export default function BranchStaff() {
 
             <div className="flex gap-2 border-b">
                 <button
-                    onClick={() => setActiveTab("active")}
+                    onClick={() =>
+                        setActiveTab("active")
+                    }
                     className={`px-4 py-3 font-medium ${
                         activeTab === "active"
                             ? "border-b-2 border-[var(--color-primary)] text-[var(--color-primary)]"
@@ -233,7 +332,9 @@ export default function BranchStaff() {
                 </button>
 
                 <button
-                    onClick={() => setActiveTab("locked")}
+                    onClick={() =>
+                        setActiveTab("locked")
+                    }
                     className={`px-4 py-3 font-medium ${
                         activeTab === "locked"
                             ? "border-b-2 border-[var(--color-danger)] text-[var(--color-danger)]"
@@ -248,44 +349,82 @@ export default function BranchStaff() {
                 <table className="w-full min-w-[850px]">
                     <thead className="bg-gray-100">
                         <tr>
-                            <th className="p-3 text-center">Tài khoản</th>
-                            <th className="p-3 text-center">Email</th>
-                            <th className="p-3 text-center">Chức vụ</th>
-                            <th className="p-3 text-center">Ngày tạo</th>
-                            <th className="p-3 text-center">Trạng thái</th>
-                            <th className="p-3 text-center">Thao tác</th>
+                            <th className="p-3 text-center">
+                                Tài khoản
+                            </th>
+
+                            <th className="p-3 text-center">
+                                Email
+                            </th>
+
+                            <th className="p-3 text-center">
+                                Chức vụ
+                            </th>
+
+                            <th className="p-3 text-center">
+                                Ngày tạo
+                            </th>
+
+                            <th className="p-3 text-center">
+                                Trạng thái
+                            </th>
+
+                            <th className="p-3 text-center">
+                                Thao tác
+                            </th>
                         </tr>
                     </thead>
 
                     <tbody>
                         {loading ? (
                             <tr>
-                                <td colSpan={6} className="p-10 text-center text-gray-500">
+                                <td
+                                    colSpan={6}
+                                    className="p-10 text-center text-gray-500"
+                                >
                                     Đang tải...
                                 </td>
                             </tr>
                         ) : filtered.length === 0 ? (
                             <tr>
-                                <td colSpan={6} className="p-10 text-center text-gray-400">
+                                <td
+                                    colSpan={6}
+                                    className="p-10 text-center text-gray-400"
+                                >
                                     {keyword
                                         ? "Không tìm thấy nhân viên phù hợp."
-                                        : activeTab === "locked"
-                                            ? "Không có nhân viên bị khóa."
-                                            : "Chưa có nhân viên đang hoạt động."}
+                                        : activeTab ===
+                                          "locked"
+                                        ? "Không có nhân viên bị khóa."
+                                        : "Chưa có nhân viên đang hoạt động."}
                                 </td>
                             </tr>
                         ) : (
                             filtered.map(user => (
-                                <tr key={user.id} className="border-t hover:bg-gray-50">
-                                    <td className="p-3 font-medium">{user.username}</td>
-                                    <td className="p-3">{user.email}</td>
+                                <tr
+                                    key={user.id}
+                                    className="border-t hover:bg-gray-50"
+                                >
+                                    <td className="p-3 font-medium">
+                                        {user.username}
+                                    </td>
 
-                                    <td className="p-3 text-center">
-                                        {ROLE_LABELS[user.role?.name] || user.role?.name || "-"}
+                                    <td className="p-3">
+                                        {user.email}
                                     </td>
 
                                     <td className="p-3 text-center">
-                                        {formatDate(user.createdAt)}
+                                        {ROLE_LABELS[
+                                            user.role?.name
+                                        ] ||
+                                            user.role?.name ||
+                                            "-"}
+                                    </td>
+
+                                    <td className="p-3 text-center">
+                                        {formatDate(
+                                            user.createdAt
+                                        )}
                                     </td>
 
                                     <td className="p-3 text-center">
@@ -296,35 +435,65 @@ export default function BranchStaff() {
                                                     : "bg-red-100 text-red-600"
                                             }`}
                                         >
-                                            {user.isActive ? "Hoạt động" : "Đã khóa"}
+                                            {user.isActive
+                                                ? "Hoạt động"
+                                                : "Đã khóa"}
                                         </span>
                                     </td>
 
                                     <td className="p-3">
                                         <div className="flex justify-center gap-2">
                                             <Button
-                                                disabled={!branch?.isActive}
+                                                disabled={
+                                                    branchLocked
+                                                }
                                                 title="Sửa nhân viên"
                                                 className="!bg-[var(--color-warning)] disabled:cursor-not-allowed disabled:opacity-40"
-                                                onClick={() => handleEdit(user)}
+                                                onClick={() =>
+                                                    handleEdit(
+                                                        user
+                                                    )
+                                                }
                                             >
-                                                <Pencil size={16} />
+                                                <Pencil
+                                                    size={
+                                                        16
+                                                    }
+                                                />
                                             </Button>
 
                                             <Button
-                                                disabled={!branch?.isActive}
-                                                title={user.isActive ? "Khóa tài khoản" : "Mở khóa tài khoản"}
+                                                disabled={
+                                                    branchLocked
+                                                }
+                                                title={
+                                                    user.isActive
+                                                        ? "Khóa tài khoản"
+                                                        : "Mở khóa tài khoản"
+                                                }
                                                 className={`disabled:cursor-not-allowed disabled:opacity-40 ${
                                                     user.isActive
                                                         ? "!bg-[var(--color-danger)]"
                                                         : "!bg-[var(--color-success)]"
                                                 }`}
-                                                onClick={() => handleToggleStatus(user)}
+                                                onClick={() =>
+                                                    handleToggleStatus(
+                                                        user
+                                                    )
+                                                }
                                             >
                                                 {user.isActive ? (
-                                                    <Lock size={16} />
+                                                    <Lock
+                                                        size={
+                                                            16
+                                                        }
+                                                    />
                                                 ) : (
-                                                    <Unlock size={16} />
+                                                    <Unlock
+                                                        size={
+                                                            16
+                                                        }
+                                                    />
                                                 )}
                                             </Button>
                                         </div>
@@ -338,7 +507,7 @@ export default function BranchStaff() {
 
             <StaffFormModal
                 open={openModal}
-                branchId={branchId}
+                branchId={currentBranchId}
                 staff={selectedStaff}
                 onClose={handleCloseModal}
                 reload={loadData}
@@ -349,7 +518,12 @@ export default function BranchStaff() {
                 type={noti.type}
                 title={noti.title}
                 message={noti.message}
-                onClose={() => setNoti(prev => ({ ...prev, open: false }))}
+                onClose={() =>
+                    setNoti(prev => ({
+                        ...prev,
+                        open: false,
+                    }))
+                }
             />
         </div>
     );

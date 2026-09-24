@@ -231,9 +231,7 @@ export default function ForgotPassword() {
                                     onClick={handleSendOtp}
                                     disabled={loading}
                                 >
-                                    {loading
-                                        ? "Đang gửi..."
-                                        : "Gửi mã OTP"}
+                                    {loading ? "Đang gửi..." : "Gửi mã OTP"}
                                 </Button>
                             </div>
                         </div>
@@ -262,9 +260,7 @@ export default function ForgotPassword() {
                                     onClick={handleVerifyOtp}
                                     disabled={loading}
                                 >
-                                    {loading
-                                        ? "Đang xác thực..."
-                                        : "Xác nhận OTP"}
+                                    {loading ? "Đang xác thực..." : "Xác nhận OTP"}
                                 </Button>
                             </div>
                         </div>
@@ -310,9 +306,7 @@ export default function ForgotPassword() {
                                     onClick={handleResetPassword}
                                     disabled={loading}
                                 >
-                                    {loading
-                                        ? "Đang cập nhật..."
-                                        : "Đổi mật khẩu"}
+                                    {loading ? "Đang cập nhật..." : "Đổi mật khẩu"}
                                 </Button>
                             </div>
                         </div>
@@ -323,7 +317,7 @@ export default function ForgotPassword() {
                         onClick={() => navigate("/login")}
                         className="mt-8 text-sm text-blue-600 hover:underline"
                     >
-                        ← Quay lại đăng nhập
+                        Quay lại đăng nhập
                     </button>
                 </div>
             </section>

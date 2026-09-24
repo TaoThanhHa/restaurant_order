@@ -151,8 +151,7 @@ export default function CashierProfile() {
                             </div>
 
                             <div className="mt-2 font-semibold">
-                                {user.branch?.name ||
-                                    "Chưa phân chi nhánh"}
+                                {user.branch?.name || "Chưa phân chi nhánh"}
                             </div>
 
                         </div>

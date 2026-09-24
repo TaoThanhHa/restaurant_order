@@ -132,26 +132,17 @@ export default function MergeOrderModal({
                                     <input
                                         type="radio"
                                         name="targetOrder"
-                                        checked={
-                                            Number(targetOrderId) ===
-                                            Number(order.id)
-                                        }
-                                        onChange={() =>
-                                            handleTargetChange(order.id)
-                                        }
+                                        checked={Number(targetOrderId) === Number(order.id) }
+                                        onChange={() => handleTargetChange(order.id)}
                                     />
 
                                     <div>
                                         <div className="font-semibold">
-                                            {order.orderCode ||
-                                                `Đơn #${order.id}`}
+                                            {order.orderCode || `Đơn #${order.id}`}
                                         </div>
 
                                         <div className="text-sm text-gray-500">
-                                            {Array.isArray(order.orderItems)
-                                                ? order.orderItems.length
-                                                : 0}{" "}
-                                            món
+                                            {Array.isArray(order.orderItems) ? order.orderItems.length : 0}{" "} món
                                         </div>
                                     </div>
                                 </div>
@@ -167,11 +158,7 @@ export default function MergeOrderModal({
 
                     <div className="space-y-2">
                         {safeOrders
-                            .filter(
-                                order =>
-                                    Number(order.id) !==
-                                    Number(targetOrderId)
-                            )
+                            .filter( order => Number(order.id) !==  Number(targetOrderId) )
                             .map(order => (
                                 <label
                                     key={order.id}
@@ -180,27 +167,17 @@ export default function MergeOrderModal({
                                     <div className="flex items-center gap-3">
                                         <input
                                             type="checkbox"
-                                            checked={sourceOrderIds.includes(
-                                                Number(order.id)
-                                            )}
-                                            onChange={() =>
-                                                handleSourceChange(order.id)
-                                            }
+                                            checked={sourceOrderIds.includes( Number(order.id) )}
+                                            onChange={() => handleSourceChange(order.id) }
                                         />
 
                                         <div>
                                             <div className="font-semibold">
-                                                {order.orderCode ||
-                                                    `Đơn #${order.id}`}
+                                                {order.orderCode || `Đơn #${order.id}`}
                                             </div>
 
                                             <div className="text-sm text-gray-500">
-                                                {Array.isArray(
-                                                    order.orderItems
-                                                )
-                                                    ? order.orderItems.length
-                                                    : 0}{" "}
-                                                món
+                                                {Array.isArray( order.orderItems ) ? order.orderItems.length : 0}{" "} món
                                             </div>
                                         </div>
                                     </div>
@@ -216,14 +193,9 @@ export default function MergeOrderModal({
 
                     <Button
                         onClick={handleMerge}
-                        disabled={
-                            loading ||
-                            sourceOrderIds.length === 0
-                        }
+                        disabled={ loading || sourceOrderIds.length === 0 }
                     >
-                        {loading
-                            ? "Đang gộp..."
-                            : "Gộp đơn"}
+                        {loading ? "Đang gộp..." : "Gộp đơn"}
                     </Button>
                 </div>
             </div>

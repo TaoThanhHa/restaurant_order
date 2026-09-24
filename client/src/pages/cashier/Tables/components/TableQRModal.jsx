@@ -7,17 +7,12 @@ import Button from "../../../../components/Button/Button";
 export default function TableQRModal({ open, table, onClose }) {
     const [qrImage, setQrImage] = useState("");
 
-    // LINK KHÁCH HÀNG
-
     const getCustomerUrl = (qrCode) => {
         if (!qrCode) return "";
-
         const frontendUrl = import.meta.env.VITE_APP_URL || "http://localhost:5173";
-
         return `${frontendUrl}/customer/${qrCode}`;
     };
 
-    // TẠO QR
 
     useEffect(() => {
         if (!open || !table?.qrCode) {
@@ -35,8 +30,6 @@ export default function TableQRModal({ open, table, onClose }) {
             });
     }, [open, table]);
 
-    // DOWNLOAD
-
     const handleDownload = () => {
         if (!qrImage || !table) return;
 
@@ -46,8 +39,6 @@ export default function TableQRModal({ open, table, onClose }) {
         link.download = `QR-Ban-${table.tableNumber}.png`;
         link.click();
     };
-
-    // PRINT
 
     const handlePrint = () => {
         if (!qrImage || !table) return;
@@ -135,8 +126,6 @@ export default function TableQRModal({ open, table, onClose }) {
     return (
         <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/50 p-4 mb-0">
             <div className="w-full max-w-lg overflow-hidden rounded-2xl bg-white shadow-2xl">
-
-                {/* HEADER */}
                 <div className="flex items-center justify-between border-b p-3">
                     <div className="flex items-center gap-2">
                         <QrCode size={22} />
@@ -148,7 +137,6 @@ export default function TableQRModal({ open, table, onClose }) {
                     </button>
                 </div>
 
-                {/* BODY */}
                 <div className="p-3">
                     {qrImage ? (
                         <>

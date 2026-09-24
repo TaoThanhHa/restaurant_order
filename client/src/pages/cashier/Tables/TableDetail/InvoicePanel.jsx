@@ -1,8 +1,9 @@
 import { useState } from "react";
+import { Trash } from "lucide-react";
 import Button from "../../../../components/Button/Button";
 import orderService from "../../../../services/order.service";
 import PaymentModal from "./PaymentModal";
-import { printKitchenOrder } from "../../../../../utils/printKitchenOrder";
+import { printKitchenOrder} from "../../../../../utils/printKitchenOrder";
 
 const STATUS = {
     PENDING: {
@@ -115,9 +116,7 @@ export default function InvoicePanel({
     );
 
     const newItemQuantity = newItems.reduce(
-        (sum, item) =>
-            sum + Number(item.quantity || 0),
-        0
+        (sum, item) => sum + Number(item.quantity || 0), 0
     );
 
     const status =
@@ -183,10 +182,7 @@ export default function InvoicePanel({
             setLoading(true);
             setErrorMessage("");
 
-            await orderService.removeItem(
-                orderId,
-                itemId
-            );
+            await orderService.removeItem(orderId, itemId);
 
             setConfirmAction(null);
 
@@ -212,10 +208,7 @@ export default function InvoicePanel({
             setLoading(true);
             setErrorMessage("");
 
-            await orderService.closeOrder(
-                orderId,
-                "CANCELLED"
-            );
+            await orderService.closeOrder(orderId, "CANCELLED");
 
             setConfirmAction(null);
 
@@ -261,9 +254,7 @@ export default function InvoicePanel({
         if (!confirmAction) return;
 
         if (confirmAction.type === "ITEM") {
-            await handleRemoveItem(
-                confirmAction.itemId
-            );
+            await handleRemoveItem( confirmAction.itemId );
             return;
         }
 
@@ -289,9 +280,7 @@ export default function InvoicePanel({
             <div
                 key={itemKey}
                 className={`mb-3 flex items-center justify-between rounded-lg border p-3 ${
-                    isNew
-                        ? "border-2 border-yellow-300 bg-yellow-50"
-                        : ""
+                    isNew ? "border-2 border-yellow-300 bg-yellow-50" : ""
                 }`}
             >
                 <div>
@@ -305,7 +294,7 @@ export default function InvoicePanel({
                         </div>
                     )}
 
-                    <div className="mt-1">
+                    {/* <div className="mt-1">
                         <span
                             className={'rounded-full px-2 py-1 text-xs font-medium ${ STATUS[item.status]?.className ||  "bg-gray-100 text-gray-700" }'}
                         >
@@ -314,20 +303,17 @@ export default function InvoicePanel({
                                 : STATUS[item.status]?.text ||
                                   item.status}
                         </span>
-                    </div>
+                    </div> */}
                 </div>
 
                 <div className="flex items-center gap-3">
-                    <div className="text-right">
+                    <div className="flex items-center text-right">
                         <div>
-                            x{item.quantity}
+                            x {item.quantity}
                         </div>
 
-                        <div className="text-sm text-gray-500">
-                            {Number(
-                                item.price || 0
-                            ).toLocaleString()}
-                            đ
+                        <div className="text-sm text-blue-500 ml-4">
+                            {Number( item.price || 0 ).toLocaleString()} đ
                         </div>
                     </div>
 
@@ -335,13 +321,11 @@ export default function InvoicePanel({
                         <button
                             type="button"
                             disabled={loading}
-                            onClick={() =>
-                                requestCancelItem(item)
-                            }
+                            onClick={() => requestCancelItem(item)}
                             className="rounded-lg p-2 text-red-500 hover:bg-red-100 disabled:opacity-50"
                             title="Hủy món"
                         >
-                            🗑
+                            <Trash size={16} />
                         </button>
                     )}
                 </div>
@@ -359,29 +343,19 @@ export default function InvoicePanel({
                         </h2>
 
                         <p className="mt-1 text-sm text-gray-500">
-                            👤{" "}
-                            {order.customer?.name ||
-                                "Khách"}
+                            {order.customer?.name || "Khách"}
                         </p>
 
                     </div>
 
                     <div className="grid items-center justify-between">
-                        <span
-                            className={`mb-2 rounded-full px-3 py-1 text-sm font-semibold ${status.className}`}
-                        >
+                        <span className={`mb-2 rounded-full px-3 py-1 text-sm font-semibold ${status.className}`}>
                             {status.text}
                         </span>
 
                         {order.status !== "COMPLETED" &&
                             order.status !== "CANCELLED" && (
-                                <Button
-                                    className="w-[150px]"
-                                    disabled={loading}
-                                    onClick={() =>
-                                        onAddFood(order)
-                                    }
-                                >
+                                <Button className="w-[150px]" disabled={loading} onClick={() => onAddFood(order) } >
                                     + Thêm món
                                 </Button>
                             )}
@@ -453,9 +427,7 @@ export default function InvoicePanel({
                             className="mt-2 w-full !bg-green-500"
                             onClick={handlePreparing}
                         >
-                            {loading
-                                ? "Đang gửi..."
-                                : "Gửi bếp"}
+                            {loading ? "Đang gửi..." : "Gửi bếp"}
                         </Button>
                     )}
 
@@ -465,9 +437,7 @@ export default function InvoicePanel({
                         className="mt-2 w-full !bg-blue-500"
                         onClick={handleServed}
                     >
-                        {loading
-                            ? "Đang cập nhật..."
-                            : "Phục vụ"}
+                        {loading ? "Đang cập nhật..." : "Phục vụ"}
                     </Button>
                 )}
 
@@ -476,18 +446,14 @@ export default function InvoicePanel({
                         <Button
                             disabled={loading}
                             className="mt-2 w-full bg-green-600 hover:bg-green-700"
-                            onClick={() =>
-                                setOpenPayment(true)
-                            }
+                            onClick={() => setOpenPayment(true)}
                         >
-                            💳 Thanh toán
+                            Thanh toán
                         </Button>
 
                         <PaymentModal
                             open={openPayment}
-                            onClose={() =>
-                                setOpenPayment(false)
-                            }
+                            onClose={() => setOpenPayment(false)}
                             order={order}
                             reload={reload}
                             table={table}

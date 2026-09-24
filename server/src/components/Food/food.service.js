@@ -359,12 +359,15 @@ const remove = async (id, user) => {
 const getByBranch = async (branchId, user) => {
     if (!branchId) throw new Error("Chi nhánh không hợp lệ.");
 
-    await checkBranchAccess(branchId, user);
+    const branch = await checkBranchAccess(branchId, user);
 
     return await prisma.branchFood.findMany({
         where: {
-            branchId: Number(branchId),
+            branchId: branch.id,
             status: { not: "INACTIVE" },
+            food: {
+                restaurantId: branch.restaurantId,
+            },
         },
         include: {
             food: {
@@ -426,6 +429,9 @@ const getByQrCode = async qrCode => {
         where: {
             branchId: branch.id,
             status: { not: "INACTIVE" },
+            food: {
+                restaurantId,
+            },
         },
         include: {
             food: {

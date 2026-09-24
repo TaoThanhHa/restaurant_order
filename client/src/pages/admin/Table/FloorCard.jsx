@@ -64,9 +64,7 @@ export default function FloorCard({
 
                                 <div className="mt-4 flex justify-center gap-2">
                                     <button
-                                        onClick={() =>
-                                            setQrTable(table)
-                                        }
+                                        onClick={() => setQrTable(table)}
                                         title="Xem QR"
                                         className="rounded-lg bg-blue-100 p-2 text-blue-600 hover:bg-blue-200"
                                     >
@@ -74,9 +72,7 @@ export default function FloorCard({
                                     </button>
 
                                     <button
-                                        onClick={() =>
-                                            onEditTable(table)
-                                        }
+                                        onClick={() => onEditTable(table)}
                                         title="Chỉnh sửa"
                                         className="rounded-lg bg-yellow-100 p-2 text-yellow-700 hover:bg-yellow-200"
                                     >
@@ -84,9 +80,7 @@ export default function FloorCard({
                                     </button>
 
                                     <button
-                                        onClick={() =>
-                                            onDeleteTable(table)
-                                        }
+                                        onClick={() => onDeleteTable(table)}
                                         title="Xóa"
                                         className="rounded-lg bg-red-100 p-2 text-red-600 hover:bg-red-200"
                                     >

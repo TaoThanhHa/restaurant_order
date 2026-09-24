@@ -1,8 +1,5 @@
 import { useState } from "react";
-import {
-    ArrowRightLeft,
-    Merge,
-} from "lucide-react";
+import { ArrowRightLeft, Merge, } from "lucide-react";
 
 import "./TableCard.css";
 import TableQRModal from "./TableQRModal";
@@ -34,12 +31,8 @@ export default function TableCard({
 }) {
     const [qrTable, setQrTable] = useState(null);
 
-    const status =
-        statusConfig[table.status] ||
-        statusConfig.AVAILABLE;
-
-    const isOccupied =
-        table.status === "OCCUPIED";
+    const status = statusConfig[table.status] || statusConfig.AVAILABLE;
+    const isOccupied = table.status === "OCCUPIED";
 
     const handleShowQR = e => {
         e.stopPropagation();
