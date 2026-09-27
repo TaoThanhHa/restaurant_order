@@ -210,6 +210,15 @@ export default function FoodFormModal({
             branchFoods: isMulti ? form.branchFoods : [],
         };
 
+        console.log("=== SAVE FOOD ===");
+console.log("food id:", food?.id);
+console.log("restaurant mode:", restaurantMode);
+console.log("branchFoods:", form.branchFoods);
+console.log(
+    "branchIds:",
+    form.branchFoods.map(item => Number(item.branchId))
+);
+
         try {
             setSaving(true);
             await onSave(data);

@@ -7,6 +7,7 @@ import FloorModal from "./FloorModal";
 import TableModal from "./TableModal";
 import branchService from "../../../services/branch.service";
 import floorService from "../../../services/floor.service";
+import tableService from "../../../services/table.service";
 
 export default function FloorManagement({ mode = "admin" }) {
     const isAdmin = mode === "admin";
@@ -17,12 +18,19 @@ export default function FloorManagement({ mode = "admin" }) {
     const [currentBranch, setCurrentBranch] = useState(null);
     const [floors, setFloors] = useState([]);
     const [loading, setLoading] = useState(false);
+
     const [openFloorModal, setOpenFloorModal] = useState(false);
     const [selectedFloor, setSelectedFloor] = useState(null);
+
     const [openTableModal, setOpenTableModal] = useState(false);
     const [selectedTable, setSelectedTable] = useState(null);
+
     const [deleteFloor, setDeleteFloor] = useState(null);
     const [deletingFloor, setDeletingFloor] = useState(false);
+
+    const [deleteTable, setDeleteTable] = useState(null);
+    const [deletingTable, setDeletingTable] = useState(false);
+
     const [notification, setNotification] = useState({
         open: false,
         type: "success",
@@ -69,10 +77,14 @@ export default function FloorManagement({ mode = "admin" }) {
             }
         } catch (error) {
             console.error("Lỗi lấy danh sách chi nhánh:", error);
+
             showNotification({
                 type: "error",
                 title: "Không thể tải dữ liệu",
-                message: getErrorMessage(error, "Không thể lấy danh sách chi nhánh.")
+                message: getErrorMessage(
+                    error,
+                    "Không thể lấy danh sách chi nhánh."
+                )
             });
         }
     };
@@ -97,7 +109,10 @@ export default function FloorManagement({ mode = "admin" }) {
             showNotification({
                 type: "error",
                 title: "Không thể tải dữ liệu",
-                message: getErrorMessage(error, "Không thể lấy chi nhánh mặc định.")
+                message: getErrorMessage(
+                    error,
+                    "Không thể lấy chi nhánh mặc định."
+                )
             });
         }
     };
@@ -108,6 +123,7 @@ export default function FloorManagement({ mode = "admin" }) {
         try {
             const res = await branchService.getById(user.branchId);
             const data = res?.data || res || null;
+
             setCurrentBranch(data);
         } catch (error) {
             console.error("Lỗi lấy thông tin chi nhánh:", error);
@@ -116,7 +132,10 @@ export default function FloorManagement({ mode = "admin" }) {
             showNotification({
                 type: "error",
                 title: "Không thể tải dữ liệu",
-                message: getErrorMessage(error, "Không thể lấy thông tin chi nhánh.")
+                message: getErrorMessage(
+                    error,
+                    "Không thể lấy thông tin chi nhánh."
+                )
             });
         }
     };
@@ -139,7 +158,10 @@ export default function FloorManagement({ mode = "admin" }) {
             showNotification({
                 type: "error",
                 title: "Không thể tải dữ liệu",
-                message: getErrorMessage(error, "Không thể lấy danh sách tầng.")
+                message: getErrorMessage(
+                    error,
+                    "Không thể lấy danh sách tầng."
+                )
             });
         } finally {
             setLoading(false);
@@ -226,7 +248,10 @@ export default function FloorManagement({ mode = "admin" }) {
                 title: selectedFloor
                     ? "Không thể cập nhật tầng"
                     : "Không thể thêm tầng",
-                message: getErrorMessage(error, "Đã xảy ra lỗi khi lưu thông tin tầng.")
+                message: getErrorMessage(
+                    error,
+                    "Đã xảy ra lỗi khi lưu thông tin tầng."
+                )
             });
         }
     };
@@ -234,7 +259,9 @@ export default function FloorManagement({ mode = "admin" }) {
     const requestDeleteFloor = floor => setDeleteFloor(floor);
 
     const closeDeleteFloor = () => {
-        if (!deletingFloor) setDeleteFloor(null);
+        if (!deletingFloor) {
+            setDeleteFloor(null);
+        }
     };
 
     const handleDeleteFloor = async () => {
@@ -262,7 +289,10 @@ export default function FloorManagement({ mode = "admin" }) {
             showNotification({
                 type: "error",
                 title: "Không thể xóa tầng",
-                message: getErrorMessage(error, "Đã xảy ra lỗi khi xóa tầng.")
+                message: getErrorMessage(
+                    error,
+                    "Đã xảy ra lỗi khi xóa tầng."
+                )
             });
         } finally {
             setDeletingFloor(false);
@@ -284,8 +314,55 @@ export default function FloorManagement({ mode = "admin" }) {
         setSelectedTable(null);
     };
 
+    const requestDeleteTable = table => {
+        setDeleteTable(table);
+    };
+
+    const closeDeleteTable = () => {
+        if (!deletingTable) {
+            setDeleteTable(null);
+        }
+    };
+
+    const handleDeleteTable = async () => {
+        if (!deleteTable || deletingTable) return;
+
+        const table = deleteTable;
+
+        try {
+            setDeletingTable(true);
+
+            await tableService.remove(table.id);
+            setDeleteTable(null);
+
+            showNotification({
+                type: "success",
+                title: "Xóa thành công",
+                message: `Bàn ${table.tableNumber} đã được xóa.`
+            });
+
+            await loadFloors();
+        } catch (error) {
+            console.error("Lỗi xóa bàn:", error);
+            setDeleteTable(null);
+
+            showNotification({
+                type: "error",
+                title: "Không thể xóa bàn",
+                message: getErrorMessage(
+                    error,
+                    "Đã xảy ra lỗi khi xóa bàn."
+                )
+            });
+        } finally {
+            setDeletingTable(false);
+        }
+    };
+
     const branchName = isAdmin
-        ? branches.find(branch => Number(branch.id) === Number(selectedBranch))?.name
+        ? branches.find(
+              branch => Number(branch.id) === Number(selectedBranch)
+          )?.name
         : currentBranch?.name || "Chi nhánh của bạn";
 
     return (
@@ -306,11 +383,18 @@ export default function FloorManagement({ mode = "admin" }) {
                         {isAdmin && (
                             <select
                                 value={selectedBranch}
-                                onChange={e => setSelectedBranch(Number(e.target.value))}
+                                onChange={e =>
+                                    setSelectedBranch(
+                                        Number(e.target.value)
+                                    )
+                                }
                                 className="rounded-lg border border-gray-300 px-4 py-2 outline-none focus:border-[var(--color-primary)]"
                             >
                                 {branches.map(branch => (
-                                    <option key={branch.id} value={branch.id}>
+                                    <option
+                                        key={branch.id}
+                                        value={branch.id}
+                                    >
                                         {branch.name}
                                     </option>
                                 ))}
@@ -356,8 +440,11 @@ export default function FloorManagement({ mode = "admin" }) {
                                 key={floor.id}
                                 floor={floor}
                                 onEdit={() => openEditFloorModal(floor)}
-                                onDelete={() => requestDeleteFloor(floor)}
+                                onDelete={() =>
+                                    requestDeleteFloor(floor)
+                                }
                                 onEditTable={openEditTableModal}
+                                onDeleteTable={requestDeleteTable}
                                 reload={loadFloors}
                             />
                         ))}
@@ -391,7 +478,10 @@ export default function FloorManagement({ mode = "admin" }) {
                         onClick={e => e.stopPropagation()}
                     >
                         <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-yellow-50">
-                            <AlertTriangle size={34} className="text-yellow-500" />
+                            <AlertTriangle
+                                size={34}
+                                className="text-yellow-500"
+                            />
                         </div>
 
                         <div className="mt-4 text-center">
@@ -428,7 +518,9 @@ export default function FloorManagement({ mode = "admin" }) {
                                 disabled={deletingFloor}
                                 className="flex-1 rounded-xl bg-red-500 px-4 py-3 font-semibold text-white transition hover:bg-red-600 disabled:cursor-not-allowed disabled:opacity-50"
                             >
-                                {deletingFloor ? "Đang xóa..." : "Xác nhận"}
+                                {deletingFloor
+                                    ? "Đang xóa..."
+                                    : "Xác nhận"}
                             </button>
                         </div>
 
@@ -436,6 +528,71 @@ export default function FloorManagement({ mode = "admin" }) {
                             type="button"
                             onClick={closeDeleteFloor}
                             disabled={deletingFloor}
+                            className="absolute"
+                            aria-label="Đóng"
+                        >
+                            <X size={0} />
+                        </button>
+                    </div>
+                </div>
+            )}
+
+            {deleteTable && (
+                <div
+                    className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/40 p-5 backdrop-blur-[2px]"
+                    onClick={closeDeleteTable}
+                >
+                    <div
+                        className="w-full max-w-sm rounded-3xl bg-white p-6 shadow-2xl"
+                        onClick={e => e.stopPropagation()}
+                    >
+                        <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-yellow-50">
+                            <AlertTriangle
+                                size={34}
+                                className="text-yellow-500"
+                            />
+                        </div>
+
+                        <div className="mt-4 text-center">
+                            <h2 className="text-xl font-bold text-gray-800">
+                                Xác nhận xóa bàn
+                            </h2>
+
+                            <p className="mt-2 text-sm leading-6 text-gray-500">
+                                Bạn có chắc muốn xóa{" "}
+                                <span className="font-semibold text-gray-700">
+                                    "Bàn {deleteTable.tableNumber}"
+                                </span>
+                                ?
+                            </p>
+                        </div>
+
+                        <div className="mt-6 flex gap-3">
+                            <button
+                                type="button"
+                                onClick={closeDeleteTable}
+                                disabled={deletingTable}
+                                className="flex-1 rounded-xl border border-gray-200 bg-gray-100 px-4 py-3 font-semibold text-gray-700 transition hover:bg-gray-200 disabled:cursor-not-allowed disabled:opacity-50"
+                            >
+                                Hủy
+                            </button>
+
+                            <button
+                                type="button"
+                                onClick={handleDeleteTable}
+                                disabled={deletingTable}
+                                className="flex-1 rounded-xl bg-red-500 px-4 py-3 font-semibold text-white transition hover:bg-red-600 disabled:cursor-not-allowed disabled:opacity-50"
+                            >
+                                {deletingTable
+                                    ? "Đang xóa..."
+                                    : "Xác nhận"}
+                            </button>
+                        </div>
+
+                        <button
+                            type="button"
+                            onClick={closeDeleteTable}
+                            disabled={deletingTable}
                             className="absolute"
                             aria-label="Đóng"
                         >

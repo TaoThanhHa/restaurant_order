@@ -2,7 +2,6 @@ const prisma = require("../../config/prisma");
 const bcrypt = require("bcrypt");
 const crypto = require("crypto");
 const mailService = require("../Mail/mail.server");
-const sseService = require("../../services/sse.service");
 
 const VALID_THEMES = [
     "lang-tre",
@@ -42,30 +41,79 @@ const getProfile = async (userId) => {
     return user;
 };
 
-
-const updatedRestaurant = await prisma.restaurant.update({
-    where: { id: restaurant.id },
-    data: updateData,
-    select: {
-        id: true,
-        name: true,
-        logo: true,
-        theme: true,
-        adminId: true,
-        createdAt: true,
-        updatedAt: true
-    }
-});
-
-if (data.theme !== undefined) {
-    sseService.sendToRestaurant(
-        updatedRestaurant.id,
-        "restaurant.theme.updated",
-        {
-            restaurantId: updatedRestaurant.id,
-            theme: updatedRestaurant.theme
+const updateRestaurant = async (userId, data) => {
+    const user = await prisma.user.findUnique({
+        where: { id: Number(userId) },
+        select: {
+            id: true,
+            restaurantId: true,
+            role: {
+                select: {
+                    name: true
+                }
+            }
         }
-    );
+    });
+
+    if (!user) {
+        throw new Error("Tài khoản không tồn tại.");
+    }
+
+    if (user.role.name !== "ADMIN") {
+        throw new Error("Bạn không có quyền cập nhật thông tin nhà hàng.");
+    }
+
+    if (!user.restaurantId) {
+        throw new Error("Tài khoản chưa được liên kết với quán.");
+    }
+
+    const restaurant = await prisma.restaurant.findUnique({
+        where: {
+            id: user.restaurantId
+        }
+    });
+
+    if (!restaurant) {
+        throw new Error("Không tìm thấy nhà hàng.");
+    }
+
+    if (data.name !== undefined && !String(data.name).trim()) {
+        throw new Error("Tên quán không được để trống.");
+    }
+
+    if (data.theme !== undefined && !VALID_THEMES.includes(data.theme)) {
+        throw new Error("Giao diện không hợp lệ.");
+    }
+
+    const updateData = {};
+
+    if (data.name !== undefined) {
+        updateData.name = String(data.name).trim();
+    }
+
+    if (data.logo !== undefined) {
+        updateData.logo = data.logo || null;
+    }
+
+    if (data.theme !== undefined) {
+        updateData.theme = data.theme;
+    }
+
+    return await prisma.restaurant.update({
+        where: {
+            id: restaurant.id
+        },
+        data: updateData,
+        select: {
+            id: true,
+            name: true,
+            logo: true,
+            theme: true,
+            adminId: true,
+            createdAt: true,
+            updatedAt: true
+        }
+    });
 };
 
 const changePassword = async (userId, currentPassword, newPassword) => {
