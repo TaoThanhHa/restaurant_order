@@ -17,6 +17,7 @@ router.use("/floors", require("../components/Floor/floor.routes"));
 router.use("/tables", require("../components/Table/table.routes"));
 router.use("/customers", require("../components/Customer/customer.routes"));
 router.use("/orders", require("../components/Order/order.routes"));
+router.use( "/payments", require("../components/Payment/payment.route"));
 router.use("/cart", require("../components/Cart/cart.routes"));
 router.use("/scan", require("../components/Scan/scan.routes"));
 router.use("/cashier", require("../components/Cashier/cashier.routes"));

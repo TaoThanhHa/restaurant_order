@@ -1,19 +1,19 @@
 const prisma = require("../../config/prisma");
 
-const getPublicInfo = async () => {
-
-    const restaurant =
-        await prisma.restaurant.findFirst({
-            select: {
-                name: true,
-                logo: true,
-            },
-        });
+const getPublicInfo = async (restaurantId) => {
+    const restaurant = await prisma.restaurant.findUnique({
+        where: {
+            id: Number(restaurantId),
+        },
+        select: {
+            name: true,
+            logo: true,
+            theme: true,
+        },
+    });
 
     if (!restaurant) {
-        throw new Error(
-            "Không tìm thấy thông tin nhà hàng."
-        );
+        throw new Error("Không tìm thấy thông tin nhà hàng.");
     }
 
     return restaurant;

@@ -1,6 +1,8 @@
+
 const clients = {
     customers: new Map(),
     branches: new Map(),
+    restaurants: new Map(),
 };
 
 const addClient = (map, id, res) => {
@@ -32,15 +34,8 @@ const send = (res, event, data = {}) => {
     res.write(`data: ${JSON.stringify(data)}\n\n`);
 };
 
-const sendToCustomer = (
-    customerId,
-    event,
-    data = {}
-) => {
-    const set =
-        clients.customers.get(
-            Number(customerId)
-        );
+const sendToCustomer = (customerId, event, data = {}) => {
+    const set = clients.customers.get(Number(customerId));
 
     if (!set) return;
 
@@ -48,29 +43,16 @@ const sendToCustomer = (
         try {
             send(res, event, data);
         } catch (error) {
-            console.error(
-                "SSE CUSTOMER SEND ERROR:",
-                error
-            );
+            console.error("SSE CUSTOMER SEND ERROR:", error);
         }
     }
 };
 
-const sendToBranch = (
-    branchId,
-    event,
-    data = {}
-) => {
-    const set =
-        clients.branches.get(
-            Number(branchId)
-        );
+const sendToBranch = (branchId, event, data = {}) => {
+    const set = clients.branches.get(Number(branchId));
 
     if (!set) {
-        console.log(
-            "SSE BRANCH NOT FOUND:",
-            branchId
-        );
+        console.log("SSE BRANCH NOT FOUND:", branchId);
         return;
     }
 
@@ -78,38 +60,38 @@ const sendToBranch = (
         try {
             send(res, event, data);
         } catch (error) {
-            console.error(
-                "SSE BRANCH SEND ERROR:",
-                error
-            );
+            console.error("SSE BRANCH SEND ERROR:", error);
         }
     }
 };
 
-const connectCustomer = (
-    customerId,
-    req,
-    res
-) => {
-    addClient(
-        clients.customers,
-        customerId,
-        res
-    );
+const sendToRestaurant = (restaurantId, event, data = {}) => {
+    const set = clients.restaurants.get(Number(restaurantId));
 
-    send(
-        res,
-        "connected",
-        {
-            message: "SSE connected"
+    if (!set) {
+        console.log("SSE RESTAURANT NOT FOUND:", restaurantId);
+        return;
+    }
+
+    for (const res of set) {
+        try {
+            send(res, event, data);
+        } catch (error) {
+            console.error("SSE RESTAURANT SEND ERROR:", error);
         }
-    );
+    }
+};
+
+const connectCustomer = (customerId, req, res) => {
+    addClient(clients.customers, customerId, res);
+
+    send(res, "connected", {
+        message: "SSE connected"
+    });
 
     const heartbeat = setInterval(() => {
         try {
-            res.write(
-                `: heartbeat ${Date.now()}\n\n`
-            );
+            res.write(`: heartbeat ${Date.now()}\n\n`);
         } catch {
             clearInterval(heartbeat);
         }
@@ -117,39 +99,20 @@ const connectCustomer = (
 
     req.on("close", () => {
         clearInterval(heartbeat);
-
-        removeClient(
-            clients.customers,
-            customerId,
-            res
-        );
+        removeClient(clients.customers, customerId, res);
     });
 };
 
-const connectBranch = (
-    branchId,
-    req,
-    res
-) => {
-    addClient(
-        clients.branches,
-        branchId,
-        res
-    );
+const connectBranch = (branchId, req, res) => {
+    addClient(clients.branches, branchId, res);
 
-    send(
-        res,
-        "connected",
-        {
-            message: "SSE connected"
-        }
-    );
+    send(res, "connected", {
+        message: "SSE connected"
+    });
 
     const heartbeat = setInterval(() => {
         try {
-            res.write(
-                `: heartbeat ${Date.now()}\n\n`
-            );
+            res.write(`: heartbeat ${Date.now()}\n\n`);
         } catch {
             clearInterval(heartbeat);
         }
@@ -157,12 +120,28 @@ const connectBranch = (
 
     req.on("close", () => {
         clearInterval(heartbeat);
+        removeClient(clients.branches, branchId, res);
+    });
+};
 
-        removeClient(
-            clients.branches,
-            branchId,
-            res
-        );
+const connectRestaurant = (restaurantId, req, res) => {
+    addClient(clients.restaurants, restaurantId, res);
+
+    send(res, "connected", {
+        message: "SSE connected"
+    });
+
+    const heartbeat = setInterval(() => {
+        try {
+            res.write(`: heartbeat ${Date.now()}\n\n`);
+        } catch {
+            clearInterval(heartbeat);
+        }
+    }, 25000);
+
+    req.on("close", () => {
+        clearInterval(heartbeat);
+        removeClient(clients.restaurants, restaurantId, res);
     });
 };
 
@@ -171,6 +150,8 @@ module.exports = {
     send,
     sendToCustomer,
     sendToBranch,
+    sendToRestaurant,
     connectCustomer,
-    connectBranch
+    connectBranch,
+    connectRestaurant
 };

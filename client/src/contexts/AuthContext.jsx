@@ -3,11 +3,19 @@ import authService from "../services/auth.service";
 
 export const AuthContext = createContext();
 
+const THEME_KEY = "restaurant-theme";
+const ROLE_KEY = "restaurant-role";
+
 export default function AuthProvider({ children }) {
     const [user, setUser] = useState(() => {
         const userStorage = localStorage.getItem("user");
 
-        return userStorage ? JSON.parse(userStorage) : null;
+        try {
+            return userStorage ? JSON.parse(userStorage) : null;
+        } catch {
+            localStorage.removeItem("user");
+            return null;
+        }
     });
 
     const [loading] = useState(false);
@@ -20,7 +28,15 @@ export default function AuthProvider({ children }) {
     };
 
     const logout = () => {
+        const savedTheme = localStorage.getItem(THEME_KEY);
+
         authService.logout();
+
+        if (savedTheme) {
+            localStorage.setItem(THEME_KEY, savedTheme);
+        }
+
+        localStorage.removeItem(ROLE_KEY);
 
         setUser(null);
     };

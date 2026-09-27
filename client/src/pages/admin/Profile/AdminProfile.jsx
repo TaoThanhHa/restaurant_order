@@ -1,10 +1,11 @@
 import { useState } from "react";
-import { Store, User, Lock, Palette, } from "lucide-react";
+import { Store, User, Lock, Palette, CreditCard} from "lucide-react";
 
 import RestaurantSection from "./components/RestaurantSection";
 import AccountSection from "./components/AccountSection";
 import SecuritySection from "./components/SecuritySection";
 import AppearanceSection from "./components/AppearanceSection";
+import PaymentAccountSection from "./components/PaymentAccountSection";
 
 function AdminProfile() {
 
@@ -35,6 +36,12 @@ function AdminProfile() {
             description: "Tùy chỉnh giao diện",
             icon: Palette,
         },
+        {
+            id: "payment",
+            name: "Tài khoản ngân hàng",
+            description: "Nhận thanh toán chuyển khoản",
+            icon: CreditCard,
+        },
     ];
 
     const renderSection = () => {
@@ -43,6 +50,7 @@ function AdminProfile() {
             case "account": return <AccountSection />;
             case "security": return <SecuritySection />;
             case "appearance": return <AppearanceSection />;
+            case "payment": return <PaymentAccountSection />;
             default: return <RestaurantSection />;
         }
     };

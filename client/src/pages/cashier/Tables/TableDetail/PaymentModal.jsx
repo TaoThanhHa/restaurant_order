@@ -4,7 +4,9 @@ import { X } from "lucide-react";
 import Button from "../../../../components/Button/Button";
 import NotiModal from "../../../../components/NotiModal/NotiModal";
 import orderService from "../../../../services/order.service";
+import paymentService from "../../../../services/payment.service";
 import { printInvoice } from "../../../../../utils/printInvoice";
+import PaymentQRModal from "../components/PaymentQRModal";
 
 export default function PaymentModal({
     open,
@@ -15,6 +17,8 @@ export default function PaymentModal({
 }) {
     const [phone, setPhone] = useState("");
     const [method, setMethod] = useState("CASH");
+    const [payment, setPayment] = useState(null);
+    const [loading, setLoading] = useState(false);
     const [noti, setNoti] = useState({
         open: false,
         type: "error",
@@ -22,6 +26,8 @@ export default function PaymentModal({
     });
 
     useEffect(() => {
+        if (!open) return;
+
         const customer = order?.customer;
 
         if (customer && !customer.isGuest) {
@@ -29,6 +35,10 @@ export default function PaymentModal({
         } else {
             setPhone("");
         }
+
+        setMethod("CASH");
+        setPayment(null);
+        setLoading(false);
     }, [order, open]);
 
     if (!open) return null;
@@ -38,7 +48,8 @@ export default function PaymentModal({
     );
 
     const total = orderItems.reduce(
-        (sum, item) => sum + Number(item.price) * Number(item.quantity),
+        (sum, item) =>
+            sum + Number(item.price) * Number(item.quantity),
         0
     );
 
@@ -49,8 +60,18 @@ export default function PaymentModal({
 
     const canEditPhone = !registeredCustomer;
 
-    const handlePayment = async () => {
+    const showError = message => {
+        setNoti({
+            open: true,
+            type: "error",
+            message,
+        });
+    };
+
+    const handleCreatePayment = async () => {
         try {
+            setLoading(true);
+
             const orderRes = await orderService.getById(order.id);
             const fullOrder = orderRes?.data || orderRes;
 
@@ -61,38 +82,53 @@ export default function PaymentModal({
                 ),
             };
 
-            await orderService.payment(order.id, {
-                paymentMethod: method,
-                phone: phone.trim() || null,
+            if (method === "CASH") {
+                await paymentService.createPayment({
+                    orderId: order.id,
+                    paymentMethod: "CASH",
+                    phone: phone.trim() || null,
+                });
+
+                printInvoice(printableOrder, "CASH");
+
+                onClose();
+                await reload();
+                return;
+            }
+
+            const response = await paymentService.createPayment({
+                orderId: order.id,
+                paymentMethod: "BANKING",
             });
 
-            printInvoice(printableOrder, method);
+            const paymentData = response?.data || response;
 
-            onClose();
-            await reload();
+            setPayment({
+                ...paymentData,
+                printableOrder,
+            });
         } catch (err) {
-            setNoti({
-                open: true,
-                type: "error",
-                message:
-                    err.response?.data?.message ||
+            showError(
+                err.response?.data?.message ||
                     err.message ||
-                    "Không thể thanh toán.",
-            });
+                    "Không thể tạo thanh toán."
+            );
+        } finally {
+            setLoading(false);
         }
     };
 
     return (
         <>
             <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
-                <div className="max-h-[calc(100vh-50px)] overflow-y-auto rounded-xl bg-white p-5">
+                <div className="max-h-[calc(100vh-50px)] w-full max-w-3xl overflow-y-auto rounded-xl bg-white">
                     <div className="flex items-center justify-between border-b p-5">
                         <h2 className="text-xl font-bold">
                             Thanh toán hóa đơn{" "}
                             {order.orderCode || `#${order.id}`}
                         </h2>
 
-                        <Button type="button" onClick={onClose} >
+                        <Button type="button" onClick={onClose}>
                             <X />
                         </Button>
                     </div>
@@ -106,14 +142,18 @@ export default function PaymentModal({
 
                             <div>
                                 Ngày:{" "}
-                                {new Date(order.createdAt).toLocaleString("vi-VN")}
+                                {new Date(
+                                    order.createdAt
+                                ).toLocaleString("vi-VN")}
                             </div>
                         </div>
 
                         <table className="w-full text-sm">
                             <thead>
                                 <tr className="border-b">
-                                    <th className="text-center">Tên món</th>
+                                    <th className="py-2 text-center">
+                                        Tên món
+                                    </th>
                                     <th>SL</th>
                                     <th>Đơn giá</th>
                                     <th>Thành tiền</th>
@@ -122,8 +162,11 @@ export default function PaymentModal({
 
                             <tbody>
                                 {orderItems.map(item => (
-                                    <tr key={item.id}>
-                                        <td>
+                                    <tr
+                                        key={item.id}
+                                        className="border-b"
+                                    >
+                                        <td className="py-2">
                                             {item.food?.name || "Món ăn"}
                                         </td>
 
@@ -132,19 +175,24 @@ export default function PaymentModal({
                                         </td>
 
                                         <td className="text-center">
-                                            {Number(item.price).toLocaleString("vi-VN")}
+                                            {Number(
+                                                item.price
+                                            ).toLocaleString("vi-VN")}
                                         </td>
 
                                         <td className="text-center">
-                                            {(Number(item.price) * Number(item.quantity) ).toLocaleString("vi-VN")}
+                                            {(
+                                                Number(item.price) *
+                                                Number(item.quantity)
+                                            ).toLocaleString("vi-VN")}
                                         </td>
                                     </tr>
                                 ))}
                             </tbody>
                         </table>
 
-                        <div className="flex">
-                            <div className="mt-6 pr-4">
+                        <div className="mt-6 grid grid-cols-1 gap-5 md:grid-cols-2">
+                            <div>
                                 <label className="mb-2 block font-semibold">
                                     Số điện thoại khách hàng
                                 </label>
@@ -152,8 +200,14 @@ export default function PaymentModal({
                                 <input
                                     type="tel"
                                     value={phone}
-                                    onChange={e => setPhone(e.target.value)}
-                                    placeholder={canEditPhone ? "Nhập số điện thoại" : "" }
+                                    onChange={e =>
+                                        setPhone(e.target.value)
+                                    }
+                                    placeholder={
+                                        canEditPhone
+                                            ? "Nhập số điện thoại"
+                                            : ""
+                                    }
                                     readOnly={!canEditPhone}
                                     className={`w-full rounded-lg border px-3 py-2 outline-none ${
                                         canEditPhone
@@ -163,26 +217,30 @@ export default function PaymentModal({
                                 />
                             </div>
 
-                            <div className="mt-6">
+                            <div>
                                 <label className="font-semibold">
                                     Hình thức thanh toán
                                 </label>
 
-                                <div className="mt-3 space-y-2">
-                                    <label className="flex gap-2">
+                                <div className="mt-3 space-y-3">
+                                    <label className="flex cursor-pointer gap-2">
                                         <input
                                             type="radio"
                                             checked={method === "CASH"}
-                                            onChange={() => setMethod("CASH") }
+                                            onChange={() =>
+                                                setMethod("CASH")
+                                            }
                                         />
                                         Tiền mặt
                                     </label>
 
-                                    <label className="flex gap-2">
+                                    <label className="flex cursor-pointer gap-2">
                                         <input
                                             type="radio"
                                             checked={method === "BANKING"}
-                                            onChange={() => setMethod("BANKING")}
+                                            onChange={() =>
+                                                setMethod("BANKING")
+                                            }
                                         />
                                         Chuyển khoản
                                     </label>
@@ -190,7 +248,7 @@ export default function PaymentModal({
                             </div>
                         </div>
 
-                        <div className="mt-6 flex justify-between text-xl font-bold">
+                        <div className="mt-6 flex justify-between border-t pt-5 text-xl font-bold">
                             <span>Tổng tiền</span>
 
                             <span className="text-red-600">
@@ -202,13 +260,27 @@ export default function PaymentModal({
                     <div className="border-t p-5">
                         <Button
                             className="w-full"
-                            onClick={handlePayment}
+                            onClick={handleCreatePayment}
+                            disabled={loading}
                         >
-                            Thanh toán
+                            {loading
+                                ? "Đang xử lý..."
+                                : method === "BANKING"
+                                ? "Tạo mã QR thanh toán"
+                                : "Thanh toán"}
                         </Button>
                     </div>
                 </div>
             </div>
+
+            <PaymentQRModal
+                open={!!payment}
+                onClose={() => setPayment(null)}
+                payment={payment}
+                printableOrder={payment?.printableOrder}
+                reload={reload}
+                onPaymentSuccess={onClose}
+            />
 
             <NotiModal
                 open={noti.open}

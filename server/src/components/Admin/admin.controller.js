@@ -13,13 +13,25 @@ const getProfile = async (req, res) => {
 
 const updateRestaurant = async (req, res) => {
     try {
-        const data = await adminService.updateRestaurant(req.user.id, req.body);
-        return response.success(res, "Cập nhật thông tin quán thành công.", data);
+        console.log("UPDATE RESTAURANT USER:", req.user);
+        console.log("UPDATE RESTAURANT BODY:", req.body);
+
+        const data = await adminService.updateRestaurant(
+            req.user.id,
+            req.body
+        );
+
+        return response.success(
+            res,
+            "Cập nhật thông tin quán thành công.",
+            data
+        );
     } catch (error) {
         console.error("UPDATE RESTAURANT ERROR:", error);
         return response.error(res, error.message, 400);
     }
 };
+
 
 const changePassword = async (req, res) => {
     try {

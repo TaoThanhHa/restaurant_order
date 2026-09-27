@@ -39,6 +39,7 @@ const login = async (email, password) => {
             role: user.role.name,
             restaurantId: user.restaurantId,
             restaurantMode: user.restaurant?.mode || null,
+            restaurantTheme: user.restaurant?.theme || "lang-tre",
             branchId: user.branchId,
             branch: user.branch,
         },
@@ -65,6 +66,7 @@ const getProfile = async (userId) => {
         role: user.role.name,
         restaurantId: user.restaurantId,
         restaurantMode: user.restaurant?.mode || null,
+        restaurantTheme: user.restaurant?.theme || "lang-tre",
         branchId: user.branchId,
         branch: user.branch,
         mustChangePassword: user.mustChangePassword,
@@ -106,7 +108,6 @@ const forgotPassword = async (email) => {
         });
     } catch (err) {
         console.error(err);
-        
         throw new Error("Không thể gửi email.");
     }
 };
@@ -116,9 +117,10 @@ const verifyOtp = async ({ email, otp }) => {
         where: { email, otp }
     });
 
-    if (!record) 
+    if (!record)
         throw new Error("OTP không đúng.");
-    if (record.expiresAt < new Date()) 
+
+    if (record.expiresAt < new Date())
         throw new Error("OTP đã hết hạn.");
 
     return true;

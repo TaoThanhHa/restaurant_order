@@ -35,11 +35,6 @@ const closeOrder = async (orderId, status) => {
     return res.data;
 };
 
-const payment = async (orderId, data) => {
-    const res = await api.post(`/orders/${orderId}/payment`, data);
-    return res.data;
-};
-
 const mergeOrders = async ({targetOrderId, sourceOrderIds}) => {
     const res = await api.post("/orders/merge", { targetOrderId, sourceOrderIds, });
     return res.data;
@@ -78,7 +73,6 @@ export default {
     updateItem,
     removeItem,
     closeOrder,
-    payment,
     mergeOrders,
     getPendingOrders,
     getCompletedKitchenOrders,

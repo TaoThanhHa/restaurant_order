@@ -16,21 +16,22 @@ model Role {
 }
 
 model Branch {
-  id              Int              @id @default(autoincrement())
+  id              Int                    @id @default(autoincrement())
   name            String
   address         String?
   phone           String?
-  email           String           @unique
-  isActive        Boolean          @default(true)
-  createdAt       DateTime         @default(now()) @map("created_at")
-  restaurantId    Int?             @map("restaurant_id")
-  kitchenMode     KitchenMode      @default(PRINT)
+  email           String                 @unique
+  isActive        Boolean                @default(true)
+  createdAt       DateTime               @default(now()) @map("created_at")
+  restaurantId    Int?                   @map("restaurant_id")
+  kitchenMode     KitchenMode            @default(PRINT)
   branchFoods     BranchFood[]
-  restaurant      Restaurant?      @relation(fields: [restaurantId], references: [id])
+  restaurant      Restaurant?            @relation(fields: [restaurantId], references: [id])
   floors          Floor[]
   orders          Order[]
   serviceRequests ServiceRequest[]
   users           User[]
+  paymentAccounts BranchPaymentAccount[]
 
   @@map("branches")
 }
@@ -41,19 +42,22 @@ model Restaurant {
   logo      String?
   adminId   Int            @unique @map("admin_id")
   mode      RestaurantMode @default(SINGLE)
+  theme     String         @default("lang-tre")
   createdAt DateTime       @default(now()) @map("created_at")
   updatedAt DateTime       @updatedAt @map("updated_at")
 
-  branches  Branch[]
-  admin     User       @relation("RestaurantAdmin", fields: [adminId], references: [id])
-  users     User[]     @relation("RestaurantUsers")
-  customers Customer[]
-  categories Category[]
-  foods Food[]
-  reservations Reservation[]
+  branches        Branch[]
+  admin           User             @relation("RestaurantAdmin", fields: [adminId], references: [id])
+  users           User[]           @relation("RestaurantUsers")
+  customers       Customer[]
+  categories      Category[]
+  foods           Food[]
+  reservations    Reservation[]
+  paymentAccounts PaymentAccount[]
 
   @@map("restaurants")
 }
+
 
 model User {
   id                 Int     @id @default(autoincrement())
@@ -391,18 +395,55 @@ model OrderItem {
 }
 
 model Payment {
-  id            Int           @id @default(autoincrement())
-  orderId       Int           @unique @map("order_id")
-  paymentMethod PaymentMethod @map("payment_method")
-  cashAmount    Decimal?
-  bankAmount    Decimal?
-  paymentCode   String?       @map("payment_code")
-  totalAmount   Decimal       @map("total_amount") @db.Decimal(12, 2)
-  paymentStatus PaymentStatus @default(UNPAID) @map("payment_status")
-  paidAt        DateTime?     @map("paid_at")
-  order         Order         @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  id               Int           @id @default(autoincrement())
+  orderId          Int           @unique @map("order_id")
+  paymentAccountId Int?          @map("payment_account_id")
+  paymentMethod    PaymentMethod @map("payment_method")
+  cashAmount       Decimal?
+  bankAmount       Decimal?
+  paymentCode      String?       @map("payment_code")
+  totalAmount      Decimal       @map("total_amount") @db.Decimal(12, 2)
+  paymentStatus    PaymentStatus @default(UNPAID) @map("payment_status")
+  paidAt           DateTime?
 
+  order          Order           @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  paymentAccount PaymentAccount? @relation(fields: [paymentAccountId], references: [id], onDelete: SetNull)
+
+  @@index([paymentAccountId])
   @@map("payments")
+}
+
+model PaymentAccount {
+  id            Int      @id @default(autoincrement())
+  restaurantId  Int      @map("restaurant_id")
+  bankCode      String   @map("bank_code")
+  accountNumber String   @map("account_number")
+  accountName   String   @map("account_name")
+  isActive      Boolean  @default(true) @map("is_active")
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+
+  restaurant Restaurant             @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
+  branches   BranchPaymentAccount[]
+  payments   Payment[]
+
+  @@unique([restaurantId, accountNumber])
+  @@index([restaurantId])
+  @@index([restaurantId, isActive])
+  @@map("payment_accounts")
+}
+
+model BranchPaymentAccount {
+  branchId         Int      @map("branch_id")
+  paymentAccountId Int      @map("payment_account_id")
+  createdAt        DateTime @default(now()) @map("created_at")
+
+  branch         Branch         @relation(fields: [branchId], references: [id], onDelete: Cascade)
+  paymentAccount PaymentAccount @relation(fields: [paymentAccountId], references: [id], onDelete: Cascade)
+
+  @@id([branchId, paymentAccountId])
+  @@index([paymentAccountId])
+  @@map("branch_payment_accounts")
 }
 
 enum TableStatus {
