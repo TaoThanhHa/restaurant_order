@@ -65,10 +65,6 @@ export default function BranchStaff() {
                 res.data ||
                 {};
 
-            console.log(
-                "STAFF BRANCH:",
-                data.branch
-            );
 
             setBranch(data.branch || null);
 

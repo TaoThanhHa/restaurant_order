@@ -263,11 +263,6 @@ export default function TableModal({
                     Number(form.capacity),
             };
 
-            console.log(
-                "TABLE SAVE DATA:",
-                data
-            );
-
             /*
              * UPDATE
              */

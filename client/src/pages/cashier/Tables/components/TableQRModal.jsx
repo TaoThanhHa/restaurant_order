@@ -1,3 +1,4 @@
+// Sửa thông báo
 import { useEffect, useState } from "react";
 import { X, QrCode, Download, Printer } from "lucide-react";
 import QRCode from "qrcode";
@@ -9,10 +10,9 @@ export default function TableQRModal({ open, table, onClose }) {
 
     const getCustomerUrl = (qrCode) => {
         if (!qrCode) return "";
-        const frontendUrl = import.meta.env.VITE_APP_URL || "http://localhost:5173";
-        return `${frontendUrl}/customer/${qrCode}`;
-    };
 
+        return `${window.location.origin}/customer/${qrCode}`;
+    };
 
     useEffect(() => {
         if (!open || !table?.qrCode) {

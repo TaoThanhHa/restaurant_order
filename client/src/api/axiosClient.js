@@ -7,32 +7,63 @@ const axiosClient = axios.create({
     },
 });
 
-// Request Interceptor
+const isCustomerRequest = (url = "") => {
+    return (
+        url === "/customer" ||
+        url.startsWith("/customer/") ||
+        url.startsWith("/auth/customer") ||
+        url.startsWith("/customer-auth")
+    );
+};
+
+const isCustomerPage = () => {
+    const path = window.location.pathname;
+
+    return (
+        path === "/customer" ||
+        path.startsWith("/customer/")
+    );
+};
+
 axiosClient.interceptors.request.use(
-    (config) => {
-        const token = localStorage.getItem("token");
+    config => {
+        const customerRequest =
+            isCustomerRequest(config.url) ||
+            config.customerAuth ||
+            isCustomerPage();
+
+        const token = customerRequest
+            ? localStorage.getItem("customerToken")
+            : localStorage.getItem("token");
 
         if (token) {
+            config.headers = config.headers || {};
             config.headers.Authorization = `Bearer ${token}`;
         }
 
+        delete config.customerAuth;
+
         return config;
     },
-    (error) => Promise.reject(error)
+    error => Promise.reject(error)
 );
 
-// Response Interceptor
-axiosClient.interceptors.request.use((config) => {
+axiosClient.interceptors.response.use(
+    response => response,
+    error => {
+        const status = error.response?.status;
+        const url = error.config?.url || "";
 
-    const token =
-        localStorage.getItem("customerToken") ||
-        localStorage.getItem("token");
+        const customerRequest =
+            isCustomerRequest(url) || isCustomerPage();
 
-    if (token) {
-        config.headers.Authorization = `Bearer ${token}`;
+        if (status === 401 && !customerRequest) {
+            localStorage.removeItem("token");
+            localStorage.removeItem("user");
+        }
+
+        return Promise.reject(error);
     }
-
-    return config;
-});
+);
 
 export default axiosClient;

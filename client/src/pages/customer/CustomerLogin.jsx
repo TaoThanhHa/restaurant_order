@@ -1,5 +1,5 @@
+// Sửa thông báo
 import { Lock, Mail, ArrowLeft, } from "lucide-react";
-
 import { useState } from "react";
 import { useNavigate, useParams, } from "react-router-dom";
 
@@ -8,7 +8,7 @@ import styles from "./Customer.module.css";
 import Input from "../../components/Input/Input";
 import Button from "../../components/Button/Button";
 
-import customerAuthService from "../../services/customerAuth.service";
+import customerService from "../../services/customer.service";
 import { getDeviceId } from "../../../utils/deviceId";
 
 export default function CustomerLogin() {
@@ -48,7 +48,7 @@ export default function CustomerLogin() {
 
         try {
             setLoading(true);
-            const res = await customerAuthService.login({
+            const res = await customerService.login({
                     identifier: form.identifier.trim(),
                     password: form.password,
                     qrCode,

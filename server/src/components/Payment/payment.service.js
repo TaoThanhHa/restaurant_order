@@ -332,7 +332,7 @@ const createPayment = async (orderId, data, user) => {
         bankAmount = totalAmount;
     }
 
-    if (paymentMethod === "MIXED") {
+    /* if (paymentMethod === "MIXED") {
         cashAmount = Number(data?.cashAmount || 0);
         bankAmount = Number(data?.bankAmount || 0);
 
@@ -351,10 +351,10 @@ const createPayment = async (orderId, data, user) => {
                 "Tổng tiền mặt và chuyển khoản không khớp tổng đơn hàng."
             );
         }
-    }
+    } */
 
     const paymentAccount =
-        paymentMethod === "BANKING" || paymentMethod === "MIXED"
+        paymentMethod === "BANKING"
             ? await getPaymentAccount(order, user)
             : null;
 

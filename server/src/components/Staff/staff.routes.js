@@ -3,9 +3,9 @@ const router = express.Router();
 
 const controller = require("./staff.controller");
 const auth = require("../../middlewares/auth.middleware");
-const authorize = require("../../middlewares/role.middleware");
+const role = require("../../middlewares/role.middleware");
 
-router.use(auth, authorize("BRANCH"));
+router.use(auth, role("BRANCH"));
 router.get("/", controller.getAll);
 router.get("/:userId", controller.getById);
 router.post("/", controller.create);

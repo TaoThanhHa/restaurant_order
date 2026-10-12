@@ -1,19 +1,8 @@
 import { useEffect, useState } from "react";
 import { NavLink } from "react-router-dom";
-import {
-    Utensils,
-    Table2,
-    UtensilsCrossed,
-    ShoppingBag,
-    Layers3,
-    Users,
-    ReceiptText,
-    User,
-    LayoutDashboard,
-    ChartNoAxesCombined,
-} from "lucide-react";
+import { Utensils, Table2, UtensilsCrossed, ShoppingBag, Layers3, Users, ReceiptText, User, LayoutDashboard, ChartNoAxesCombined,} from "lucide-react";
 
-import restaurantService from "../../services/restaurant.service";
+import adminService from "../../services/admin.service";
 import useAuth from "../../hooks/useAuth";
 
 export default function Sidebar() {
@@ -24,8 +13,7 @@ export default function Sidebar() {
         logo: "",
     });
 
-    const SERVER_URL =
-        import.meta.env.VITE_API_URL?.replace(/\/api\/?$/, "") || "";
+    const SERVER_URL = import.meta.env.VITE_API_URL?.replace(/\/api\/?$/, "") || "";
 
     const getImageUrl = (url) => {
         if (!url) return "";
@@ -38,22 +26,22 @@ export default function Sidebar() {
     };
 
     useEffect(() => {
-        const loadRestaurant = async () => {
-            try {
-                const res = await restaurantService.getInfo();
-                const data = res?.message;
+    const loadRestaurant = async () => {
+        try {
+            const res = await adminService.getProfile();
+            const data = res?.data || res;
 
-                setRestaurant({
-                    name: data?.name || "Làng Tre",
-                    logo: data?.logo || "",
-                });
-            } catch (error) {
-                console.error("LOAD RESTAURANT ERROR:", error);
-            }
-        };
+            setRestaurant({
+                name: data?.restaurant?.name || "Làng Tre",
+                logo: data?.restaurant?.logo || "",
+            });
+        } catch (error) {
+            console.error("LOAD RESTAURANT ERROR:", error);
+        }
+    };
 
-        loadRestaurant();
-    }, []);
+    loadRestaurant();
+}, []);
 
     const roleName = user?.role?.name || user?.role || "";
 
@@ -132,14 +120,11 @@ export default function Sidebar() {
                             className="h-full w-full rounded-lg object-cover"
                         />
                     ) : (
-                        <Utensils
-                            size={22}
-                            className="mx-auto mt-2 text-white"
-                        />
+                        <Utensils size={22} className="mx-auto" />
                     )}
                 </div>
 
-                <h2 className="mt-2 truncate text-lg font-bold text-white">
+                <h2 className="mt-4 truncate text-xl font-bold text-white">
                     {restaurant.name}
                 </h2>
             </div>

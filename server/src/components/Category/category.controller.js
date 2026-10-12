@@ -3,8 +3,6 @@ const response = require("../../utils/response");
 
 const getAll = async (req, res) => {
     try {
-        console.log("CATEGORY REQ USER:", req.user);
-        console.log("CATEGORY REQ CUSTOMER:", req.customer);
 
         const user = req.user || req.customer;
 

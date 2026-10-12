@@ -1,7 +1,7 @@
+// Sửa thông báo
 import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import customerAuthService from "../../services/customerAuth.service";
-import restaurantService from "../../services/restaurant.service";
+import customerService from "../../services/customer.service";
 import useCustomerAuth from "../../hooks/useCustomerAuth";
 import { getDeviceId } from "../../../utils/deviceId";
 import styles from "./Customer.module.css";
@@ -9,61 +9,80 @@ import styles from "./Customer.module.css";
 export default function CustomerWelcome() {
     const navigate = useNavigate();
     const { qrCode } = useParams();
+
     const [table, setTable] = useState(null);
-    const [restaurant, setRestaurant] = useState({ name: "Làng Tre", logo: "" });
+    const [restaurant, setRestaurant] = useState({
+        name: "Làng Tre",
+        logo: "",
+    });
+
     const [checkingAuth, setCheckingAuth] = useState(true);
     const [loadingGuest, setLoadingGuest] = useState(false);
+
     const { login } = useCustomerAuth();
 
-    const SERVER_URL = import.meta.env.VITE_API_URL?.replace(/\/api\/?$/, "") || "";
+    const SERVER_URL =
+        import.meta.env.VITE_API_URL?.replace(/\/api\/?$/, "") || "";
 
     const getImageUrl = (url) => {
         if (!url) return "";
-        if (url.startsWith("http://") || url.startsWith("https://")) return url;
+
+        if (url.startsWith("http://") || url.startsWith("https://")) {
+            return url;
+        }
+
         return `${SERVER_URL}${url}`;
     };
 
     useEffect(() => {
-        const loadRestaurant = async () => {
-            try {
-                const res = await restaurantService.getInfo();
-                const data = res?.message;
-                setRestaurant({ name: data?.name || "Làng Tre", logo: data?.logo || "" });
-            } catch (error) {
-                console.error("LOAD RESTAURANT ERROR:", error);
-            }
-        };
-
-        loadRestaurant();
-    }, []);
-
-    useEffect(() => {
         const load = async () => {
             try {
-                if (!qrCode) throw new Error("Không xác định được mã QR của bàn.");
+                if (!qrCode) {
+                    throw new Error("Không xác định được mã QR của bàn.");
+                }
 
-                const tableRes = await customerAuthService.getTable(qrCode);
+                const tableRes = await customerService.getTable(qrCode);
                 const currentTable = tableRes.data;
+
                 setTable(currentTable);
 
+                setRestaurant({
+                    name: currentTable.restaurantName || "Làng Tre",
+                    logo: currentTable.restaurantLogo || "",
+                });
+
                 const token = localStorage.getItem("customerToken");
-                if (!token) return;
+
+                if (!token) {
+                    return;
+                }
 
                 try {
-                    const profileRes = await customerAuthService.profile();
+                    const profileRes =
+                        await customerService.profile();
 
                     if (!profileRes?.data) {
                         localStorage.removeItem("customerToken");
                         return;
                     }
 
-                    navigate(`/customer/home/${currentTable.qrCode}`, { replace: true });
+                    navigate(
+                        `/customer/home/${currentTable.qrCode}`,
+                        { replace: true }
+                    );
                 } catch (authError) {
-                    console.error("CUSTOMER AUTH ERROR:", authError);
+                    console.error(
+                        "CUSTOMER AUTH ERROR:",
+                        authError
+                    );
+
                     localStorage.removeItem("customerToken");
                 }
             } catch (error) {
-                console.error("CUSTOMER WELCOME ERROR:", error.response?.data || error);
+                console.error(
+                    "CUSTOMER WELCOME ERROR:",
+                    error.response?.data || error
+                );
             } finally {
                 setCheckingAuth(false);
             }
@@ -81,19 +100,35 @@ export default function CustomerWelcome() {
         try {
             setLoadingGuest(true);
 
-            const res = await customerAuthService.guest({
+            const res = await customerService.guest({
                 deviceId: getDeviceId(),
                 tableId: qrCode,
             });
 
             login(res.data.token, res.data.customer);
-            localStorage.setItem("customerToken", res.data.token);
-            localStorage.setItem("customerTable", JSON.stringify(res.data.table));
 
-            navigate(`/customer/home/${res.data.table.qrCode}`, { replace: true });
+            localStorage.setItem(
+                "customerToken",
+                res.data.token
+            );
+
+            localStorage.setItem(
+                "customerTable",
+                JSON.stringify(res.data.table)
+            );
+
+            navigate(
+                `/customer/home/${res.data.table.qrCode}`,
+                { replace: true }
+            );
         } catch (error) {
             console.error("GUEST LOGIN ERROR:", error);
-            alert(error.response?.data?.message || error.message || "Không thể tiếp tục.");
+
+            alert(
+                error.response?.data?.message ||
+                error.message ||
+                "Không thể tiếp tục."
+            );
         } finally {
             setLoadingGuest(false);
         }

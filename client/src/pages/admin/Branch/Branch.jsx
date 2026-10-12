@@ -23,8 +23,6 @@ export default function Branch() {
 
             const res = await branchService.getAll();
 
-            console.log("BRANCH RESPONSE:", res);
-
             setBranches(res.data || []);
         } catch (err) {
             console.log(err);

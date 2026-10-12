@@ -1,10 +1,9 @@
 import api from "../api/axiosClient";
 
-const getInfo = async () => {
-    const res = await api.get("/restaurant");
-    return res.data;
+const getPublicInfo = restaurantId => {
+    return api.get(`/restaurant/${restaurantId}`);
 };
 
 export default {
-    getInfo,
+    getPublicInfo,
 };

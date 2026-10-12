@@ -35,10 +35,12 @@ export default function Login() {
                 break;
 
             case "CASHIER":
-            case "ORDER":
                 navigate("/branch/tables", {replace: true, });
                 break;
 
+            case "ORDER":
+                navigate("/order/tables", {replace: true, });
+                break;
             case "KITCHEN":
                 navigate("/kitchen", {replace: true, });
                 break;
@@ -75,7 +77,10 @@ export default function Login() {
         try {
             setLoading(true);
 
-            const result = await authService.login(formData);
+            const result = await authService.login({
+                ...formData,
+                baseUrl: window.location.origin,
+            });
 
             const { token, user } = result.data;
 

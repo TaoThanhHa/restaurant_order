@@ -1,16 +1,9 @@
-import {
-    ArrowLeft,
-    ChevronRight,
-    ReceiptText,
-} from "lucide-react";
+import { ArrowLeft, ChevronRight, ReceiptText,} from "lucide-react";
 
 import { useEffect, useMemo, useState } from "react";
-import {
-    useNavigate,
-    useParams,
-} from "react-router-dom";
+import { useNavigate, useParams,} from "react-router-dom";
 
-import customerAuthService from "../../../services/customerAuth.service";
+import customerService from "../../../services/customer.service";
 
 const STATUS = {
     PENDING: {
@@ -68,7 +61,7 @@ export default function CustomerOrderHistory() {
             try {
 
                 const res =
-                    await customerAuthService.profile();
+                    await customerService.profile();
 
                 setProfile(res.data);
 

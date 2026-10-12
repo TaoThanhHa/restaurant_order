@@ -54,9 +54,7 @@ const create = async (customerId, tableId, items, options = {}) => {
             customer.restaurantId !==
                 table.floor.branch.restaurantId
         ) {
-            throw new Error(
-                "Khách hàng không thuộc nhà hàng này."
-            );
+            throw new Error(  "Khách hàng không thuộc nhà hàng này." );
         }
 
         let session =
@@ -117,22 +115,17 @@ const create = async (customerId, tableId, items, options = {}) => {
 
         if (orderId) {
             order = activeOrders.find(
-                item =>
-                    item.id === Number(orderId)
+                item => item.id === Number(orderId)
             );
 
             if (!order) {
-                throw new Error(
-                    "Đơn hàng không tồn tại hoặc đã kết thúc."
-                );
+                throw new Error( "Đơn hàng không tồn tại hoặc đã kết thúc." );
             }
         } else if (newOrder) {
             order = null;
         } else if (customer.currentOrderId) {
             order = activeOrders.find(
-                item =>
-                    item.id ===
-                    customer.currentOrderId
+                item => item.id === customer.currentOrderId
             );
 
             if (!order) {
@@ -147,62 +140,38 @@ const create = async (customerId, tableId, items, options = {}) => {
             }
         }
 
-        if (
-            !order &&
-            !newOrder &&
-            activeOrders.length > 0
-        ) {
+        if (  !order && !newOrder &&  activeOrders.length > 0 ) {
             const orders =
                 activeOrders.map(
                     currentOrder => ({
                         id: currentOrder.id,
-                        orderCode:
-                            currentOrder.orderCode,
-                        totalAmount:
-                            currentOrder.totalAmount,
-                        createdAt:
-                            currentOrder.createdAt,
-                        customerCount:
-                            currentOrder.orderMembers
-                                .length,
-                        itemCount:
-                            currentOrder.orderItems.reduce(
-                                (total, item) =>
-                                    total +
-                                    Number(
-                                        item.quantity ||
-                                            0
-                                    ),
-                                0
-                            ),
+                        orderCode: currentOrder.orderCode,
+                        totalAmount: currentOrder.totalAmount,
+                        createdAt: currentOrder.createdAt,
+                        customerCount: currentOrder.orderMembers .length,
+                        itemCount: currentOrder.orderItems.reduce(
+                            (total, item) => total + Number( item.quantity || 0 ), 0
+                        ),
                         members:
                             currentOrder.orderMembers.map(
                                 member => ({
-                                    customerId:
-                                        member.customerId,
-                                    customerName:
-                                        member.customer
-                                            ?.name ||
-                                        "Khách"
+                                    customerId: member.customerId,
+                                    customerName: member.customer  ?.name || "Khách"
                                 })
                             )
                     })
                 );
 
-            const error = new Error(
-                `Bàn ${table.tableNumber} đang có ${orders.length} đơn.`
-            );
+            const error = new Error( `Bàn ${table.tableNumber} đang có ${orders.length} đơn.` );
 
             error.statusCode = 409;
-            error.code =
-                "ACTIVE_ORDER_EXISTS";
+            error.code = "ACTIVE_ORDER_EXISTS";
 
             error.data = {
                 table: {
                     id: table.id,
                     qrCode: table.qrCode,
-                    tableNumber:
-                        table.tableNumber
+                    tableNumber: table.tableNumber
                 },
                 orders
             };
@@ -213,16 +182,13 @@ const create = async (customerId, tableId, items, options = {}) => {
         if (!order) {
             order = await tx.order.create({
                 data: {
-                    orderCode:
-                        `OD${Date.now()}`,
+                    orderCode: `OD${Date.now()}`,
                     sessionId: session.id,
-                    branchId:
-                        table.floor.branchId,
+                    branchId: table.floor.branchId,
                     orderType: "DINE_IN",
                     status: "PENDING",
                     totalAmount: 0,
-                    createdByCustomerId:
-                        customerId
+                    createdByCustomerId: customerId
                 },
                 include: {
                     orderItems: true,
@@ -271,19 +237,15 @@ const create = async (customerId, tableId, items, options = {}) => {
                 !item.quantity ||
                 Number(item.quantity) <= 0
             ) {
-                throw new Error(
-                    "Số lượng món không hợp lệ."
-                );
+                throw new Error( "Số lượng món không hợp lệ." );
             }
 
             const branchFood =
                 await tx.branchFood.findUnique({
                     where: {
                         branchId_foodId: {
-                            branchId:
-                                table.floor.branchId,
-                            foodId:
-                                Number(item.foodId)
+                            branchId: table.floor.branchId,
+                            foodId:  Number(item.foodId)
                         }
                     },
                     include: {
@@ -298,33 +260,23 @@ const create = async (customerId, tableId, items, options = {}) => {
             }
 
             if (
-                branchFood.status !==
-                "AVAILABLE"
+                branchFood.status !== "AVAILABLE"
             ) {
-                throw new Error(
-                    `Món "${branchFood.food.name}" hiện không bán.`
-                );
+                throw new Error( `Món "${branchFood.food.name}" hiện không bán.` );
             }
 
             await tx.orderItem.create({
                 data: {
                     orderId: order.id,
-                    foodId:
-                        branchFood.food.id,
-                    quantity:
-                        Number(item.quantity),
-                    price:
-                        branchFood.food.price,
+                    foodId:  branchFood.food.id,
+                    quantity: Number(item.quantity),
+                    price: branchFood.food.price,
                     note: item.note || null,
-                    status: "PENDING"
+                    status: "PREPARING"
                 }
             });
 
-            total +=
-                Number(
-                    branchFood.food.price
-                ) *
-                Number(item.quantity);
+            total += Number( branchFood.food.price ) * Number(item.quantity);
         }
 
         const updatedOrder =
@@ -334,7 +286,7 @@ const create = async (customerId, tableId, items, options = {}) => {
                 },
                 data: {
                     totalAmount: total,
-                    status: "PENDING"
+                    status: "PREPARING"
                 },
                 include: {
                     orderItems: {
@@ -361,27 +313,12 @@ const create = async (customerId, tableId, items, options = {}) => {
         return {
             order: updatedOrder,
             tableId: table.id,
-            tableNumber:
-                table.tableNumber,
-            branchId:
-                table.floor.branchId,
+            tableNumber: table.tableNumber,
+            branchId: table.floor.branchId,
             tableChanged
         };
     });
 
-    console.log(
-        "CUSTOMER ORDER SSE:",
-        {
-            branchId: result.branchId,
-            tableId: result.tableId,
-            tableNumber:
-                result.tableNumber,
-            tableChanged:
-                result.tableChanged,
-            orderId:
-                result.order.id
-        }
-    );
 
     if (result.tableChanged) {
         sseService.sendToBranch(
@@ -389,8 +326,7 @@ const create = async (customerId, tableId, items, options = {}) => {
             "table.updated",
             {
                 tableId: result.tableId,
-                tableNumber:
-                    result.tableNumber,
+                tableNumber:  result.tableNumber,
                 status: "OCCUPIED"
             }
         );
@@ -400,11 +336,9 @@ const create = async (customerId, tableId, items, options = {}) => {
         result.branchId,
         "order.updated",
         {
-            orderId:
-                result.order.id,
-            tableId:
-                result.tableId,
-            status: "PENDING"
+            orderId: result.order.id,
+            tableId: result.tableId,
+            status: "PREPARING"
         }
     );
 

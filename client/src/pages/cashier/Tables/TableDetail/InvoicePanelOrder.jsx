@@ -5,7 +5,6 @@ import Button from "../../../../components/Button/Button";
 import NotiModal from "../../../../components/NotiModal/NotiModal";
 import orderService from "../../../../services/order.service";
 import customerOrderService from "../../../../services/customerOrder.service";
-import cartService from "../../../../services/cart.service";
 import CustomerMergeOrderModal from "../../../customer/Order/CustomerMergeOrderModal";
 
 export default function InvoicePanelOrder({
@@ -15,12 +14,15 @@ export default function InvoicePanelOrder({
     order,
     reload,
     onBack,
+    onSuccess,
     mode = "cashier",
     qrCode,
 }) {
     const [sending, setSending] = useState(false);
     const [openMerge, setOpenMerge] = useState(false);
     const [existingOrders, setExistingOrders] = useState([]);
+    const [showPreparingWarning, setShowPreparingWarning] = useState(false);
+    const [pendingCustomerOrder, setPendingCustomerOrder] = useState(null);
     const [notiModal, setNotiModal] = useState({
         open: false,
         type: "success",
@@ -29,122 +31,58 @@ export default function InvoicePanelOrder({
     });
 
     const safeCart = Array.isArray(cart) ? cart : [];
+
     const total = safeCart.reduce(
-        (sum, item) => sum + Number(item.price || 0) * Number(item.quantity || 0),
+        (sum, item) =>
+            sum +
+            Number(item.price || 0) *
+            Number(item.quantity || 0),
         0
     );
 
-    const updateCart = res => {
-        const cartData = res?.data || res;
-        const items = cartData?.items || [];
-
+    const increase = item => {
         setCart(
-            items.map(item => ({
-                id: item.food.id,
-                cartItemId: item.id,
-                foodId: item.food.id,
-                name: item.food.name,
-                image: item.food.image
-                    ? import.meta.env.VITE_API_URL.replace("/api", "") + item.food.image
-                    : "https://placehold.co/400x400?text=Food",
-                price: Number(item.food.price),
-                quantity: item.quantity,
-                note: item.note || "",
-            }))
+            safeCart.map(x =>
+                x.id === item.id
+                    ? {
+                        ...x,
+                        quantity: x.quantity + 1,
+                    }
+                    : x
+            )
         );
     };
 
-    const increase = async item => {
-        if (mode !== "customer") {
-            setCart(
-                safeCart.map(x =>
-                    x.id === item.id ? { ...x, quantity: x.quantity + 1 } : x
-                )
-            );
-            return;
-        }
-
-        try {
-            setSending(true);
-            const guestToken = localStorage.getItem("guestToken");
-            const res = await cartService.updateItem(item.cartItemId, {
-                guestToken,
-                quantity: item.quantity + 1,
-            });
-            updateCart(res);
-        } catch (err) {
-            setNotiModal({
-                open: true,
-                type: "error",
-                title: "Không thể cập nhật",
-                message: err.response?.data?.message || err.message || "Không thể tăng số lượng.",
-            });
-        } finally {
-            setSending(false);
-        }
-    };
-
-    const decrease = async item => {
-        if (mode !== "customer") {
-            setCart(
-                safeCart
-                    .map(x =>
-                        x.id === item.id ? { ...x, quantity: x.quantity - 1 } : x
-                    )
-                    .filter(x => x.quantity > 0)
-            );
-            return;
-        }
-
+    const decrease = item => {
         if (item.quantity <= 1) {
-            await remove(item);
+            setCart(
+                safeCart.filter(x => x.id !== item.id)
+            );
             return;
         }
 
-        try {
-            setSending(true);
-            const guestToken = localStorage.getItem("guestToken");
-            const res = await cartService.updateItem(item.cartItemId, {
-                guestToken,
-                quantity: item.quantity - 1,
-            });
-            updateCart(res);
-        } catch (err) {
-            setNotiModal({
-                open: true,
-                type: "error",
-                title: "Không thể cập nhật",
-                message: err.response?.data?.message || err.message || "Không thể giảm số lượng.",
-            });
-        } finally {
-            setSending(false);
-        }
+        setCart(
+            safeCart.map(x =>
+                x.id === item.id
+                    ? {
+                        ...x,
+                        quantity: x.quantity - 1,
+                    }
+                    : x
+            )
+        );
     };
 
-    const remove = async item => {
-        if (mode !== "customer") {
-            setCart(safeCart.filter(x => x.id !== item.id));
-            return;
-        }
-
-        try {
-            setSending(true);
-            const guestToken = localStorage.getItem("guestToken");
-            const res = await cartService.removeItem(item.cartItemId, guestToken);
-            updateCart(res);
-        } catch (err) {
-            setNotiModal({
-                open: true,
-                type: "error",
-                title: "Không thể xóa món",
-                message: err.response?.data?.message || err.message || "Không thể xóa món khỏi giỏ.",
-            });
-        } finally {
-            setSending(false);
-        }
+    const remove = item => {
+        setCart(
+            safeCart.filter(x => x.id !== item.id)
+        );
     };
 
-    const createCustomerOrder = async ({ orderId = null, newOrder = false } = {}) => {
+    const createCustomerOrder = async ({
+        orderId = null,
+        newOrder = false,
+    } = {}) => {
         if (!safeCart.length) {
             setNotiModal({
                 open: true,
@@ -160,7 +98,8 @@ export default function InvoicePanelOrder({
                 open: true,
                 type: "error",
                 title: "Không xác định được bàn",
-                message: "Không thể xác định bàn hiện tại. Vui lòng quét lại mã QR.",
+                message:
+                    "Không thể xác định bàn hiện tại. Vui lòng quét lại mã QR.",
             });
             return;
         }
@@ -174,11 +113,18 @@ export default function InvoicePanelOrder({
                 note: item.note || null,
             }));
 
-            const payload = { tableId: qrCode, items };
-            if (orderId) payload.orderId = orderId;
-            if (newOrder) payload.newOrder = true;
+            const payload = {
+                tableId: qrCode,
+                items,
+            };
 
-            console.log("CUSTOMER ORDER PAYLOAD:", payload);
+            if (orderId) {
+                payload.orderId = orderId;
+            }
+
+            if (newOrder) {
+                payload.newOrder = true;
+            }
 
             const res = await customerOrderService.create(payload);
 
@@ -186,7 +132,19 @@ export default function InvoicePanelOrder({
             setOpenMerge(false);
             setExistingOrders([]);
 
-            if (reload) await reload();
+            if (reload) {
+                await reload();
+            }
+            if (mode === "order") {
+                setNotiModal({
+                    open: true,
+                    type: "success",
+                    title: "Thêm món thành công",
+                    message: "Các món đã được thêm vào đơn hàng.",
+                });
+            } else if (onBack) {
+                onBack();
+            }
 
             setNotiModal({
                 open: true,
@@ -201,12 +159,18 @@ export default function InvoicePanelOrder({
 
             return res;
         } catch (err) {
-            console.error("CUSTOMER ORDER ERROR:", err.response?.data || err);
+            console.error(
+                "CUSTOMER ORDER ERROR:",
+                err.response?.data || err
+            );
 
             const status = err.response?.status;
             const data = err.response?.data;
 
-            if (status === 409 && data?.code === "ACTIVE_ORDER_EXISTS") {
+            if (
+                status === 409 &&
+                data?.code === "ACTIVE_ORDER_EXISTS"
+            ) {
                 const orders = data?.data?.orders || [];
 
                 if (!orders.length) {
@@ -214,7 +178,9 @@ export default function InvoicePanelOrder({
                         open: true,
                         type: "warning",
                         title: "Bàn đang có đơn",
-                        message: data?.message || "Bàn hiện đang có đơn hàng.",
+                        message:
+                            data?.message ||
+                            "Bàn hiện đang có đơn hàng.",
                     });
                     return;
                 }
@@ -228,20 +194,53 @@ export default function InvoicePanelOrder({
                 open: true,
                 type: "error",
                 title: "Không thể gửi món",
-                message: data?.message || err.message || "Đã xảy ra lỗi khi gửi món. Vui lòng thử lại.",
+                message:
+                    data?.message ||
+                    err.message ||
+                    "Đã xảy ra lỗi khi gửi món. Vui lòng thử lại.",
             });
         } finally {
             setSending(false);
         }
     };
 
+    const submitCustomerOrderWithWarning = async (options = {}) => {
+        const preparingItems = (order?.items || []).filter(
+            item => item.status === "PREPARING"
+        );
+
+        if (preparingItems.length > 0) {
+            setPendingCustomerOrder(options);
+            setShowPreparingWarning(true);
+            return;
+        }
+
+        await createCustomerOrder(options);
+    };
+
+    const confirmPreparingWarning = async () => {
+        if (!pendingCustomerOrder) return;
+
+        const options = pendingCustomerOrder;
+
+        setShowPreparingWarning(false);
+        setPendingCustomerOrder(null);
+
+        await createCustomerOrder(options);
+    };
+
     const handleMergeOrder = async selectedOrder => {
         if (!selectedOrder) return;
-        await createCustomerOrder({ orderId: selectedOrder.id });
+
+        await submitCustomerOrderWithWarning({
+            orderId: selectedOrder.id,
+        });
     };
 
     const handleNewOrder = async () => {
-        await createCustomerOrder({ newOrder: true });
+        await submitCustomerOrderWithWarning({
+            newOrder: true,
+        });
     };
 
     const handleSubmit = async () => {
@@ -256,7 +255,7 @@ export default function InvoicePanelOrder({
         }
 
         if (mode === "customer") {
-            await createCustomerOrder();
+            await submitCustomerOrderWithWarning();
             return;
         }
 
@@ -265,14 +264,14 @@ export default function InvoicePanelOrder({
                 open: true,
                 type: "error",
                 title: "Không xác định được đơn",
-                message: "Vui lòng chọn đơn hàng trước khi thêm món.",
+                message:
+                    "Vui lòng chọn đơn hàng trước khi thêm món.",
             });
             return;
         }
 
         try {
             setSending(true);
-            console.log("ADD FOOD TO ORDER:", { orderId: order.id, cart: safeCart });
 
             for (const item of safeCart) {
                 await orderService.addItem(order.id, {
@@ -283,16 +282,28 @@ export default function InvoicePanelOrder({
             }
 
             setCart([]);
-            if (reload) await reload();
-            if (onBack) onBack();
+
+            if (reload) {
+                await reload();
+            }
+
+            if (onBack) {
+                onBack();
+            }
         } catch (err) {
-            console.error("BRANCH ORDER ERROR:", err.response?.data || err);
+            console.error(
+                "BRANCH ORDER ERROR:",
+                err.response?.data || err
+            );
 
             setNotiModal({
                 open: true,
                 type: "error",
                 title: "Không thể thêm món",
-                message: err.response?.data?.message || err.message || "Đã xảy ra lỗi khi thêm món.",
+                message:
+                    err.response?.data?.message ||
+                    err.message ||
+                    "Đã xảy ra lỗi khi thêm món.",
             });
         } finally {
             setSending(false);
@@ -305,9 +316,16 @@ export default function InvoicePanelOrder({
                 <div className="flex items-center justify-between">
                     <div>
                         <h2 className="text-xl font-bold">
-                            {mode === "customer" ? "Giỏ hàng" : order ? "Thêm món" : "Tạo Order"}
+                            {mode === "customer"
+                                ? "Giỏ hàng"
+                                : order
+                                    ? "Thêm món"
+                                    : "Tạo Order"}
                         </h2>
-                        <p className="text-sm text-gray-500">{safeCart.length} món đã chọn</p>
+
+                        <p className="text-sm text-gray-500">
+                            {safeCart.length} món đã chọn
+                        </p>
                     </div>
 
                     {mode === "customer" && (
@@ -324,17 +342,28 @@ export default function InvoicePanelOrder({
 
             <div className="flex-1 overflow-y-auto p-5">
                 {safeCart.length === 0 && (
-                    <div className="text-center text-gray-400">Chưa có món nào.</div>
+                    <div className="text-center text-gray-400">
+                        Chưa có món nào.
+                    </div>
                 )}
 
                 {safeCart.map(item => (
-                    <div key={item.id} className="mb-3 rounded-lg border p-2">
+                    <div
+                        key={item.id}
+                        className="mb-3 rounded-lg border p-2"
+                    >
                         <div className="flex gap-3">
                             <div className="flex flex-1 text-left">
                                 <div className="flex-1">
-                                    <div className="font-semibold">{item.name}</div>
+                                    <div className="font-semibold">
+                                        {item.name}
+                                    </div>
+
                                     <div className="text-sm text-gray-500">
-                                        {Number(item.price || 0).toLocaleString()}đ
+                                        {Number(
+                                            item.price || 0
+                                        ).toLocaleString()}
+                                        đ
                                     </div>
 
                                     {item.note && (
@@ -349,24 +378,34 @@ export default function InvoicePanelOrder({
                                         <Button
                                             className="!bg-white !text-black"
                                             disabled={sending}
-                                            onClick={() => decrease(item)}
+                                            onClick={() =>
+                                                decrease(item)
+                                            }
                                         >
                                             <Minus size={12} />
                                         </Button>
 
-                                        <span className="w-8 text-center">{item.quantity}</span>
+                                        <span className="w-8 text-center">
+                                            {item.quantity}
+                                        </span>
 
                                         <Button
                                             disabled={sending}
                                             className="!bg-white !text-black"
-                                            onClick={() => increase(item)}
+                                            onClick={() =>
+                                                increase(item)
+                                            }
                                         >
                                             <Plus size={12} />
                                         </Button>
                                     </div>
 
                                     <div className="text-center font-semibold text-blue-600">
-                                        {(Number(item.price || 0) * Number(item.quantity || 0)).toLocaleString()}đ
+                                        {(
+                                            Number(item.price || 0) *
+                                            Number(item.quantity || 0)
+                                        ).toLocaleString()}
+                                        đ
                                     </div>
                                 </div>
                             </div>
@@ -385,11 +424,20 @@ export default function InvoicePanelOrder({
 
             <div className="border-t p-3">
                 <div className="mb-4 flex justify-between">
-                    <span className="font-semibold">Tổng tiền</span>
-                    <span className="font-bold text-red-500">{total.toLocaleString()}đ</span>
+                    <span className="font-semibold">
+                        Tổng tiền
+                    </span>
+
+                    <span className="font-bold text-red-500">
+                        {total.toLocaleString()}đ
+                    </span>
                 </div>
 
-                <Button className="w-full" disabled={sending} onClick={handleSubmit}>
+                <Button
+                    className="w-full"
+                    disabled={sending}
+                    onClick={handleSubmit}
+                >
                     {sending
                         ? "Đang xử lý..."
                         : mode === "customer"
@@ -407,9 +455,75 @@ export default function InvoicePanelOrder({
                     onMerge={handleMergeOrder}
                     onNewOrder={handleNewOrder}
                     onClose={() => {
-                        if (!sending) setOpenMerge(false);
+                        if (!sending) {
+                            setOpenMerge(false);
+                        }
                     }}
                 />
+            )}
+
+            {showPreparingWarning && (
+                <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 p-4">
+                    <div className="w-full max-w-md rounded-xl bg-white p-5 shadow-xl">
+                        <div className="mb-3 flex items-center gap-3">
+                            <div className="flex h-11 w-11 items-center justify-center rounded-full bg-orange-100 text-orange-600">
+                                <span className="text-xl">!</span>
+                            </div>
+
+                            <h3 className="text-lg font-bold text-gray-900">
+                                Bàn đang có món được chế biến
+                            </h3>
+                        </div>
+
+                        <p className="mb-3 text-sm text-gray-600">
+                            Một số món của đơn trước vẫn đang được chế biến.
+                            Vui lòng kiểm tra để tránh gửi nhầm món.
+                        </p>
+
+                        <div className="mb-4 max-h-48 space-y-2 overflow-y-auto rounded-lg bg-orange-50 p-3">
+                            {(order?.items || [])
+                                .filter(item => item.status === "PREPARING")
+                                .map(item => (
+                                    <div
+                                        key={item.id}
+                                        className="flex items-center justify-between gap-3 text-sm"
+                                    >
+                                        <span className="font-medium text-gray-800">
+                                            {item.food?.name || item.foodName || "Món ăn"}
+                                        </span>
+
+                                        <span className="shrink-0 font-semibold text-orange-700">
+                                            × {item.quantity}
+                                        </span>
+                                    </div>
+                                ))}
+                        </div>
+
+                        <p className="mb-5 text-sm text-gray-700">
+                            Bạn vẫn muốn gửi các món trong giỏ hàng chứ?
+                        </p>
+
+                        <div className="flex gap-3">
+                            <Button
+                                className="flex-1 !bg-gray-100 !text-gray-700"
+                                onClick={() => {
+                                    setShowPreparingWarning(false);
+                                    setPendingCustomerOrder(null);
+                                }}
+                            >
+                                Quay lại
+                            </Button>
+
+                            <Button
+                                className="flex-1"
+                                disabled={sending}
+                                onClick={confirmPreparingWarning}
+                            >
+                                Vẫn gửi món
+                            </Button>
+                        </div>
+                    </div>
+                </div>
             )}
 
             <NotiModal
@@ -418,6 +532,9 @@ export default function InvoicePanelOrder({
                 title={notiModal.title}
                 message={notiModal.message}
                 onClose={() => {
+                    const wasSuccess =
+                        notiModal.type === "success";
+
                     setNotiModal({
                         open: false,
                         type: "success",
@@ -425,7 +542,13 @@ export default function InvoicePanelOrder({
                         message: "",
                     });
 
-                    if (notiModal.type === "success" && onBack) onBack();
+                    if (wasSuccess) {
+                        if (mode === "order" && onSuccess) {
+                            onSuccess();
+                        } else if (onBack) {
+                            onBack();
+                        }
+                    }
                 }}
             />
         </div>

@@ -1,8 +1,5 @@
-import {
-    ArrowLeft,
-    Lock,
-} from "lucide-react";
-
+// Sửa thông báo
+import { ArrowLeft, Lock,} from "lucide-react";
 import { useState } from "react";
 
 import Button from "../../../components/Button/Button";

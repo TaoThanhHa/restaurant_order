@@ -1,17 +1,14 @@
+// Sửa thông báo
 import { ArrowLeft, Lock, Mail, Phone, User, } from "lucide-react";
-
 import { useState } from "react";
-import {
-    useNavigate,
-    useParams,
-} from "react-router-dom";
+import { useNavigate, useParams, } from "react-router-dom";
 
 import styles from "./Customer.module.css";
 
 import Button from "../../components/Button/Button";
 import Input from "../../components/Input/Input";
 
-import customerAuthService from "../../services/customerAuth.service";
+import customerService from "../../services/customer.service";
 import { getDeviceId } from "../../../utils/deviceId";
 
 
@@ -82,7 +79,7 @@ export default function CustomerRegister() {
 
         try {
             setLoading(true);
-            const res = await customerAuthService.register({
+            const res = await customerService.register({
                     name: form.name.trim(),
                     phone: form.phone.trim(),
                     email: form.email.trim().toLowerCase(),

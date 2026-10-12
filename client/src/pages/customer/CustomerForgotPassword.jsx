@@ -5,7 +5,7 @@ import { useNavigate, useParams } from "react-router-dom";
 import Button from "../../components/Button/Button";
 import Input from "../../components/Input/Input";
 import NotiModal from "../../components/NotiModal/NotiModal";
-import customerAuthService from "../../services/customerAuth.service";
+import customerService from "../../services/customer.service";
 
 import styles from "./Customer.module.css";
 
@@ -49,7 +49,7 @@ export default function CustomerForgotPassword() {
 
         try {
             setLoading(true);
-            await customerAuthService.forgotPassword(form.email.trim());
+            await customerService.forgotPassword(form.email.trim());
 
             showNoti(
                 "success",
@@ -78,7 +78,7 @@ export default function CustomerForgotPassword() {
 
         try {
             setLoading(true);
-            await customerAuthService.verifyOtp({
+            await customerService.verifyOtp({
                 email: form.email.trim(),
                 otp: form.otp.trim(),
             });
@@ -137,7 +137,7 @@ export default function CustomerForgotPassword() {
 
         try {
             setLoading(true);
-            await customerAuthService.resetPassword({
+            await customerService.resetPassword({
                 email: form.email.trim(),
                 otp: form.otp.trim(),
                 password: form.password,

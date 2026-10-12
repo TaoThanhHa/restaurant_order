@@ -1,9 +1,8 @@
+// Sửa thông báo
 import { ArrowLeft, User, Phone, Mail, Lock, ChevronRight, Pencil, LogOut, ReceiptText, Camera, Check, X,} from "lucide-react";
-
 import { useEffect, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 
-import customerAuthService from "../../../services/customerAuth.service";
 import customerService from "../../../services/customer.service";
 import uploadService from "../../../services/upload.service";
 
@@ -54,7 +53,7 @@ export default function CustomerAccount() {
     useEffect(() => {
         const loadProfile = async () => {
             try {
-                const res = await customerAuthService.profile();
+                const res = await customerService.profile();
                 const data = res.data;
 
                 setProfile(data);

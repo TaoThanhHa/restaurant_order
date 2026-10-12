@@ -3,7 +3,7 @@ const response = require("../../utils/response");
 
 const login = async (req, res) => {
     try {
-        const { email, password } = req.body;
+        const { email, password, baseUrl } = req.body;
 
         if (!email || !password) {
             return response.error(
@@ -13,7 +13,19 @@ const login = async (req, res) => {
             );
         }
 
-        const result = await authService.login(email, password);
+        if (!baseUrl) {
+            return response.error(
+                res,
+                "Không xác định được website nhà hàng.",
+                400
+            );
+        }
+
+        const result = await authService.login(
+            email,
+            password,
+            baseUrl
+        );
 
         return response.success(
             res,
@@ -26,7 +38,7 @@ const login = async (req, res) => {
         return response.error(
             res,
             error.message,
-            401
+            error.statusCode || 401
         );
     }
 };

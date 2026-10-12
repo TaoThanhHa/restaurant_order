@@ -60,6 +60,19 @@ const addItem = async (req, res) => {
     }
 };
 
+const getPreparingItems = async (req, res, next) => {
+    try {
+        const items = await orderService.getPreparingItems(
+            req.params.orderId,
+            req.user
+        );
+
+        res.json({ items });
+    } catch (error) {
+        next(error);
+    }
+};
+
 const removeItem = async (req, res) => {
     try {
         const data = await orderService.removeItem(
@@ -320,6 +333,7 @@ module.exports = {
     getById,
     getActiveOrderByTable,
     addItem,
+    getPreparingItems,
     confirmItems,
     updateItem,
     removeItem,

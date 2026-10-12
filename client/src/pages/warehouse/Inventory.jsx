@@ -209,7 +209,6 @@ export default function Inventory() {
                 </div>
             </div>
 
-            {/* ALERT */}
             {error && (
                 <div className="mb-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-red-600 flex items-center justify-between">
                     <span>{error}</span>

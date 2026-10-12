@@ -138,7 +138,7 @@ export default function PaymentQRModal({
                                         Nội dung chuyển khoản
                                     </label>
 
-                                    <div className="flex gap-2">
+                                    {/* <div className="flex gap-2">
                                         <div className="flex-1 rounded-lg border bg-gray-50 px-3 py-2 font-semibold">
                                             {payment.paymentCode || "-"}
                                         </div>
@@ -149,7 +149,7 @@ export default function PaymentQRModal({
                                         >
                                             <Copy size={18} />
                                         </Button>
-                                    </div>
+                                    </div> */}
                                 </div>
                             </div>
 
@@ -204,11 +204,11 @@ export default function PaymentQRModal({
                             </div>*/}
                         </div>
 
-                        <div className="mt-6 rounded-lg border border-yellow-300 bg-yellow-50 p-4 text-sm text-yellow-800">
+                       {/*  <div className="mt-6 rounded-lg border border-yellow-300 bg-yellow-50 p-4 text-sm text-yellow-800">
                             <strong>Lưu ý:</strong> Chỉ xác nhận thanh toán sau
                             khi kiểm tra giao dịch đã thực sự vào tài khoản nhà
                             hàng.
-                        </div>
+                        </div> */}
                     </div>
 
                     <div className="flex gap-3 border-t p-5">
@@ -221,7 +221,7 @@ export default function PaymentQRModal({
                             Đóng
                         </Button>
 
-                        <Button
+                        {/* <Button
                             type="button"
                             className="flex-1"
                             onClick={handleConfirmPayment}
@@ -235,7 +235,7 @@ export default function PaymentQRModal({
                             {confirming
                                 ? "Đang xác nhận..."
                                 : "Đã nhận tiền - Xác nhận"}
-                        </Button>
+                        </Button> */}
                     </div>
                 </div>
             </div>

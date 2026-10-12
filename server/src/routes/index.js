@@ -5,7 +5,6 @@ const router = express.Router();
 router.use("/auth", require("../components/Auth/auth.routes"));
 router.use("/events", require("../components/Events/event.routes"));
 
-router.use("/customer", require("../components/CustomerAuth/customerAuth.route"));
 router.use( "/customer/orders",require("../components/CustomerOrder/customerOrder.routes"));
 router.use("/customer-admin", require("../components/CustomerAdmin/customerAdmin.route"));
 
@@ -29,5 +28,6 @@ router.use("/employee", require("../components/Staff/staff.routes"));
 router.use("/service-requests", require("../components/ServiceRequest/serviceRequest.routes"));
 router.use("/inventory", require("../components/Inventory/inventory.routes"));
 router.use("/kitchen", require("../components/Kitchenn/kitchen.route"));
+router.use("/webhooks/sepay", require("../components/SepayWebhook/sepayWebhook.route"));
 
 module.exports = router;

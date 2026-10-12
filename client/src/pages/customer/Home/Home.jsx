@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { UtensilsCrossed, BellRing, CheckCircle, Clock, X } from "lucide-react";
 
-import customerAuthService from "../../../services/customerAuth.service";
+import customerService from "../../../services/customer.service";
 import serviceRequestService from "../../../services/serviceRequest.service";
 import HomeHeader from "../../../components/Customer/HomeHeader";
 import ActionCard from "../../../components/Customer/ActionCard";
@@ -32,7 +32,7 @@ export default function Home() {
 
     const loadProfile = useCallback(async (showStatusNotification = true) => {
         try {
-            const profileRes = await customerAuthService.profile();
+            const profileRes = await customerService.profile();
             const newProfile = profileRes.data;
             const newOrders = newProfile?.orderMembers?.map(member => member.order)?.filter(Boolean) || [];
             const newOrderMap = new Map(newOrders.map(order => [order.id, order.status]));
@@ -100,7 +100,7 @@ export default function Home() {
             try {
                 if (!qrCode) throw new Error("Không xác định được mã QR của bàn.");
 
-                const profileRes = await customerAuthService.profile();
+                const profileRes = await customerService.profile();
                 if (cancelled) return;
 
                 const initialProfile = profileRes.data;
@@ -109,7 +109,7 @@ export default function Home() {
                 const initialOrders = initialProfile?.orderMembers?.map(member => member.order)?.filter(Boolean) || [];
                 previousOrdersRef.current = new Map(initialOrders.map(order => [order.id, order.status]));
 
-                const tableRes = await customerAuthService.getTable(qrCode);
+                const tableRes = await customerService.getTable(qrCode);
                 if (cancelled) return;
 
                 setTable(tableRes.data);

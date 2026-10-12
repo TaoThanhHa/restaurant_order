@@ -83,9 +83,6 @@ const getAll = async (user) => {
           },
         };
 
-  console.log("GET FLOORS USER:", user);
-  console.log("GET FLOORS WHERE:", where);
-
   const floors = await prisma.floor.findMany({
     where,
     include: {
@@ -100,8 +97,6 @@ const getAll = async (user) => {
       floorNumber: "asc",
     },
   });
-
-  console.log("GET FLOORS RESULT:", floors);
 
   return floors;
 };

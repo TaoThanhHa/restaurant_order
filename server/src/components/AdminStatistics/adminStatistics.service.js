@@ -413,18 +413,7 @@ const getFoodTrend = async (
 };
 
 const getUnsoldFoods = async (scope, currentPayments = []) => {
-    console.log("UNSOLD SCOPE:", scope);
-
     const foods = await getSellableFoods(scope);
-
-    console.log(
-        "UNSOLD FOODS:",
-        foods.map(food => ({
-            id: food.id,
-            name: food.name
-        }))
-    );
-
     const foodMap = buildFoodMap(currentPayments);
 
     return foods

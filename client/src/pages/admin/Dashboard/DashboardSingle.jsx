@@ -41,7 +41,7 @@ export default function Dashboard() {
         { 
             title: "Quản lý khách hàng thành viên",
             description: "Quản lý thông tin khách hàng đã đăng ký thành viên.",
-            path: "/customers",
+            path: "/customer",
             icon: <Users size={40}/>,
         },
     ];

@@ -2,11 +2,11 @@ const express = require("express");
 const router = express.Router();
 
 const auth = require("../../middlewares/auth.middleware");
-const authorize = require("../../middlewares/role.middleware");
+const role = require("../../middlewares/role.middleware");
 
 const controller = require("./inventory.controller");
 
-router.use(auth, authorize("WAREHOUSE"));
+router.use(auth, role("WAREHOUSE"));
 router.get("/ingredients", controller.getAllIngredients);
 router.get("/ingredients/:id", controller.getIngredientById);
 router.post("/ingredients", controller.createIngredient);

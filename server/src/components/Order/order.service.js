@@ -214,12 +214,12 @@ const create = async (data, user) => {
 
     const order = await prisma.order.create({
         data: {
-            orderCode: `B-${Date.now()}`,
+            orderCode: `OB-${Date.now()}`,
             branchId,
             sessionId: session.id,
             createdByUserId: Number(userId || user?.id),
             createdByCustomerId: customer.id,
-            status: "PENDING",
+            status: "PREPARING",
             orderType: "DINE_IN",
             totalAmount: 0,
         },
@@ -311,18 +311,48 @@ const addItem = async (orderId, data, user) => {
             quantity: Number(quantity),
             price: food.price,
             note: note || null,
-            status: "PENDING",
+            status: "PREPARING",
         },
         include: { food: true },
     });
 
     await prisma.order.update({
         where: { id },
-        data: { status: "PENDING" },
+        data: { status: "PREPARING" },
     });
 
     await notifyOrderCustomers(id);
     return item;
+};
+
+const getPreparingItems = async (orderId, user) => {
+    const id = Number(orderId);
+    const order = await prisma.order.findUnique({
+        where: { id },
+        include: {
+            items: {
+                where: { status: "PREPARING" },
+                include: {
+                    food: {
+                        select: { id: true, name: true },
+                    },
+                },
+            },
+        },
+    });
+
+    if (!order) throw new Error("Đơn hàng không tồn tại.");
+
+    await checkBranchAccess(order.branchId, user);
+
+    return order.items.map((item) => ({
+        id: item.id,
+        foodId: item.foodId,
+        foodName: item.food.name,
+        quantity: item.quantity,
+        note: item.note,
+        status: item.status,
+    }));
 };
 
 const confirmItems = async (orderId, user) => {
@@ -864,13 +894,9 @@ const createTakeAway = async (data, user) => {
         const orderItems = [];
 
         for (const item of data.items) {
-            const food = foods.find(
-                food => food.id === Number(item.foodId)
-            );
-
+            const food = foods.find( food => food.id === Number(item.foodId) );
             const price = Number(food.price);
             const quantity = Number(item.quantity);
-
             totalAmount += price * quantity;
 
             orderItems.push({
@@ -1094,6 +1120,7 @@ const getHistory = async user => {
     });
 };
 
+//Tính năng gộp đơn trong 1 bàn
 const mergeOrders = async ({
     targetOrderId,
     sourceOrderIds,
@@ -1109,9 +1136,7 @@ const mergeOrders = async ({
     }
 
     if (!sourceOrderIds.length) {
-        throw new Error(
-            "Vui lòng chọn ít nhất một đơn để gộp"
-        );
+        throw new Error( "Vui lòng chọn ít nhất một đơn để gộp" );
     }
 
     const result = await prisma.$transaction(
@@ -1132,26 +1157,16 @@ const mergeOrders = async ({
                     },
                 });
 
-            if (
-                orders.length !==
-                sourceOrderIds.length + 1
-            ) {
-                throw new Error(
-                    "Có đơn không tồn tại"
-                );
+            if ( orders.length !== sourceOrderIds.length + 1 ) {
+                throw new Error( "Có đơn không tồn tại" );
             }
 
             for (const order of orders) {
-                await checkBranchAccess(
-                    order.branchId,
-                    user
-                );
+                await checkBranchAccess( order.branchId, user );
             }
 
             const targetOrder = orders.find(
-                order =>
-                    order.id ===
-                    targetOrderId
+                order => order.id === targetOrderId
             );
 
             if (!targetOrder) {
@@ -1233,8 +1248,7 @@ const mergeOrders = async ({
             const totalAmount =
                 mergedItems
                     .filter(
-                        item =>
-                            item.status !==
+                        item => item.status !==
                             "CANCELLED"
                     )
                     .reduce(
@@ -1451,6 +1465,7 @@ module.exports = {
     notifyOrderCustomers,
     getById,
     addItem,
+    getPreparingItems,
     confirmItems,
     updateItem,
     removeItem,

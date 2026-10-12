@@ -9,6 +9,7 @@ const getPublicInfo = async (restaurantId) => {
             name: true,
             logo: true,
             theme: true,
+            baseUrl: true,
         },
     });
 

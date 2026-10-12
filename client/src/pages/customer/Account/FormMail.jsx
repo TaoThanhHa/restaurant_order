@@ -1,9 +1,5 @@
-import {
-    ArrowLeft,
-    Mail,
-    ShieldCheck,
-} from "lucide-react";
-
+// Sửa thông báo
+import { ArrowLeft, Mail, ShieldCheck, } from "lucide-react";
 import { useState } from "react";
 
 import Input from "../../../components/Input/Input";

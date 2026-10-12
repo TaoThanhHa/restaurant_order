@@ -1,34 +1,17 @@
-const restaurantService =
-    require("./restaurant.service");
-
-const response =
-    require("../../utils/response");
+const restaurantService = require("./restaurant.service");
 
 const getPublicInfo = async (req, res) => {
-
     try {
+        const restaurantId = req.params.restaurantId;
 
-        const restaurant =
-            await restaurantService.getPublicInfo();
+        const data = await restaurantService.getPublicInfo(restaurantId);
 
-        return response.success(
-            res,
-            restaurant
-        );
-
+        return res.json(data);
     } catch (error) {
-
-        console.error(
-            "GET RESTAURANT INFO ERROR:",
-            error
-        );
-
-        return response.error(
-            res,
-            error.message,
-            500
-        );
-
+        console.error("GET PUBLIC INFO ERROR:", error);
+        return res.status(500).json({
+            message: error.message,
+        });
     }
 };
 

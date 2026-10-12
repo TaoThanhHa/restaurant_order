@@ -66,9 +66,7 @@ export default function OrderNotificationBell() {
         if (!token) return;
 
         const eventSource = new EventSource(
-            import.meta.env.VITE_API_URL +
-            "/events/branch?token=" +
-            encodeURIComponent(token)
+            `${import.meta.env.VITE_API_URL}/events/branch?token=${encodeURIComponent(token)}`
         );
 
         eventSource.addEventListener("connected", event => {

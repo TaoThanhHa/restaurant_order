@@ -15,6 +15,7 @@ model Role {
   @@map("roles")
 }
 
+//Chi nhánh
 model Branch {
   id              Int                    @id @default(autoincrement())
   name            String
@@ -36,10 +37,12 @@ model Branch {
   @@map("branches")
 }
 
+// Nhà hàng
 model Restaurant {
   id        Int            @id @default(autoincrement())
   name      String
   logo      String?
+  baseUrl   String? @map("base_url")
   adminId   Int            @unique @map("admin_id")
   mode      RestaurantMode @default(SINGLE)
   theme     String         @default("lang-tre")
@@ -58,7 +61,7 @@ model Restaurant {
   @@map("restaurants")
 }
 
-
+// Người dùng (amdin,branch,cashier,kitchen,order)
 model User {
   id                 Int     @id @default(autoincrement())
   username           String  @unique
@@ -90,6 +93,7 @@ model User {
   @@map("users")
 }
 
+// Tầng
 model Floor {
   id          Int      @id @default(autoincrement())
   branchId    Int      @map("branch_id")
@@ -103,6 +107,7 @@ model Floor {
   @@map("floors")
 }
 
+//Bàn
 model Table {
   id              Int                @id @default(autoincrement())
   floorId         Int                @map("floor_id")
@@ -121,25 +126,87 @@ model Table {
   @@map("tables")
 }
 
+// Đặt bàn (nâng cấp sau)
 model Reservation {
-  id              Int                @id @default(autoincrement())
-  restaurantId    Int                @map("restaurant_id")
-  customerName    String             @map("customer_name")
-  customerPhone   String             @map("customer_phone")
-  numberOfGuests  Int                @map("number_of_guests")
-  reservationTime DateTime           @map("reservation_time")
-  status          ReservationStatus  @default(PENDING)
+  id              Int              @id @default(autoincrement())
+  customerName    String           @map("customer_name")
+  customerPhone   String           @map("customer_phone")
+  numberOfGuests  Int              @map("number_of_guests")
+  reservationTime DateTime         @map("reservation_time")
+  status          ReservationStatus @default(PENDING)
+
   note            String?
-  createdAt       DateTime           @default(now()) @map("created_at")
-  updatedAt       DateTime           @updatedAt @map("updated_at")
-  restaurant      Restaurant         @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
+
+  depositRequired Boolean          @default(false) @map("deposit_required")
+  depositAmount   Decimal          @default(0) @map("deposit_amount") @db.Decimal(12, 2)
+  depositStatus   DepositStatus    @default(NOT_REQUIRED) @map("deposit_status")
+
+  preOrderAmount  Decimal          @default(0) @map("pre_order_amount") @db.Decimal(12, 2)
+
+  checkedInAt     DateTime?        @map("checked_in_at")
+  checkedOutAt    DateTime?        @map("checked_out_at")
+
+  createdAt       DateTime         @default(now()) @map("created_at")
+  updatedAt       DateTime         @updatedAt @map("updated_at")
+
+  restaurantId    Int              @map("restaurant_id")
+
   sessions        DiningSession[]
   tables          ReservationTable[]
+  preOrderItems   ReservationItem[]
+  depositPayments ReservationDeposit[]
+  restaurant      Restaurant       @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
 
   @@index([restaurantId])
   @@index([reservationTime])
   @@index([status])
+  @@index([customerPhone])
   @@map("reservations")
+}
+
+// Thêm món đặt bàn  (nâng cấp sau)
+model ReservationItem {
+  id            Int               @id @default(autoincrement())
+  reservationId Int               @map("reservation_id")
+  foodId        Int               @map("food_id")
+
+  quantity      Int
+  price         Decimal           @db.Decimal(12, 2)
+  note          String?
+
+  createdAt     DateTime          @default(now()) @map("created_at")
+  updatedAt     DateTime          @updatedAt @map("updated_at")
+
+  reservation   Reservation       @relation(fields: [reservationId], references: [id], onDelete: Cascade)
+  food          Food              @relation(fields: [foodId], references: [id])
+
+  @@index([reservationId])
+  @@index([foodId])
+  @@map("reservation_items")
+}
+
+model ReservationDeposit {
+  id              Int             @id @default(autoincrement())
+  reservationId   Int             @map("reservation_id")
+
+  amount          Decimal         @db.Decimal(12, 2)
+  paymentMethod   PaymentMethod   @map("payment_method")
+
+  paymentAccountId Int?           @map("payment_account_id")
+  paymentCode      String?        @map("payment_code")
+
+  status          DepositPaymentStatus @default(PENDING)
+
+  paidAt          DateTime?       @map("paid_at")
+  createdAt       DateTime        @default(now()) @map("created_at")
+  updatedAt       DateTime        @updatedAt @map("updated_at")
+
+  reservation     Reservation     @relation(fields: [reservationId], references: [id], onDelete: Cascade)
+  paymentAccount  PaymentAccount? @relation(fields: [paymentAccountId], references: [id])
+
+  @@index([reservationId])
+  @@index([paymentAccountId])
+  @@map("reservation_deposits")
 }
 
 model ReservationTable {
@@ -153,6 +220,7 @@ model ReservationTable {
   @@map("reservation_tables")
 }
 
+// Yêu cầu khách hàng
 model ServiceRequest {
   id          Int                  @id @default(autoincrement())
   branchId    Int                  @map("branch_id")
@@ -176,6 +244,7 @@ model ServiceRequest {
   @@map("service_requests")
 }
 
+// Phiên đơn
 model DiningSession {
   id            Int                 @id @default(autoincrement())
   tableId       Int                 @map("table_id")
@@ -197,6 +266,7 @@ model DiningSession {
   @@map("dining_sessions")
 }
 
+// Giỏ hàng customer và order
 model Cart {
   id         Int        @id @default(autoincrement())
   customerId Int        @unique
@@ -208,6 +278,7 @@ model Cart {
   @@map("carts")
 }
 
+// Món trong giỏ hàng
 model CartItem {
   id        Int      @id @default(autoincrement())
   cartId    Int
@@ -222,6 +293,7 @@ model CartItem {
   @@map("cart_items")
 }
 
+// Loại món ăn
 model Category {
   id           Int        @id @default(autoincrement())
   name         String
@@ -236,6 +308,7 @@ model Category {
   @@map("categories")
 }
 
+//Món ăn
 model Food {
   id           Int          @id @default(autoincrement())
   restaurantId Int          @map("restaurant_id")
@@ -248,15 +321,18 @@ model Food {
   updatedAt    DateTime     @updatedAt @map("updated_at")
   restaurant   Restaurant   @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
   category     Category     @relation(fields: [categoryId], references: [id])
+  
   branchFoods  BranchFood[]
   cartItems    CartItem[]
   orderItems   OrderItem[]
+  reservationItems  ReservationItem[]
 
   @@unique([restaurantId, categoryId, name])
   @@index([restaurantId])
   @@map("foods")
 }
 
+//Món thuộc chi nhánh 
 model BranchFood {
   id        Int        @id @default(autoincrement())
   branchId  Int        @map("branch_id")
@@ -270,6 +346,7 @@ model BranchFood {
   @@map("branch_foods")
 }
 
+// Lấy lại mật khẩu
 model PasswordResetOtp {
   id        Int      @id @default(autoincrement())
   email     String
@@ -280,6 +357,7 @@ model PasswordResetOtp {
   @@map("password_reset_otps")
 }
 
+//Đổi mail cho khách hàng
 model EmailChangeOtp {
   id        Int      @id @default(autoincrement())
   userId    Int      @map("user_id")
@@ -293,6 +371,7 @@ model EmailChangeOtp {
   @@map("email_change_otps")
 }
 
+//Khách hàng
 model Customer {
   id                Int       @id @default(autoincrement())
   sessionId         Int?      @map("session_id")
@@ -329,6 +408,7 @@ model Customer {
   @@map("customers")
 }
 
+//Đơn 
 model Order {
   id                  Int            @id @default(autoincrement())
   orderCode           String         @unique @map("order_code")
@@ -359,6 +439,7 @@ model Order {
   @@map("orders")
 }
 
+//Đơn thuộc khách nào
 model OrderMember {
   id         Int      @id @default(autoincrement())
   customerId Int      @map("customer_id")
@@ -373,6 +454,7 @@ model OrderMember {
   @@map("order_members")
 }
 
+//Các món trong đơn
 model OrderItem {
   id                 Int               @id @default(autoincrement())
   orderId            Int               @map("order_id")
@@ -394,6 +476,7 @@ model OrderItem {
   @@map("order_items")
 }
 
+//Thanh toán
 model Payment {
   id               Int           @id @default(autoincrement())
   orderId          Int           @unique @map("order_id")
@@ -408,24 +491,27 @@ model Payment {
 
   order          Order           @relation(fields: [orderId], references: [id], onDelete: Cascade)
   paymentAccount PaymentAccount? @relation(fields: [paymentAccountId], references: [id], onDelete: SetNull)
+  sepayTransactions SePayTransaction[]
 
   @@index([paymentAccountId])
   @@map("payments")
 }
 
+//Tài khoản để khách thanh toán
 model PaymentAccount {
-  id            Int      @id @default(autoincrement())
-  restaurantId  Int      @map("restaurant_id")
-  bankCode      String   @map("bank_code")
-  accountNumber String   @map("account_number")
-  accountName   String   @map("account_name")
-  isActive      Boolean  @default(true) @map("is_active")
-  createdAt     DateTime @default(now()) @map("created_at")
-  updatedAt     DateTime @updatedAt @map("updated_at")
+  id             Int                    @id @default(autoincrement())
+  restaurantId   Int                    @map("restaurant_id")
+  bankCode       String                 @map("bank_code")
+  accountNumber  String                 @map("account_number")
+  accountName    String                 @map("account_name")
+  isActive       Boolean                @default(true) @map("is_active")
+  createdAt      DateTime               @default(now()) @map("created_at")
+  updatedAt      DateTime               @updatedAt @map("updated_at")
 
-  restaurant Restaurant             @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
-  branches   BranchPaymentAccount[]
-  payments   Payment[]
+  branches       BranchPaymentAccount[]
+  restaurant     Restaurant             @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
+  payments       Payment[]
+  depositPayments ReservationDeposit[]
 
   @@unique([restaurantId, accountNumber])
   @@index([restaurantId])
@@ -433,6 +519,7 @@ model PaymentAccount {
   @@map("payment_accounts")
 }
 
+// Tài khoản thanh toán từng chi nhánh
 model BranchPaymentAccount {
   branchId         Int      @map("branch_id")
   paymentAccountId Int      @map("payment_account_id")
@@ -444,6 +531,27 @@ model BranchPaymentAccount {
   @@id([branchId, paymentAccountId])
   @@index([paymentAccountId])
   @@map("branch_payment_accounts")
+}
+
+model SePayTransaction {
+  id              Int       @id @default(autoincrement())
+  sepayId         BigInt    @unique @map("sepay_id")
+  paymentId       Int?      @map("payment_id")
+  accountNumber   String    @map("account_number")
+  transferType    String    @map("transfer_type")
+  transferAmount  Decimal   @map("transfer_amount") @db.Decimal(12, 2)
+  paymentCode     String?   @map("payment_code")
+  content         String?
+  referenceCode   String?   @map("reference_code")
+  processingStatus String  @default("RECEIVED") @map("processing_status")
+  rawPayload      Json      @map("raw_payload")
+  createdAt       DateTime  @default(now()) @map("created_at")
+
+  payment Payment? @relation(fields: [paymentId], references: [id], onDelete: SetNull)
+
+  @@index([paymentId])
+  @@index([paymentCode])
+  @@map("sepay_transactions")
 }
 
 enum TableStatus {
@@ -529,4 +637,20 @@ enum KitchenItemStatus {
 enum RestaurantMode {
   SINGLE
   MULTI
+}
+
+enum DepositStatus {
+  NOT_REQUIRED
+  PENDING
+  PAID
+  REFUNDED
+  FORFEITED
+  APPLIED
+}
+
+enum DepositPaymentStatus {
+  PENDING
+  PAID
+  FAILED
+  REFUNDED
 }

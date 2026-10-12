@@ -19,11 +19,6 @@ const create = async ({
             "Vui lòng nhập nội dung yêu cầu."
         );
     }
-
-    // ----------------------------------------
-    // TÌM BÀN
-    // ----------------------------------------
-
     const table = await prisma.table.findUnique({
         where: {
             qrCode,
@@ -38,10 +33,6 @@ const create = async ({
             "Không tìm thấy bàn."
         );
     }
-
-    // ----------------------------------------
-    // KIỂM TRA YÊU CẦU ĐANG CHỜ
-    // ----------------------------------------
 
     const existing =
         await prisma.serviceRequest.findFirst({
@@ -61,11 +52,6 @@ const create = async ({
             "Bàn này đang có một yêu cầu chưa được xử lý."
         );
     }
-
-    // ----------------------------------------
-    // TẠO YÊU CẦU
-    // ----------------------------------------
-
     const request =
         await prisma.serviceRequest.create({
             data: {

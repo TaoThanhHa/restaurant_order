@@ -3,7 +3,7 @@ const prisma = require("../../config/prisma");
 const mail = require("../../config/mail");
 const { generateToken } = require("../../utils/jwt");
 
-const login = async (email, password) => {
+const login = async (email, password, baseUrl) => {
     const user = await prisma.user.findUnique({
         where: { email },
         include: {
@@ -27,6 +27,32 @@ const login = async (email, password) => {
     if (!isMatch)
         throw new Error("Tên đăng nhập hoặc mật khẩu không đúng.");
 
+    const normalizeUrl = (url) => {
+        if (!url) return "";
+
+        return url
+            .trim()
+            .replace(/\/+$/, "")
+            .toLowerCase();
+    };
+
+    const currentBaseUrl = normalizeUrl(baseUrl);
+    const restaurantBaseUrl = normalizeUrl(
+        user.restaurant?.baseUrl
+    );
+
+    if (
+        !restaurantBaseUrl ||
+        currentBaseUrl !== restaurantBaseUrl
+    ) {
+        const error = new Error(
+            "Tài khoản không thuộc nhà hàng của website này."
+        );
+
+        error.statusCode = 403;
+        throw error;
+    }
+
     const token = generateToken(user);
 
     return {
@@ -40,6 +66,7 @@ const login = async (email, password) => {
             restaurantId: user.restaurantId,
             restaurantMode: user.restaurant?.mode || null,
             restaurantTheme: user.restaurant?.theme || "lang-tre",
+            baseUrl: user.restaurant?.baseUrl || null,
             branchId: user.branchId,
             branch: user.branch,
         },

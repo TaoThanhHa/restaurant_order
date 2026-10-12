@@ -20,6 +20,11 @@ const confirmItems = async (orderId) => {
     return res.data;
 };
 
+const getPreparingItems = async (orderId) => {
+    const res = await api.get(`/orders/${orderId}/preparing-items`);
+    return res.data;
+};
+
 const updateItem = async (itemId, data) => {
     const res = await api.put(`/orders/items/${itemId}`, data);
     return res.data;
@@ -69,6 +74,7 @@ export default {
     create,
     getById,
     addItem,
+    getPreparingItems,
     confirmItems,
     updateItem,
     removeItem,

@@ -4,6 +4,7 @@ import { CreditCard, Pencil, Plus, Trash2, Power } from "lucide-react";
 import Button from "../../../../components/Button/Button";
 import NotiModal from "../../../../components/NotiModal/NotiModal";
 import paymentService from "../../../../services/payment.service";
+import branchService from "../../../../services/branch.service";
 import useAuth from "../../../../hooks/useAuth";
 import vietnamBanks from "../../../../constants/vietnamBanks";
 
@@ -15,6 +16,8 @@ export default function PaymentAccountSection() {
     const [loading, setLoading] = useState(true);
     const [showForm, setShowForm] = useState(false);
     const [editingAccount, setEditingAccount] = useState(null);
+    const [bankSearch, setBankSearch] = useState("");
+    const [showBankList, setShowBankList] = useState(false);
 
     const [form, setForm] = useState({
         bankCode: "",
@@ -31,22 +34,47 @@ export default function PaymentAccountSection() {
 
     const isMulti = user?.restaurantMode === "MULTI";
 
+    const filteredBanks = vietnamBanks.filter(bank =>
+        `${bank.name} ${bank.code}`
+            .toLowerCase()
+            .includes(bankSearch.trim().toLowerCase())
+    );
+
     const loadData = async () => {
         try {
             setLoading(true);
 
-            const response = await paymentService.getAll();
-            const data = response?.data || response;
+            const [accountResponse, branchResponse] = await Promise.all([
+                paymentService.getAll(),
+                branchService.getAll(),
+            ]);
 
-            setAccounts(data.accounts || []);
-            setBranches(data.branches || []);
+            const accountResult =
+                accountResponse?.data?.data ??
+                accountResponse?.data ??
+                accountResponse;
+
+            const branchResult =
+                branchResponse?.data?.data ??
+                branchResponse?.data ??
+                branchResponse;
+
+            setAccounts(Array.isArray(accountResult) ? accountResult : []);
+
+            setBranches(
+                Array.isArray(branchResult)
+                    ? branchResult
+                    : branchResult?.branches || []
+            );
         } catch (err) {
+            console.error("Lỗi tải dữ liệu:", err);
+
             setNoti({
                 open: true,
                 type: "error",
                 message:
                     err.response?.data?.message ||
-                    "Không thể tải tài khoản ngân hàng.",
+                    "Không thể tải tài khoản ngân hàng hoặc chi nhánh.",
             });
         } finally {
             setLoading(false);
@@ -215,30 +243,89 @@ export default function PaymentAccountSection() {
                                     Ngân hàng
                                 </label>
 
-                                <select
-                                    value={form.bankCode}
-                                    onChange={e =>
-                                        setForm(prev => ({
-                                            ...prev,
-                                            bankCode: e.target.value,
-                                        }))
-                                    }
-                                    className="w-full rounded-lg border px-3 py-2 outline-none focus:border-[var(--color-primary)]"
-                                    required
-                                >
-                                    <option value="">
-                                        Chọn ngân hàng
-                                    </option>
-
-                                    {vietnamBanks.map(bank => (
-                                        <option
-                                            key={bank.code}
-                                            value={bank.code}
+                                <div className="relative">
+                                    <button
+                                        type="button"
+                                        onClick={() => {
+                                            setShowBankList(prev => !prev);
+                                            setBankSearch("");
+                                        }}
+                                        className="flex w-full items-center justify-between rounded-lg border bg-white px-3 py-2 text-left outline-none focus:border-[var(--color-primary)]"
+                                    >
+                                        <span
+                                            className={
+                                                form.bankCode
+                                                    ? "text-gray-900"
+                                                    : "text-gray-400"
+                                            }
                                         >
-                                            {bank.name} ({bank.code})
-                                        </option>
-                                    ))}
-                                </select>
+                                            {form.bankCode
+                                                ? (() => {
+                                                    const bank = vietnamBanks.find(
+                                                        item => item.code === form.bankCode
+                                                    );
+
+                                                    return bank
+                                                        ? `${bank.name} (${bank.code})`
+                                                        : "Chọn ngân hàng";
+                                                })()
+                                                : "Chọn ngân hàng"}
+                                        </span>
+
+                                        <span className="text-gray-400">⌄</span>
+                                    </button>
+
+                                    {showBankList && (
+                                        <div className="absolute z-50 mt-1 w-full rounded-lg border bg-white shadow-lg">
+                                            <div className="border-b p-2">
+                                                <input
+                                                    type="text"
+                                                    value={bankSearch}
+                                                    onChange={e =>
+                                                        setBankSearch(e.target.value)
+                                                    }
+                                                    onClick={e => e.stopPropagation()}
+                                                    placeholder="Tìm ngân hàng..."
+                                                    className="w-full rounded-md border px-3 py-2 text-sm outline-none focus:border-[var(--color-primary)]"
+                                                    autoFocus
+                                                />
+                                            </div>
+
+                                            <div className="max-h-60 overflow-y-auto">
+                                                {filteredBanks.length > 0 ? (
+                                                    filteredBanks.map(bank => (
+                                                        <button
+                                                            key={bank.code}
+                                                            type="button"
+                                                            onClick={() => {
+                                                                setForm(prev => ({
+                                                                    ...prev,
+                                                                    bankCode: bank.code,
+                                                                }));
+                                                                setShowBankList(false);
+                                                                setBankSearch("");
+                                                            }}
+                                                            className={`block w-full px-3 py-2 text-left text-sm hover:bg-gray-100 ${
+                                                                form.bankCode === bank.code
+                                                                    ? "bg-[var(--color-primary)]/10 font-medium"
+                                                                    : ""
+                                                            }`}
+                                                        >
+                                                            {bank.name}
+                                                            <span className="ml-1 text-gray-500">
+                                                                ({bank.code})
+                                                            </span>
+                                                        </button>
+                                                    ))
+                                                ) : (
+                                                    <div className="px-3 py-4 text-center text-sm text-gray-500">
+                                                        Không tìm thấy ngân hàng
+                                                    </div>
+                                                )}
+                                            </div>
+                                        </div>
+                                    )}
+                                </div>
                             </div>
 
                             <div>
@@ -288,10 +375,7 @@ export default function PaymentAccountSection() {
                                     <select
                                         value={form.branchId}
                                         onChange={e =>
-                                            setForm(prev => ({
-                                                ...prev,
-                                                branchId: e.target.value,
-                                            }))
+                                            setForm(prev => ({ ...prev, branchId: e.target.value, }))
                                         }
                                         className="w-full rounded-lg border px-3 py-2 outline-none focus:border-[var(--color-primary)]"
                                         required
@@ -379,10 +463,13 @@ export default function PaymentAccountSection() {
                                                     {account.accountName}
                                                 </div>
 
-                                                {account.branch && (
+                                                {account.branches?.length > 0 && (
                                                     <div className="mt-1 text-xs text-gray-500">
                                                         Chi nhánh:{" "}
-                                                        {account.branch.name}
+                                                        {account.branches
+                                                            .map(item => item.branch?.name)
+                                                            .filter(Boolean)
+                                                            .join(", ")}
                                                     </div>
                                                 )}
                                             </div>

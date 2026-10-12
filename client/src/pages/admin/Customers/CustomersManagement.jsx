@@ -1,15 +1,4 @@
-import {
-    Search,
-    Users,
-    UserRound,
-    UserRoundCheck,
-    UserPlus,
-    Wallet,
-    MapPin,
-    CalendarDays,
-    ChevronRight,
-    Store,
-} from "lucide-react";
+import { Search, Users, UserRound, UserRoundCheck, UserPlus, Wallet, MapPin, CalendarDays, ChevronRight, Store, } from "lucide-react";
 import { useEffect, useState } from "react";
 
 import customerAdminService from "../../../services/customerAdmin.service";

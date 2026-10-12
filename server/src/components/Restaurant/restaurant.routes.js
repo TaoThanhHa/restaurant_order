@@ -3,6 +3,6 @@ const router = express.Router();
 
 const controller = require("./restaurant.controller");
 
-router.get("/", controller.getPublicInfo);
+router.get("/:restaurantId", controller.getPublicInfo);
 
 module.exports = router;

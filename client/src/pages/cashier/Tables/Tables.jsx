@@ -75,8 +75,9 @@ export default function Tables({ mode = "branch" }) {
             return;
         }
 
-        const url = import.meta.env.VITE_API_URL + "/events/branch?token=" + token;
-        const eventSource = new EventSource(url);
+        const eventSource = new EventSource(
+            `${import.meta.env.VITE_API_URL}/events/branch?token=${encodeURIComponent(token)}`
+        );
 
         const reloadTables = () => loadTables(false);
         const reloadOrders = () => loadTables(false);

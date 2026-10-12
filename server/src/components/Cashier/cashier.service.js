@@ -574,15 +574,6 @@ const getStatistics = async (branchId) => {
 
         const total = dineInRevenue + takeAwayRevenue;
 
-        console.log(`[STATISTICS] ${dateString}`, {
-            total,
-            member: memberRevenue,
-            guest: guestRevenue,
-            dineIn: dineInRevenue,
-            takeAway: takeAwayRevenue,
-            paymentCount: dayPayments.length
-        });
-
         statistics.push({
             date: dateString,
             label: date.toLocaleDateString("vi-VN", {

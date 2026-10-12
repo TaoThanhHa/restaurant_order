@@ -4,10 +4,15 @@ import { Outlet, useNavigate, Link } from "react-router-dom";
 import useAuth from "../../hooks/useAuth";
 import Button from "../../components/Button/Button";
 
+import ServiceRequestBell from "../../components/HeaderAuth/ServiceRequestBell";
+import OrderNotificationBell from "../../components/HeaderAuth/OrderNotificationBell";
+
 export default function OrderLayout() {
 
     const { user, logout } = useAuth();
     const navigate = useNavigate();
+
+    const branchId = user?.branchId || user?.branch?.id || null;
 
     const handleLogout = () => {
         logout();
@@ -22,25 +27,27 @@ export default function OrderLayout() {
             {/* HEADER ORDER */}
             <header className="flex h-16 items-center justify-between border-b bg-[var(--color-primary)] px-6 shadow-sm text-white">
 
-                <Link to={`/branch/table`} className="font-bold text-lg">
+                <Link to={`/order/tables`} className="font-bold text-lg">
                     Gọi món
                 </Link>
 
                 <div className="flex items-center gap-4">
 
                     <div className="flex items-center gap-2">
-
-                        <div className="flex h-9 w-9 items-center justify-center rounded-full bg-gray-500">
-                            <User size={18} />
-                        </div>
-
+                        {branchId && (
+                            <div className="flex items-center gap-1 rounded-xl px-1 py-1 backdrop-blur-sm">
+                                <OrderNotificationBell branchId={branchId} />
+                                <ServiceRequestBell branchId={branchId} />
+                            </div>
+                        )}
+                        
                         <div>
                             <button
                                 type="button"
                                 onClick={() => navigate("/branch/profile")}
-                                className="text-sm font-medium cursor-pointer hover:text-[var(--color-primary)] transition"
+                                className="flex h-9 w-9 items-center justify-center rounded-full bg-gray-500"
                             >
-                                {user?.username}
+                                <User size={18} />
                             </button>
                         </div>
 

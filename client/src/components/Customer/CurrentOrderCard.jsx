@@ -1,12 +1,4 @@
 const STATUS = {
-    PENDING: {
-        text: "Chờ xác nhận",
-        className: "bg-yellow-100 text-yellow-700",
-    },
-    CONFIRMED: {
-        text: "Đã xác nhận",
-        className: "bg-blue-100 text-blue-700",
-    },
     PREPARING: {
         text: "Đang chế biến",
         className: "bg-orange-100 text-orange-700",

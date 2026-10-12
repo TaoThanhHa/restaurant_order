@@ -134,7 +134,7 @@ export default function OrderList({
                             className={
                                 "cursor-pointer border-b p-4 transition hover:bg-gray-50 " +
                                 (selectedOrder?.id === order.id
-                                    ? "border-l-4 border-l-[#4f7d4f] bg-blue-50"
+                                    ? "border-l-4 border-l-[var(--color-primary)] bg-blue-50"
                                     : "")
                             }
                         >

@@ -4,9 +4,9 @@ const router = express.Router();
 
 const controller = require("./branchFood.controller");
 const auth = require("../../middlewares/auth.middleware");
-const authorize = require("../../middlewares/role.middleware");
+const role = require("../../middlewares/role.middleware");
 
-router.get("/", auth, authorize("BRANCH", "CASHIER"), controller.getAll);
-router.patch("/:foodId/status", auth, authorize("BRANCH", "CASHIER"), controller.updateStatus);
+router.get("/", auth, role("BRANCH", "CASHIER"), controller.getAll);
+router.patch("/:foodId/status", auth, role("BRANCH", "CASHIER"), controller.updateStatus);
 
 module.exports = router;

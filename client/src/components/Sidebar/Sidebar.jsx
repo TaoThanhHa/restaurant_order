@@ -10,8 +10,7 @@ export default function Sidebar() {
         logo: "",
     });
 
-    const SERVER_URL =
-        import.meta.env.VITE_API_URL?.replace(/\/api\/?$/, "") || "";
+    const SERVER_URL = import.meta.env.VITE_API_URL?.replace(/\/api\/?$/, "") || "";
 
     const getImageUrl = (url) => {
         if (!url) return "";

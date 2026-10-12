@@ -1,6 +1,6 @@
 const response = require("../utils/response");
 
-const authorize = (...roles) => {
+const role = (...roles) => {
   return (req, res, next) => {
     if (!req.user) {
       return response.error(
@@ -31,4 +31,4 @@ const authorize = (...roles) => {
   };
 };
 
-module.exports = authorize;
+module.exports = role;

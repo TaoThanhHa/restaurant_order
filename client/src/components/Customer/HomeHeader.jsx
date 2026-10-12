@@ -47,23 +47,27 @@ export default function HomeHeader({
     useEffect(() => {
         const loadRestaurant = async () => {
             try {
-                const res =  await restaurantService.getInfo();
-                const data = res?.message;
+                if (!table?.restaurantId) {
+                    return;
+                }
+
+                const res = await restaurantService.getPublicInfo(
+                    table.restaurantId
+                );
+
+                const data = res?.data?.data ?? res?.data ?? res;
 
                 setRestaurant({
-                    name: data?.name ||  "Làng Tre",
+                    name: data?.name || "Làng Tre",
                     logo: data?.logo || "",
                 });
-
             } catch (error) {
-                console.error(
-                    "LOAD RESTAURANT ERROR:",
-                    error
-                );
+                console.error("LOAD RESTAURANT ERROR:", error);
             }
         };
+
         loadRestaurant();
-    }, []);
+    }, [table?.restaurantId]);
 
     const displayName = profile?.name || "Khách hàng";
     const avatarLetter = displayName.charAt(0).toUpperCase();
@@ -96,18 +100,15 @@ export default function HomeHeader({
                         className="flex items-center gap-3 text-white"
                     >
                         <div className="flex h-10 w-10 items-center justify-center overflow-hidden rounded-lg bg-white/20">
-                            {restaurant.logo ? (
-                                <img
-                                    src={getImageUrl(
-                                        restaurant.logo
-                                    )}
-                                    alt={restaurant.name}
-                                    className="h-full w-full object-cover "
-                                />
-                            ) : (
-                                <Utensils size={22} />
-                            )}
-
+                             {restaurant.logo ? (
+                            <img
+                                src={getImageUrl(restaurant.logo)}
+                                alt={restaurant.name}
+                                className="h-full w-full rounded-lg object-cover"
+                            />
+                        ) : (
+                            <Utensils size={22} className="mx-auto" />
+                        )}
                         </div>
 
                         <span className="text-[28px] font-bold text-white">
@@ -137,11 +138,11 @@ export default function HomeHeader({
                     className="flex items-center gap-3 rounded-2xl px-2 py-1.5 transition "
                 >
 
-                    <div className="text-right">
+                    {/* <div className="text-right">
                         <p className="text-sm font-semibold text-white">
                             {displayName}
                         </p>
-                    </div>
+                    </div> */}
 
                     <div className="flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-full bg-[#dcebdc] text-[#4f7d4f]">
                         {currentAvatar ? (

@@ -1,18 +1,15 @@
+
 import { useState } from "react";
-import { Trash } from "lucide-react";
+import { ArrowLeft, Trash } from "lucide-react";
+
 import Button from "../../../../components/Button/Button";
 import orderService from "../../../../services/order.service";
 import PaymentModal from "./PaymentModal";
-import { printKitchenOrder} from "../../../../../utils/printKitchenOrder";
 
 const STATUS = {
     PENDING: {
         text: "Chờ gửi bếp",
         className: "bg-yellow-100 text-yellow-700",
-    },
-    CONFIRMED: {
-        text: "Đã xác nhận",
-        className: "bg-blue-100 text-blue-700",
     },
     PREPARING: {
         text: "Đang chế biến",
@@ -41,13 +38,7 @@ const mergeItems = items => {
         const price = Number(item.price || 0);
         const status = item.status || "";
 
-        const key = [
-            foodId,
-            status,
-            note,
-            price,
-        ].join("|");
-
+        const key = [foodId, status, note, price].join("|");
         const existing = map.get(key);
 
         if (existing) {
@@ -71,6 +62,7 @@ export default function InvoicePanel({
     reload,
     onAddFood,
     table,
+    onBack,
 }) {
     const [openPayment, setOpenPayment] = useState(false);
     const [confirmAction, setConfirmAction] = useState(null);
@@ -93,15 +85,14 @@ export default function InvoicePanel({
         : [];
 
     const oldItems = mergeItems(
-        orderItems.filter(item => item.status !== "PENDING")
+        orderItems.filter(item => item.status !== "PREPARING")
     );
 
     const newItems = mergeItems(
-        orderItems.filter(item => item.status === "PENDING")
+        orderItems.filter(item => item.status === "PREPARING")
     );
 
-    const canCancelItem = item =>
-        ["PENDING", "PREPARING"].includes(item.status);
+    const canCancelItem = item => item.status === "PREPARING";
 
     const canPayment =
         orderItems.length > 0 &&
@@ -110,46 +101,18 @@ export default function InvoicePanel({
     const total = orderItems.reduce(
         (sum, item) =>
             sum +
-            Number(item.price || 0) *
-            Number(item.quantity || 0),
+            Number(item.price || 0) * Number(item.quantity || 0),
         0
     );
 
     const newItemQuantity = newItems.reduce(
-        (sum, item) => sum + Number(item.quantity || 0), 0
+        (sum, item) => sum + Number(item.quantity || 0),
+        0
     );
 
-    const status =
-        STATUS[order.status] || {
-            text: order.status,
-            className: "bg-gray-100 text-gray-700",
-        };
-
-    const handlePreparing = async () => {
-        try {
-            setLoading(true);
-            setErrorMessage("");
-
-            await orderService.confirmItems(orderId);
-
-            const orderRes = await orderService.getById(orderId);
-            const fullOrder = orderRes?.data || orderRes;
-
-            printKitchenOrder(fullOrder);
-
-            if (reload) {
-                await reload();
-            }
-        } catch (err) {
-            setErrorMessage(
-                err.response?.data?.message ||
-                err.response?.data?.error ||
-                err.message ||
-                "Không thể gửi đơn vào bếp."
-            );
-        } finally {
-            setLoading(false);
-        }
+    const status = STATUS[order.status] || {
+        text: order.status || "Không xác định",
+        className: "bg-gray-100 text-gray-700",
     };
 
     const handleServed = async () => {
@@ -157,19 +120,14 @@ export default function InvoicePanel({
             setLoading(true);
             setErrorMessage("");
 
-            await orderService.closeOrder(
-                orderId,
-                "SERVED"
-            );
+            await orderService.closeOrder(orderId, "SERVED");
 
-            if (reload) {
-                await reload();
-            }
-        } catch (err) {
+            if (reload) await reload();
+        } catch (error) {
             setErrorMessage(
-                err.response?.data?.message ||
-                err.response?.data?.error ||
-                err.message ||
+                error.response?.data?.message ||
+                error.response?.data?.error ||
+                error.message ||
                 "Không thể cập nhật trạng thái phục vụ."
             );
         } finally {
@@ -183,19 +141,15 @@ export default function InvoicePanel({
             setErrorMessage("");
 
             await orderService.removeItem(orderId, itemId);
-
             setConfirmAction(null);
 
-            if (reload) {
-                await reload(false);
-            }
-        } catch (err) {
+            if (reload) await reload(false);
+        } catch (error) {
             setConfirmAction(null);
-
             setErrorMessage(
-                err.response?.data?.message ||
-                err.response?.data?.error ||
-                err.message ||
+                error.response?.data?.message ||
+                error.response?.data?.error ||
+                error.message ||
                 "Không thể hủy món."
             );
         } finally {
@@ -209,19 +163,15 @@ export default function InvoicePanel({
             setErrorMessage("");
 
             await orderService.closeOrder(orderId, "CANCELLED");
-
             setConfirmAction(null);
 
-            if (reload) {
-                await reload();
-            }
-        } catch (err) {
+            if (reload) await reload();
+        } catch (error) {
             setConfirmAction(null);
-
             setErrorMessage(
-                err.response?.data?.message ||
-                err.response?.data?.error ||
-                err.message ||
+                error.response?.data?.message ||
+                error.response?.data?.error ||
+                error.message ||
                 "Không thể hủy đơn."
             );
         } finally {
@@ -240,34 +190,18 @@ export default function InvoicePanel({
         });
     };
 
-    {/* const requestCancelOrder = () => {
-        setErrorMessage("");
-
-        setConfirmAction({
-            type: "ORDER",
-            orderId,
-            orderCode: currentOrderCode,
-        });
-    }; */}
-
     const handleConfirmAction = async () => {
         if (!confirmAction) return;
 
         if (confirmAction.type === "ITEM") {
-            await handleRemoveItem( confirmAction.itemId );
-            return;
-        }
-
-        if (confirmAction.type === "ORDER") {
+            await handleRemoveItem(confirmAction.itemId);
+        } else if (confirmAction.type === "ORDER") {
             await handleCancelOrder();
         }
     };
 
     const renderItem = (item, isNew = false) => {
-        const foodId = Number(
-            item.food?.id || item.foodId
-        );
-
+        const foodId = Number(item.food?.id || item.foodId);
         const itemKey = [
             orderId,
             foodId,
@@ -293,27 +227,14 @@ export default function InvoicePanel({
                             Ghi chú: {item.note}
                         </div>
                     )}
-
-                    {/* <div className="mt-1">
-                        <span
-                            className={'rounded-full px-2 py-1 text-xs font-medium ${ STATUS[item.status]?.className ||  "bg-gray-100 text-gray-700" }'}
-                        >
-                            {isNew
-                                ? "Chờ gửi bếp"
-                                : STATUS[item.status]?.text ||
-                                  item.status}
-                        </span>
-                    </div> */}
                 </div>
 
                 <div className="flex items-center gap-3">
                     <div className="flex items-center text-right">
-                        <div>
-                            x {item.quantity}
-                        </div>
+                        <div>x {item.quantity}</div>
 
-                        <div className="text-sm text-blue-500 ml-4">
-                            {Number( item.price || 0 ).toLocaleString()} đ
+                        <div className="ml-4 text-sm text-blue-500">
+                            {Number(item.price || 0).toLocaleString()} đ
                         </div>
                     </div>
 
@@ -335,27 +256,46 @@ export default function InvoicePanel({
 
     return (
         <div className="flex h-full flex-col pt-2">
-            <div className="border-b pb-3 pl-4 pr-4">
-                <div className="flex items-center justify-between">
-                    <div>
-                        <h2 className="text-xl font-bold">
-                            Đơn {currentOrderCode}
-                        </h2>
+            <div className="border-b px-4 pb-3">
+                <div className="flex items-center justify-between gap-3">
+                    <div className="flex min-w-0 items-start gap-3">
+                        {onBack && (
+                            <button
+                                type="button"
+                                onClick={onBack}
+                                className="mt-1 shrink-0 rounded-lg p-1 text-gray-500 transition hover:bg-gray-100 hover:text-[var(--color-primary)]"
+                                aria-label="Quay lại danh sách đơn"
+                                title="Quay lại danh sách đơn"
+                            >
+                                <ArrowLeft size={24} />
+                            </button>
+                        )}
 
-                        <p className="mt-1 text-sm text-gray-500">
-                            {order.customer?.name || "Khách"}
-                        </p>
+                        <div>
+                            <h2 className="text-xl font-bold">
+                                Đơn {currentOrderCode}
+                            </h2>
 
+                            <p className="mt-1 text-sm text-gray-500">
+                                {order.customer?.name || "Khách"}
+                            </p>
+                        </div>
                     </div>
 
-                    <div className="grid items-center justify-between">
-                        <span className={`mb-2 rounded-full px-3 py-1 text-sm font-semibold ${status.className}`}>
+                    <div className="grid shrink-0 items-center justify-between">
+                        <span
+                            className={`mb-2 rounded-full px-3 py-1 text-sm font-semibold ${status.className}`}
+                        >
                             {status.text}
                         </span>
 
                         {order.status !== "COMPLETED" &&
                             order.status !== "CANCELLED" && (
-                                <Button className="w-[150px]" disabled={loading} onClick={() => onAddFood(order) } >
+                                <Button
+                                    className="w-[150px]"
+                                    disabled={loading}
+                                    onClick={() => onAddFood?.(order)}
+                                >
                                     + Thêm món
                                 </Button>
                             )}
@@ -373,12 +313,10 @@ export default function InvoicePanel({
                 {oldItems.length > 0 && (
                     <>
                         <h3 className="mb-3 font-semibold">
-                            Món đã gửi bếp
+                            Món đã phục vụ
                         </h3>
 
-                        {oldItems.map(item =>
-                            renderItem(item, false)
-                        )}
+                        {oldItems.map(item => renderItem(item, false))}
                     </>
                 )}
 
@@ -388,7 +326,7 @@ export default function InvoicePanel({
 
                         <div className="mb-3 flex items-center justify-between">
                             <h3 className="font-semibold text-yellow-600">
-                                Món mới
+                                Món đang chế biến
                             </h3>
 
                             <span className="rounded-full bg-red-500 px-2 py-1 text-xs text-white">
@@ -396,9 +334,7 @@ export default function InvoicePanel({
                             </span>
                         </div>
 
-                        {newItems.map(item =>
-                            renderItem(item, true)
-                        )}
+                        {newItems.map(item => renderItem(item, true))}
                     </>
                 )}
 
@@ -409,27 +345,14 @@ export default function InvoicePanel({
                 )}
             </div>
 
-            <div className="border-t pl-5 pr-5">
+            <div className="border-t px-5">
                 <div className="mb-2 mt-2 flex items-center justify-between">
-                    <span className="font-semibold">
-                        Tổng tiền
-                    </span>
+                    <span className="font-semibold">Tổng tiền</span>
 
                     <span className="text-lg font-bold text-red-500">
                         {total.toLocaleString()}đ
                     </span>
                 </div>
-
-                {order.status === "PENDING" &&
-                    newItems.length > 0 && (
-                        <Button
-                            disabled={loading}
-                            className="mt-2 w-full !bg-green-500"
-                            onClick={handlePreparing}
-                        >
-                            {loading ? "Đang gửi..." : "Gửi bếp"}
-                        </Button>
-                    )}
 
                 {order.status === "PREPARING" && (
                     <Button
@@ -461,35 +384,16 @@ export default function InvoicePanel({
                     </>
                 )}
 
-                {/* {order.status !== "COMPLETED" &&
-                    order.status !== "CANCELLED" &&
-                    !orderItems.some(
-                        item => item.status === "SERVED"
-                    ) && (
-                        <button
-                            type="button"
-                            disabled={loading}
-                            onClick={requestCancelOrder}
-                            className="mt-3 w-full rounded-lg border border-red-200 py-2 text-sm font-medium text-red-500 hover:bg-red-50 disabled:opacity-50"
-                        >
-                            Hủy đơn
-                        </button>
-                    )
-                        } */}
-
                 <div className="h-3" />
             </div>
 
             {confirmAction && (
                 <div
                     className="fixed inset-0 z-50 flex items-center justify-center bg-black/40"
-                    onClick={() =>
-                        !loading &&
-                        setConfirmAction(null)
-                    }
+                    onClick={() => !loading && setConfirmAction(null)}
                 >
                     <div
-                        className="w-[400px] rounded-xl bg-white p-5 shadow-xl"
+                        className="w-[400px] max-w-[calc(100%-2rem)] rounded-xl bg-white p-5 shadow-xl"
                         onClick={event => event.stopPropagation()}
                     >
                         <h3 className="text-lg font-bold">
@@ -502,7 +406,9 @@ export default function InvoicePanel({
                                 <span className="font-semibold text-gray-800">
                                     {confirmAction.itemName}
                                 </span>
-                                {confirmAction.quantity > 1 && ` x${confirmAction.quantity}`} ?
+                                {confirmAction.quantity > 1 &&
+                                    ` x${confirmAction.quantity}`}
+                                ?
                             </p>
                         ) : (
                             <p className="mt-3 text-sm text-gray-600">
